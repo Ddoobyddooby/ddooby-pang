@@ -1,0 +1,144 @@
+# ddooby-pang TASKS (v0.1 MVP)
+
+> 기준 문서: [`SPEC.md`](../SPEC.md), [`PLAN.md`](./PLAN.md)
+> 체크박스로 진행 상황을 관리한다. ID는 `주차-번호`. **완료 기준**을 만족해야 체크한다.
+> 범례: 🧪 테스트 필수 · 👀 수동 확인 · ⛓ 선행 작업
+
+---
+
+## 1주차 — 코어 엔진
+
+### 세팅
+- [ ] **W1-01** Vite + TypeScript(strict) 프로젝트 생성, Phaser 3 설치
+  - 완료: `npm run dev`로 빈 Phaser 캔버스(720x1280, FIT) 표시
+- [ ] **W1-02** Vitest 설정, `npm test` 스크립트
+  - 완료: 샘플 테스트 1개 통과
+- [ ] **W1-03** ESLint + Prettier, `src/core/**`에서 `phaser`·`view`·`scenes` import 금지 규칙
+  - 완료: core에서 phaser import 시 lint 에러
+- [ ] **W1-04** 폴더 구조 생성 (`core/ modes/ scenes/ view/ data/ storage/`), `config.ts` 뼈대
+
+### core
+- [ ] **W1-05** 🧪 `core/types.ts` — Color, Block, Pos, Board, GameState, GameEvent, MatchGroup
+- [ ] **W1-06** 🧪 `core/rng.ts` — mulberry32 순수 함수 `next(state) → [value, state]`
+  - 완료: 같은 seed → 같은 수열
+- [ ] **W1-07** 🧪 테스트 헬퍼 `parseBoard()` / `printBoard()` (문자열 ↔ Board)
+- [ ] **W1-08** 🧪 `core/board.ts` — 초기 생성(매치 회피), get/set/clone, 인접 판정 ⛓W1-06
+- [ ] **W1-09** 🧪 `core/matcher.ts` — 가로·세로 run 수집 + Union-Find 그룹 병합, `maxRunH/V`, `hasIntersection`
+  - 테스트: 3I, 4I(H/V), 5I, L, T, +, 6+, 칸을 공유하지 않는 같은 색 두 그룹
+- [ ] **W1-10** 🧪 `core/gravity.ts` — 낙하(`fall` 이벤트), 리필(`refill` 이벤트)
+  - 테스트: 한 열 여러 빈칸, 빈칸 사이에 블록, 리필 후 빈칸 0
+- [ ] **W1-11** 🧪 `core/moves.ts` — `hasAnyMove`, `findHint`, `shuffle`
+  - 테스트: 수 없는 보드 → 셔플 후 매치 0 + 수 ≥ 1
+- [ ] **W1-12** 🧪 `core/engine.ts` — `resolveSwap` (특수 블록 없이): 스왑 → 매치 → 제거 → 낙하 → 리필 → 연쇄 → 셔플 ⛓W1-08~11
+  - 테스트: 매치 없는 스왑은 `valid:false` + `swapBack`, 연쇄 단계 수, cascade 상한 assert
+- [ ] **W1-13** 🧪 seed 1~1000 초기 보드 테스트: 매치 0, 가능한 수 ≥ 1, 같은 seed 재생성 결과 동일
+- [ ] **W1-14** 🧪 퍼즈 테스트: 랜덤 seed + 랜덤 유효 스왑 1000회 → 예외·빈칸 없음, resolve 후 매치 0
+
+### view (최소)
+- [ ] **W1-15** `view/BlockSprite.ts` — 색별 단색 도형
+- [ ] **W1-16** `view/BoardView.ts` — `Map<id, sprite>`, `play(steps)` (swap / swapBack / remove / fall / refill 트윈)
+- [ ] **W1-17** `view/input.ts` — 스와이프 입력 → `{a, b}`
+- [ ] **W1-18** 👀 `GameScene` 임시 버전: 보드 표시 + 입력 + resolve + 재생, 애니메이션 중 입력 차단
+
+**1주차 완료 기준**: 브라우저에서 3매치·연쇄가 돈다 + `npm test` 전부 통과
+
+---
+
+## 2주차 — 특수 블록 + 경쟁 모드
+
+### 특수 블록
+- [ ] **W2-01** 🧪 `core/specials.ts` — `decideSpecial(group, swapPos)` (PLAN 4.5 테이블)
+  - 테스트: 테이블 기반, 4I-H → lineV, 4I-V → lineH, 5L/5T → bomb, 5I → color, 6+ → super
+- [ ] **W2-02** 🧪 생성 위치 규칙: 첫 cascade는 스왑 위치, 이후 cascade는 그룹 중앙
+- [ ] **W2-03** 🧪 `blastArea(kind, at, board, targetColor?)` — line / bomb 3x3 / super 5x5+십자 / color
+  - 테스트: 보드 모서리·가장자리에서 범위 잘림
+- [ ] **W2-04** 🧪 연쇄 발동 BFS — 범위 안 특수 블록 재발동, 중복 발동 없음
+- [ ] **W2-05** 🧪 engine 통합 — `activate`, `create` 이벤트, 특수 블록이 낙하·셔플에서 유지
+- [ ] **W2-06** 🧪 컬러 블록 스왑 발동 (매치 없이), 상대가 특수 블록 / 컬러 블록인 경우
+- [ ] **W2-07** 👀 특수 블록 표시 (아이콘/줄무늬) + 발동 이펙트 기본형
+
+### 점수
+- [ ] **W2-08** 🧪 `core/scoring.ts` + `config.SCORE` — 그룹 점수, 특수 제거 점수, cascade 배율
+  - 테스트: SPEC 5절 표의 각 행
+
+### 경쟁 모드
+- [ ] **W2-09** 🧪 `modes/GameMode.ts` 인터페이스
+- [ ] **W2-10** 🧪 `modes/TimeAttackMode.ts` — 60초 타이머, 시간 종료 시 진행 중 연쇄는 끝까지 처리
+- [ ] **W2-11** 👀 HUD: 점수, 남은 시간 (마지막 10초 강조)
+- [ ] **W2-12** 👀 임시 결과 화면 (점수, 다시하기)
+- [ ] **W2-13** 👀 탭-탭 입력 (선택 하이라이트, 인접 아니면 선택 변경)
+
+**2주차 완료 기준**: 4I / 5L / 5I / 6+ 특수 블록이 생성·발동되고, 60초 타임어택 한 판을 끝까지 플레이할 수 있다
+
+---
+
+## 3주차 — 스토리 모드
+
+### 데이터
+- [ ] **W3-01** 🧪 `data/stageSchema.ts` — 타입 + 런타임 검증 (필수 필드, colors 3~6, stars 오름차순, 색 이름)
+- [ ] **W3-02** `data/stageLoader.ts` — `public/stages/story.json`, `timeattack.json` 로드, 실패 시 에러 표시
+- [ ] **W3-03** 스테이지 1~10 JSON 작성 (점수 미션 → 색 수집 → 복합 순, colors 4→6, moves 25→15)
+- [ ] **W3-04** 경쟁 모드 설정을 `timeattack.json`으로 이동 (`timeLimit: 60`)
+
+### 모드 / 저장
+- [ ] **W3-05** 🧪 `modes/StoryMode.ts` — 유효 스왑만 이동 차감, 미션 2종 집계(특수 제거 포함), 클리어/실패 판정
+- [ ] **W3-06** 🧪 남은 이동 보너스 + 별 계산
+- [ ] **W3-07** 🧪 `storage/progress.ts` — `Storage` 인터페이스 + `LocalStorageAdapter`, `SaveData v1`
+  - 테스트: 저장 → 로드 왕복, 손상된 JSON이면 기본값
+
+### 화면
+- [ ] **W3-08** 👀 `MenuScene` — 스토리 / 경쟁 버튼
+- [ ] **W3-09** 👀 `StageMapScene` — 스테이지 1~10, 잠금 표시, 최고 별 표시
+- [ ] **W3-10** 👀 HUD 스토리 버전 — 남은 이동, 점수, 미션 진행도
+- [ ] **W3-11** 👀 `ResultScene` — 클리어/실패, 별, 점수, [다시하기] [다음 스테이지] [메뉴]
+- [ ] **W3-12** 👀 해금 흐름: 클리어 시 다음 스테이지 해금, 최고 별·점수 갱신
+- [ ] **W3-13** Capacitor로 빈 Android 앱 APK 빌드 한 번 시험 (4주차 리스크 선제 확인)
+
+**3주차 완료 기준**: 스테이지 1~10을 순서대로 해금하며 플레이, 새로고침 후에도 진행 유지
+
+---
+
+## 4주차 — 폴리싱 + APK
+
+### 폴리싱
+- [ ] **W4-01** 👀 이펙트: 제거 파티클, 특수 발동 화면 흔들림, 점수 팝업, 연쇄 텍스트
+- [ ] **W4-02** 👀 사운드: 스왑, 매치, 특수 발동, 연쇄, 클리어/실패 (무료 효과음), 음소거 토글
+- [ ] **W4-03** 👀 힌트: 5초 무입력 시 `findHint` 결과 깜빡임
+- [ ] **W4-04** 👀 일시정지 메뉴 (계속 / 다시하기 / 메뉴), 타임어택 타이머 정지
+- [ ] **W4-05** 👀 블록 그래픽 교체 검토 (Kenney 에셋 또는 단색 유지)
+- [ ] **W4-06** 👀 `TitleScene` (또는 BootScene에 타이틀 표시)
+
+### 모바일
+- [ ] **W4-07** Capacitor Android 프로젝트 정식 설정, 세로 고정, 앱 이름·아이콘
+- [ ] **W4-08** 🧪 `CapacitorPreferencesStorage` 구현, `isNativePlatform()`으로 선택
+- [ ] **W4-09** 👀 실기기 설치, 터치 입력 확인, 앱 재시작 후 진행·최고 점수 유지 확인
+- [ ] **W4-10** 👀 성능 확인 (60fps 근접, 긴 연쇄·슈퍼 블록 발동 시 끊김 여부)
+- [ ] **W4-11** 👀 **조카 시범 플레이** → 피드백 기록 (`docs/FEEDBACK.md`)
+
+**4주차 완료 기준**: Android 실기기에서 두 모드 모두 플레이 가능 + 시범 플레이 완료
+
+---
+
+## SPEC 10절 수용 기준 ↔ 태스크
+
+| 수용 기준 | 태스크 |
+|---|---|
+| 시작 보드 매치 0, 가능한 수 ≥ 1 (seed 1~1000) | W1-08, W1-13 |
+| 매치 없는 스왑은 되돌아가고 이동 미차감 | W1-12, W3-05 |
+| L / T / + 하나의 그룹 | W1-09 |
+| 4 / 5L / 5I / 6+ → 정해진 특수 블록 | W2-01 |
+| 수 없으면 셔플 | W1-11, W1-12 |
+| 같은 seed → 같은 보드 | W1-06, W1-13 |
+| 스토리 1~10 순차 해금, 재시작 후 유지 | W3-12, W4-08, W4-09 |
+| 경쟁 최고 점수 재시작 후 유지 | W3-07, W4-08, W4-09 |
+| 실기기 60fps 근접 | W4-10 |
+
+## 백로그 (v0.2 이후)
+
+- 특수 블록끼리 조합 효과 (line+line, bomb+line, color+X …)
+- 장애물: 얼음, 잠금, 초콜릿
+- Sugar Crush 연출 (남은 이동을 특수 블록으로 바꿔 터뜨리기)
+- 경쟁 모드 시간 추가 아이템
+- 난이도 곡선 정밀 설계
+- 오리지널 캐릭터 / 테마
+- iOS 빌드
