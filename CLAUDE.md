@@ -1,0 +1,39 @@
+# CLAUDE.md
+
+ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 MVP 개발 중). 응답과 문서는 한국어로 쓴다.
+
+## 문서
+
+작업 전에 해당 부분을 읽는다. 문서끼리 충돌하면 SPEC > PLAN > TASKS 순으로 따른다.
+
+- `SPEC.md`: 무엇을 / 왜. 게임 규칙, 점수, 스테이지 스키마, 수용 기준
+- `docs/PLAN.md`: 어떻게. 구조, core 타입·이벤트, 오픈 이슈 잠정 결정
+- `docs/TASKS.md`: 작업 체크리스트 (ID `W<주차>-<번호>`)
+
+## 작업 방식
+
+- `docs/TASKS.md`의 위에서부터 첫 번째 미완료 태스크를 진행한다. 한 번에 태스크 하나.
+- 태스크의 **완료 기준**을 실제로 확인한 뒤에만 체크박스를 `[x]`로 바꾼다. 🧪 표시는 테스트 통과가 조건이다.
+- 규칙이나 설계를 바꿔야 하면 코드보다 문서(SPEC / PLAN)를 먼저 고친다.
+
+## 아키텍처 규칙 (어기지 않는다)
+
+- `src/core/`는 순수 TS. `phaser`, DOM, `Math.random`, `src/view`, `src/scenes`를 import하거나 호출하지 않는다.
+- core 함수는 `(state, action) → { state, events }` 형태이고 상태는 불변으로 다룬다.
+- 랜덤은 `core/rng.ts`의 seed RNG만 쓴다. 같은 seed + 같은 입력 → 같은 결과.
+- 점수, 배율, 애니메이션 시간은 `src/config.ts`에 두고 코드에 박지 않는다.
+- view는 core가 준 이벤트를 재생만 한다. 게임 상태를 직접 계산하지 않는다.
+- 의존 방향: `scenes → view/modes → core`, `scenes → data/storage`. core는 아무것도 의존하지 않는다.
+
+## 명령어
+
+W1-01 ~ W1-03 이후 사용 가능 (생기면 여기를 실제 명령으로 갱신한다).
+
+- `npm run dev`: 개발 서버
+- `npm test`: Vitest
+- `npm run lint`: ESLint
+
+## Git
+
+- 커밋 메시지: `[type] 설명` (예: `[feat] Add matcher`, `[docs] Update TASKS`). type은 `feat`, `fix`, `test`, `refactor`, `docs`, `chore`.
+- 커밋과 push는 사용자가 요청할 때만 한다.
