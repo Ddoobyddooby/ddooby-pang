@@ -1,0 +1,19 @@
+# Claude Code / oh-my-claudecode 세션 상태
+.omc/
+
+# Node
+node_modules/
+dist/
+coverage/
+
+# Capacitor / Android
+android/app/build/
+android/.gradle/
+android/local.properties
+
+# Env / OS / Editor
+.env
+.env.*
+.DS_Store
+.vscode/
+.idea/
