@@ -46,4 +46,4 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 MVP 개발 중).
 ## Git
 
 - 커밋 메시지: `[type] 설명` (예: `[feat] Add matcher`, `[docs] Update TASKS`). type은 `feat`, `fix`, `test`, `refactor`, `docs`, `chore`.
-- 커밋과 push는 사용자가 요청할 때만 한다.
+- 커밋과 push는 사용자가 요청할 때만 한다. 메인(설계) 세션의 작업 지시에 커밋·push가 들어 있으면 그 지시대로 해도 된다.
