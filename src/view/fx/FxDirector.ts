@@ -3,6 +3,7 @@
 
 import type Phaser from 'phaser';
 import { FX, THEME } from '../../config';
+import type { Color } from '../../core/types';
 import { cellCenter, type Layout } from '../layout';
 import { FX_TEX, type Face } from '../theme/textures';
 import { fxLevel, particleCount } from './fxLevels';
@@ -12,6 +13,8 @@ const WHITE = 0xffffff;
 /** 파티클은 블록(깊이 0) 위, 칭찬 문구 아래 */
 const PARTICLE_DEPTH = 10;
 const PRAISE_DEPTH = 20;
+/** preview가 터뜨리는 행 */
+const PREVIEW_ROW = 3;
 /** 칭찬 문구 모양과 움직임 (ms, px). 문구·색·크기 배율은 config의 FX / THEME에 있다 */
 const PRAISE = {
   fontSize: 72,
@@ -159,7 +162,10 @@ export class FxDirector {
     });
   }
 
+  /** 개발용: 보드 가운데 행 3칸이 터진 것처럼 level 단계 연출만 재생한다. 블록 상태는 건드리지 않는다 */
   preview(level: number): void {
-    void level; // D-11
+    const color = ((level - 1) % THEME.blocks.length) as Color; // 단계마다 다른 색 하트
+    const cells = [2, 3, 4].map((c) => ({ at: { r: PREVIEW_ROW, c }, color }));
+    this.playMatch(level, cells);
   }
 }

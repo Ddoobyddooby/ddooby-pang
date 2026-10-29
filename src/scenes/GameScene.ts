@@ -59,7 +59,14 @@ export class GameScene extends Phaser.Scene {
     this.swipe = new SwipeInput(this, layout, (a, b) => void this.trySwap(a, b));
 
     if (params.has('demo')) this.time.delayedCall(800, () => void this.demoLoop());
-    if (import.meta.env.DEV) this.exposeDebug();
+    if (import.meta.env.DEV) {
+      this.exposeDebug();
+      // 키 1~5: 그 연쇄 단계의 연출 미리보기
+      this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
+        const n = Number(e.key);
+        if (n >= 1 && n <= 5) fx.preview(n);
+      });
+    }
   }
 
   private async trySwap(a: Pos, b: Pos): Promise<void> {
