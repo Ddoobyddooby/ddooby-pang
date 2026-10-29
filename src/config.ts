@@ -126,3 +126,9 @@ export const DECOR = {
   /** 보드판: 칸 영역보다 사방으로 이만큼 크다 */
   frame: { pad: 10, radius: 18, border: 4, grainLines: 4, grainAlpha: 0.6 },
 } as const;
+
+/** HUD 배치와 글자 크기 */
+export const HUD = {
+  title: { y: 80, fontSize: 56, strokeThickness: 10 },
+  info: { y: 150, fontSize: 26, height: 44, padX: 40 },
+} as const;

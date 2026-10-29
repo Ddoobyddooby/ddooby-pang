@@ -6,11 +6,12 @@
 //   ?demo       힌트 수를 자동으로 둔다
 
 import Phaser from 'phaser';
-import { BOARD, GAME } from '../config';
+import { BOARD } from '../config';
 import { createInitialState, resolveSwap } from '../core/engine';
 import { findHint } from '../core/moves';
 import type { GameState, Pos } from '../core/types';
 import { BoardView } from '../view/BoardView';
+import { Hud } from '../view/Hud';
 import { SwipeInput } from '../view/input';
 import { createLayout } from '../view/layout';
 import { Background } from '../view/theme/Background';
@@ -22,7 +23,7 @@ export class GameScene extends Phaser.Scene {
   private state!: GameState;
   private view!: BoardView;
   private swipe!: SwipeInput;
-  private info!: Phaser.GameObjects.Text;
+  private hud!: Hud;
   private busy = false;
   private moves = 0;
   private seed = 0;
@@ -48,12 +49,7 @@ export class GameScene extends Phaser.Scene {
     drawBoardFrame(this, layout);
     this.view = new BoardView(this, this.state.board, layout);
 
-    this.add
-      .text(GAME.width / 2, 80, 'Ddooby-Pang', { fontSize: '48px', color: '#ffffff' })
-      .setOrigin(0.5);
-    this.info = this.add
-      .text(GAME.width / 2, 150, '', { fontSize: '26px', color: '#b8b8d0' })
-      .setOrigin(0.5);
+    this.hud = new Hud(this, 'Ddooby-Pang');
     this.updateInfo();
 
     this.swipe = new SwipeInput(this, layout, (a, b) => void this.trySwap(a, b));
@@ -86,7 +82,7 @@ export class GameScene extends Phaser.Scene {
 
   private updateInfo(lastCascades = 0): void {
     const combo = lastCascades > 1 ? ` · 연쇄 x${lastCascades}` : '';
-    this.info.setText(`seed ${this.seed} · 이동 ${this.moves}${combo}`);
+    this.hud.setInfo(`seed ${this.seed} · 이동 ${this.moves}${combo}`);
   }
 
   private async demoLoop(): Promise<void> {
