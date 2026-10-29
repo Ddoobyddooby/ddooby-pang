@@ -176,6 +176,21 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - `npm run dev` → 보드판 바탕이 어두운 남색에서 밝은 크림색으로 바뀌었다. 나머지 테마 값은 D-03부터 화면에 쓰인다
 - **칭찬 문구 바꾸기**: `src/config.ts`의 `FX.praise`에서 `3: '이서팡!'`을 원하는 말로 고치고 저장하면 된다. 문구 색은 `THEME.praiseColors`, 크기는 `FX.praiseScale`
 
+### D-03 Jua 글꼴
+- `npm run dev` → 타이틀과 표시줄이 둥근 Jua 글꼴로 보이면 정상
+- Console에 `document.fonts.check('48px Jua')` 입력 → `true`
+- 글꼴 파일은 `public/fonts/Jua-Regular.ttf` (라이선스 `OFL.txt`). 인터넷이 없어도 앱 안의 파일을 쓴다. 글꼴을 못 불러와도 2초 뒤에는 기본 글꼴로 게임이 시작된다
+
+### D-04 배경 + 웨이퍼 보드판
+- `npm run dev` → 하늘색에서 분홍으로 넘어가는 하늘, 천천히 좌우로 움직이는 구름, 깜빡이는 작은 별, 베이지색 웨이퍼 보드판
+- 블록이 위에서 떨어질 때 보드판 밖(하늘)으로 비치지 않는다
+- 구름·별 위치와 보드판 두께는 `src/config.ts`의 `DECOR`에서 바꾼다
+
+### D-10 HUD
+- 분홍 Jua 타이틀(흰 테두리)과 그 아래 흰 알약 모양 표시줄(`seed · 이동 · 연쇄`)
+- 이동이 늘거나 연쇄가 나서 글자가 길어지면 알약 폭도 같이 늘어난다
+- 위치·크기는 `src/config.ts`의 `HUD`
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -334,3 +349,22 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **0부터 세기 vs 1부터 보여주기**: core는 연쇄를 0부터 세고(`cascade`), 화면은 1단계부터 보여준다. 변환을 `cascadeToLevel` 한 곳에 둬서 "+1"이 여기저기 흩어지지 않게 했다
 - **`noUncheckedIndexedAccess`**: 배열 `a[i]`를 `T | undefined`로 본다. 범위를 보장해도 TS는 모르니 `?? 1` 같은 기본값을 둔다 → `fxLevel`의 `particlesPerBlock`
 - 참고: [TS noUncheckedIndexedAccess](https://www.typescriptlang.org/tsconfig/#noUncheckedIndexedAccess)
+
+### D-03 Jua 글꼴
+- **웹 글꼴 미리 불러오기**: `index.html`의 `@font-face`로 글꼴 파일을 등록하고, `document.fonts.load()`로 다 받을 때까지 기다린 뒤 게임을 시작한다. 안 그러면 Phaser가 기본 글꼴로 글자를 먼저 그려버린다 → `index.html`, `src/scenes/BootScene.ts`
+- **`Promise.race`로 시간 제한**: "글꼴 로딩"과 "2초 타이머" 중 먼저 끝나는 쪽을 기다린다. 실패(reject)도 잡아서 게임은 무조건 시작된다. 느린 휴대폰·오프라인 대비 → `BootScene.loadFont`
+- **`public/` 폴더**: 빌드할 때 그대로 복사되는 정적 파일 자리. `vite.config.ts`의 `base: './'` 덕분에 상대 경로로 불러와서 Capacitor 앱 안에서도 동작한다
+- **글꼴 라이선스(OFL)**: 무료로 쓰고 앱에 넣을 수 있지만 라이선스 파일을 같이 둬야 한다
+- 참고: [MDN @font-face](https://developer.mozilla.org/ko/docs/Web/CSS/@font-face), [MDN Promise.race](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Promise/race)
+
+### D-04 배경 + 웨이퍼 보드판
+- **그라데이션과 둥근 사각형**: `fillGradientStyle`로 위·아래 색을 정해 하늘을 칠하고, `fillRoundedRect` / `strokeRoundedRect`로 보드판 테두리를 그린다 → `src/view/theme/Background.ts`, `BoardFrame.ts`
+- **반복 트윈**: `yoyo: true` + `repeat: -1`이면 왕복을 끝없이 반복한다. `delay`를 다르게 주면 구름·별이 제각각 움직여 자연스럽다
+- **깊이(depth)와 그리는 순서**: 배경은 `depth -100`으로 맨 뒤. 보드판은 블록보다 먼저 만들어서 그 아래에 깔린다 → `GameScene.create`
+- **장식 수치도 config로**: 구름 좌표, 별 개수, 보드판 두께를 `DECOR`에 모았다. 코드를 몰라도 숫자만 바꿔 실험할 수 있다
+- 참고: [Phaser Graphics](https://docs.phaser.io/phaser/concepts/gameobjects/graphics), [Phaser Tween 반복](https://docs.phaser.io/phaser/concepts/tweens)
+
+### D-10 HUD
+- **외곽선 글자**: Text 스타일의 `stroke` / `strokeThickness`로 흰 테두리를 둘러 어떤 배경에서도 읽히게 한다 → `src/view/Hud.ts`
+- **내용에 맞춰 다시 그리기**: 글자를 바꾼 뒤 `text.width`를 읽고, 알약 Graphics를 `clear()` 후 그 폭으로 다시 그린다 → `Hud.setInfo`
+- **화면 조각을 작은 클래스로**: GameScene은 `hud.setInfo('…')`만 부르고, 어떻게 그릴지는 `Hud`가 안다. 모드 화면을 만들 때 HUD만 갈아끼우기 쉽다
