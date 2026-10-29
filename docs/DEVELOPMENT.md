@@ -99,6 +99,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - `npm test` → `tests/core/board.test.ts` 통과. 색 3~6종 × seed 200개씩 만든 보드에 시작 매치가 없는지 검사한다
 - 테스트가 진짜 잡는지 보기: `src/core/board.ts`의 `if (!banned.has(k as Color))`를 지워 저장 → `npm run test:watch`에서 실패가 뜨고, 실패 메시지에 문제의 보드가 그림으로 찍힌다. 되돌리기
 
+### W1-09 매치 판정
+- `npm test` → `tests/core/matcher.test.ts` 16개 통과
+- 테스트 파일에서 보드 그림과 기대 결과를 나란히 보면 규칙이 한눈에 보인다: 3I, 4I, 5I, L, T, +, 6+, 떨어진 같은 색, 평행한 두 줄, 컬러 블록 제외
+- 직접 실험: 테스트 하나를 복사해서 보드 그림만 바꿔보고 `npm run test:watch`로 결과를 확인해보자
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -168,3 +173,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **파라미터화 테스트**: `it.each([3,4,5,6])`로 같은 테스트를 여러 입력에 돌린다. 실패 메시지에 seed와 보드 그림을 넣어서 바로 재현할 수 있게 했다
 - **뮤테이션 테스트(개념)**: 코드를 일부러 망가뜨렸을 때 테스트가 실패하는지 본다. 통과만 하는 테스트는 아무것도 지켜주지 않을 수 있다
 - 참고: [MDN 전개 구문](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Operators/Spread_syntax), [Vitest test.each](https://vitest.dev/api/#test-each)
+
+### W1-09 매치 판정
+- **run 스캔**: 한 줄을 왼쪽부터 보며 "같은 색이 몇 개 이어지나"를 센다. 색이 바뀌는 순간 길이가 3 이상이면 run으로 기록 → `collectRuns`
+- **Union-Find (Disjoint Set)**: "같은 집합인가?"를 빠르게 답하는 자료구조. run의 칸들을 한 집합으로 묶으면, 가로 run과 세로 run이 칸을 공유할 때 자동으로 하나로 합쳐진다. L / T / + 모양이 이렇게 하나의 그룹이 된다 → `createUnionFind`
+  - 경로 압축: `find`할 때 부모를 할아버지로 당겨서 트리를 납작하게 만든다
+- **`Map` / `Set`**: 루트별 run 모으기(`Map<number, Run[]>`), 중복 없는 칸 모으기(`Set<number>`)
+- **결정적 출력**: `Map` 순서에 기대지 않고 그룹을 왼쪽 위 칸 기준으로 정렬한다. 테스트와 리플레이가 항상 같은 결과를 내게 하려면 "순서"도 정해야 한다
+- **테스트도 틀릴 수 있다**: 이번에 6+ 테스트 보드의 채움 칸에 `Y Y Y`를 넣어서 테스트가 먼저 틀렸다. 실패하면 코드와 테스트 중 어느 쪽이 틀렸는지 먼저 판단한다
+- 참고: [Union-Find (위키백과)](https://ko.wikipedia.org/wiki/서로소_집합_자료_구조), [MDN Map](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Map)

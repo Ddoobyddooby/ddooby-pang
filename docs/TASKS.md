@@ -23,7 +23,7 @@
   - 완료: 같은 seed → 같은 수열
 - [x] **W1-07** 🧪 테스트 헬퍼 `parseBoard()` / `printBoard()` (문자열 ↔ Board)
 - [x] **W1-08** 🧪 `core/board.ts` — 초기 생성(매치 회피), get/set/clone, 인접 판정 ⛓W1-06
-- [ ] **W1-09** 🧪 `core/matcher.ts` — 가로·세로 run 수집 + Union-Find 그룹 병합, `maxRunH/V`, `hasIntersection`
+- [x] **W1-09** 🧪 `core/matcher.ts` — 가로·세로 run 수집 + Union-Find 그룹 병합, `maxRunH/V`, `hasIntersection`
   - 테스트: 3I, 4I(H/V), 5I, L, T, +, 6+, 칸을 공유하지 않는 같은 색 두 그룹
 - [ ] **W1-10** 🧪 `core/gravity.ts` — 낙하(`fall` 이벤트), 리필(`refill` 이벤트)
   - 테스트: 한 열 여러 빈칸, 빈칸 사이에 블록, 리필 후 빈칸 0
