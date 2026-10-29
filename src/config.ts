@@ -38,4 +38,17 @@ export const ANIM = {
   remove: 150,
   fallPerCell: 60,
   refillPerCell: 60,
+  shuffle: 300,
+} as const;
+
+/** 화면 배치와 블록 모양 (PLAN 6.3: 상단 HUD 200px, 보드 680x680) */
+export const VIEW = {
+  board: { x: 20, y: 200, size: 680 },
+  /** 칸 대비 블록 크기 */
+  blockScale: 0.84,
+  /** Color 0~5: red, yellow, green, blue, purple, orange */
+  blockColors: [0xff5a5f, 0xffd23f, 0x3ecf8e, 0x4d96ff, 0x9b5de5, 0xff8c42],
+  boardBackground: 0x1f1f33,
+  /** 칸 크기 대비 이만큼 끌면 스와이프로 본다 */
+  swipeThreshold: 0.3,
 } as const;

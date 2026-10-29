@@ -132,6 +132,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 직접 확인: `src/core/gravity.ts`에서 `moves.push(...)` 앞에 `if (c !== 0)`을 붙여 저장 → 퍼즈 테스트가 `refill: 0,0가 비어 있지 않다`로 실패. 되돌리기
 - **여기까지가 1주차 core 완료**. 다음 W1-15~18에서 화면(view)을 붙이면 브라우저에서 실제로 플레이할 수 있다
 
+### W1-15 블록 그리기
+- `npm run dev` → 8x8 보드(seed 1001)에 색과 모양이 다른 블록 6종이 보이고, 아래에 특수 블록 표시 5종(가로줄, 세로줄, 폭탄, 슈퍼, 컬러)이 보이면 정상
+  - 빨강 원 · 노랑 둥근 사각형 · 초록 다이아몬드 · 파랑 삼각형 · 보라 육각형 · 주황 별
+- `npm test` → `tests/view/layout.test.ts` 4개 통과 (칸 ↔ 화면 좌표 변환)
+- 색 바꿔보기: `src/config.ts`의 `VIEW.blockColors` 첫 값을 `0x000000`으로 → 빨강 원이 검정이 된다. 되돌리기
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -249,3 +255,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **계약(contract) 테스트**: `replay`는 view가 할 일을 흉내 낸다. "이벤트만 따라가도 최종 보드가 된다"는 core와 view 사이의 약속을 테스트로 고정했다. 화면을 만들기 전에 화면 버그의 한 종류를 미리 없앤 셈이다
 - **`switch`와 완전성**: 이벤트 종류마다 `case`를 두고, 아무것도 안 하는 종류도 명시했다. 새 이벤트를 추가하면 어디를 고쳐야 하는지 보인다
 - 참고: [Fuzzing (위키백과)](https://ko.wikipedia.org/wiki/퍼징), [fast-check: 속성 기반 테스트 소개](https://fast-check.dev/docs/introduction/)
+
+### W1-15 블록 그리기
+- **좌표계 두 개**: 게임 로직은 (행, 열), 화면은 (x, y) 픽셀. 변환을 `layout.ts` 한 곳에 모아 순수 함수로 만들었더니 Phaser 없이 테스트할 수 있었다 → `src/view/layout.ts`
+- **Phaser Graphics로 도형 그리기**: `fillStyle` → `fillCircle / fillRoundedRect / fillPoints`. 이미지 파일 없이 코드로 그린다. 나중에 에셋으로 바꿔도 `BlockSprite`만 고치면 된다 → `src/view/BlockSprite.ts`
+- **Container**: 도형 + 하이라이트 + 특수 표시를 묶어 하나처럼 움직이고 크기를 바꾼다. 트윈(W1-16)에서 이 묶음을 통째로 움직인다
+- **극좌표로 다각형 만들기**: 꼭짓점 = `(cos θ · r, sin θ · r)`. 삼각형·육각형·별이 같은 공식으로 나온다 → `regularPolygon`, `star`
+- **접근성(색각 이상)**: 색만으로 구분하면 일부 사람은 빨강·초록을 헷갈린다. 모양을 같이 바꾸면 누구나 구분할 수 있다
+- 참고: [Phaser Graphics](https://docs.phaser.io/phaser/concepts/gameobjects/graphics), [Phaser Container](https://docs.phaser.io/phaser/concepts/gameobjects/container)
