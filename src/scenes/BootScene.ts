@@ -1,10 +1,12 @@
 import Phaser from 'phaser';
-import { GAME, VIEW } from '../config';
-import { createInitialState } from '../core/engine';
-import { BlockSprite } from '../view/BlockSprite';
-import { cellCenter, createLayout } from '../view/layout';
+import { GAME } from '../config';
+import { createInitialState, resolveSwap } from '../core/engine';
+import { findHint } from '../core/moves';
+import type { GameState } from '../core/types';
+import { BoardView } from '../view/BoardView';
+import { createLayout } from '../view/layout';
 
-/** 임시: 블록 미리보기 (W1-18에서 GameScene으로 바뀐다) */
+/** 임시: 힌트 수를 자동으로 두며 애니메이션을 확인하는 데모 (W1-18에서 GameScene으로 바뀐다) */
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('Boot');
@@ -12,31 +14,32 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     this.add
-      .text(GAME.width / 2, 100, 'ddooby-pang', { fontSize: '48px', color: '#ffffff' })
+      .text(GAME.width / 2, 100, 'ddooby-pang (demo)', { fontSize: '40px', color: '#ffffff' })
       .setOrigin(0.5);
 
-    const { board } = createInitialState({ rows: 8, cols: 8, colors: 6, seed: 1001 });
-    const layout = createLayout(board.rows, board.cols);
-    this.add
-      .rectangle(layout.x, layout.y, layout.width, layout.height, VIEW.boardBackground)
-      .setOrigin(0);
+    let state: GameState = createInitialState({ rows: 8, cols: 8, colors: 5, seed: 1001 });
+    const view = new BoardView(this, state.board, createLayout(8, 8));
 
-    board.cells.forEach((block, i) => {
-      if (!block) return;
-      const { x, y } = cellCenter(layout, { r: Math.floor(i / board.cols), c: i % board.cols });
-      new BlockSprite(this, x, y, block, layout.cell);
-    });
-
-    // 특수 블록 표시 미리보기
-    const specials = [
-      { id: -1, color: 0, special: 'lineH' },
-      { id: -2, color: 3, special: 'lineV' },
-      { id: -3, color: 2, special: 'bomb' },
-      { id: -4, color: 4, special: 'super' },
-      { id: -5, color: null, special: 'color' },
-    ] as const;
-    specials.forEach((block, i) => {
-      new BlockSprite(this, 160 + i * 100, layout.y + layout.height + 80, block, layout.cell);
-    });
+    let turns = 0;
+    const loop = async () => {
+      const hint = findHint(state.board)!;
+      const result = resolveSwap(state, hint.a, hint.b);
+      await view.play(result.steps);
+      state = result.state;
+      turns++;
+      const actual = view.spriteCells();
+      const expected = state.board.cells.map((b, i) => `${Math.floor(i / 8)},${i % 8}=${b!.id}`);
+      const mismatch = expected.filter((e) => {
+        const [pos, id] = e.split('=');
+        return actual.get(pos!) !== Number(id);
+      });
+      if (mismatch.length > 0 || actual.size !== 64) {
+        console.error('[demo] view ≠ board', { turns, mismatch, sprites: actual.size });
+      } else {
+        console.log(`[demo] turn ${turns} ok`);
+      }
+      this.time.delayedCall(600, loop);
+    };
+    this.time.delayedCall(800, loop);
   }
 }

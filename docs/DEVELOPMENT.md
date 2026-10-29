@@ -138,6 +138,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - `npm test` → `tests/view/layout.test.ts` 4개 통과 (칸 ↔ 화면 좌표 변환)
 - 색 바꿔보기: `src/config.ts`의 `VIEW.blockColors` 첫 값을 `0x000000`으로 → 빨강 원이 검정이 된다. 되돌리기
 
+### W1-16 이벤트 재생 (BoardView)
+- `npm run dev` → "ddooby-pang (demo)" 화면에서 힌트 수를 자동으로 두며 스왑 → 사라짐 → 낙하 → 리필 → 연쇄가 1초 간격으로 반복된다 (W1-18 전까지 임시 데모)
+- 개발자도구 Console에 `[demo] turn N ok`가 계속 찍히면 정상. 스프라이트의 실제 위치와 core 보드를 매 턴 대조한 결과다. `view ≠ board`가 찍히면 버그
+- 애니메이션 속도 바꿔보기: `src/config.ts`의 `ANIM.fallPerCell`을 `300`으로 → 낙하가 느려져서 동작이 잘 보인다. 되돌리기
+- `npm test` → `tests/view/eventTracker.test.ts` 3개 + 퍼즈 테스트가 view의 `EventTracker`도 검사한다
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -263,3 +269,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **극좌표로 다각형 만들기**: 꼭짓점 = `(cos θ · r, sin θ · r)`. 삼각형·육각형·별이 같은 공식으로 나온다 → `regularPolygon`, `star`
 - **접근성(색각 이상)**: 색만으로 구분하면 일부 사람은 빨강·초록을 헷갈린다. 모양을 같이 바꾸면 누구나 구분할 수 있다
 - 참고: [Phaser Graphics](https://docs.phaser.io/phaser/concepts/gameobjects/graphics), [Phaser Container](https://docs.phaser.io/phaser/concepts/gameobjects/container)
+
+### W1-16 이벤트 재생 (BoardView)
+- **트윈(tween)**: "x를 0.1초 동안 100에서 200으로"처럼 값을 시간에 따라 바꾸는 애니메이션. `ease`(Quad.easeIn: 점점 빨라짐, Back: 살짝 튕김)로 느낌이 달라진다 → `src/view/BoardView.ts`
+- **Promise와 async/await로 애니메이션 순서 잡기**: 트윈을 Promise로 감싸면(`tween.ts`) "step 하나 끝날 때까지 기다렸다가 다음 step"을 `for … await`로 쓸 수 있다. 동시에 재생할 것은 `Promise.all`
+- **`Map<id, sprite>`**: core가 "id 7번이 (2,3)으로"라고 하면 view는 id로 스프라이트를 찾아 움직인다. id가 있어야 화면과 로직을 연결할 수 있다 (W1-05에서 `Block.id`를 둔 이유)
+- **마스크**: 리필 블록은 보드 위에서 출발한다. 보드 영역만 보이게 잘라서 HUD 위로 블록이 비치지 않게 했다
+- **테스트 가능한 부분을 떼어내기**: Phaser는 테스트에서 돌리기 어렵다. 위치 추적(`EventTracker`)만 순수 코드로 분리해 퍼즈 테스트 5000수로 검증하고, Phaser 쪽은 얇게 유지했다
+- **런타임 디버그 체크**: 데모가 매 턴 "스프라이트 실제 위치 = core 보드"를 확인한다. 테스트로 못 잡는 화면 쪽 버그를 개발 중에 바로 알 수 있다
+- 참고: [Phaser Tweens](https://docs.phaser.io/phaser/concepts/tweens), [easings.net (ease 그래프)](https://easings.net/ko), [MDN async/await](https://developer.mozilla.org/ko/docs/Learn/JavaScript/Asynchronous/Promises)

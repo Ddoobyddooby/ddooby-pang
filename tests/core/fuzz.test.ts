@@ -5,6 +5,7 @@ import { findMatches } from '../../src/core/matcher';
 import { hasAnyMove, isValidSwap } from '../../src/core/moves';
 import { createRng, nextInt, type RngState } from '../../src/core/rng';
 import type { Board, GameEvent, GameState, Pos } from '../../src/core/types';
+import { EventTracker } from '../../src/view/eventTracker';
 import { printBoard } from '../helpers/board';
 
 function validSwaps(board: Board): { a: Pos; b: Pos }[] {
@@ -129,6 +130,10 @@ function fuzz({ rows, cols, colors, games, swapsPerGame }: FuzzConfig) {
       expect(findMatches(board), where).toEqual([]);
       expect(hasAnyMove(board), where).toBe(true);
       expect(replay(state.board, result.steps), where).toEqual(boardIds(board));
+      // view가 실제로 쓰는 EventTracker도 같은 결과를 내야 한다
+      const tracker = new EventTracker(state.board);
+      for (const e of result.steps.flat()) tracker.apply(e);
+      expect(tracker.snapshot(), where).toEqual(boardIds(board));
 
       const ids = board.cells.map((x) => x!.id);
       expect(new Set(ids).size, where).toBe(ids.length);
