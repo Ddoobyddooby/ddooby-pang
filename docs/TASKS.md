@@ -51,7 +51,7 @@
 
 ### 시안 / 기반
 - [x] **D-01** 디자인 시안 결정 (테마, 배경, 보드판, 블록, 연쇄 연출, 칭찬 문구) + 설계 문서
-- [ ] **D-02** 🧪 `config.THEME` / `config.FX` + `view/fx/fxLevels.ts` (연쇄 단계 → 연출 세기, 칭찬 문구 표)
+- [x] **D-02** 🧪 `config.THEME` / `config.FX` + `view/fx/fxLevels.ts` (연쇄 단계 → 연출 세기, 칭찬 문구 표)
   - 테스트: 1~10단계 조각 수 증가·상한, 문구 선택(1단계 없음, 5+는 5단계), 흔들림·웃음 시작 단계
 - [ ] **D-03** Jua 글꼴 포함(`public/fonts`, OFL) + BootScene에서 로딩 대기
 

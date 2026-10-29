@@ -171,6 +171,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - `?seed=1001`로 열면 매번 같은 보드, `?demo`로 열면 자동 플레이
 - **1주차 완료 기준**: 브라우저에서 3매치·연쇄가 돈다 + `npm test` 전부 통과 → 둘 다 충족
 
+### D-02 테마·이펙트 설정값
+- `npm test` → `tests/view/fxLevels.test.ts` 8개 통과
+- `npm run dev` → 보드판 바탕이 어두운 남색에서 밝은 크림색으로 바뀌었다. 나머지 테마 값은 D-03부터 화면에 쓰인다
+- **칭찬 문구 바꾸기**: `src/config.ts`의 `FX.praise`에서 `3: '이서팡!'`을 원하는 말로 고치고 저장하면 된다. 문구 색은 `THEME.praiseColors`, 크기는 `FX.praiseScale`
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -322,3 +327,10 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **개발 전용 코드**: `import.meta.env.DEV`일 때만 디버그 체크와 `window.__ddooby` 훅이 켜진다. 배포 빌드에서는 빠진다. 브라우저 Console에서 `__ddooby.state()`로 현재 보드를 볼 수 있다
 - **URL 파라미터로 디버그 옵션**: `URLSearchParams`로 `?seed`, `?demo`를 읽는다. 코드를 안 고치고 상황을 재현할 수 있다
 - 참고: [Phaser Scene 전환](https://docs.phaser.io/phaser/concepts/scenes#starting-a-scene), [Vite 환경 변수](https://vite.dev/guide/env-and-mode), [MDN URLSearchParams](https://developer.mozilla.org/ko/docs/Web/API/URLSearchParams)
+
+### D-02 테마·이펙트 설정값
+- **연출 세기 계산을 순수 함수로 분리**: "연쇄 3단계면 조각 몇 개, 문구는 뭐, 흔들림은 얼마"를 Phaser 없이 계산한다. 화면 없이 테스트할 수 있고, 연출 코드는 이 결과만 따른다 → `src/view/fx/fxLevels.ts`
+- **값 고정(clamp)과 상한**: 범위 밖 입력(연쇄 0단계, 9단계)을 1~5로 맞추고, 조각 수는 `min(블록당 개수 × 제거 수, 60)`으로 제한한다. 긴 연쇄에서 휴대폰이 버벅이지 않게 하는 안전장치 → `clampLevel`, `particleCount`
+- **0부터 세기 vs 1부터 보여주기**: core는 연쇄를 0부터 세고(`cascade`), 화면은 1단계부터 보여준다. 변환을 `cascadeToLevel` 한 곳에 둬서 "+1"이 여기저기 흩어지지 않게 했다
+- **`noUncheckedIndexedAccess`**: 배열 `a[i]`를 `T | undefined`로 본다. 범위를 보장해도 TS는 모르니 `?? 1` 같은 기본값을 둔다 → `fxLevel`의 `particlesPerBlock`
+- 참고: [TS noUncheckedIndexedAccess](https://www.typescriptlang.org/tsconfig/#noUncheckedIndexedAccess)
