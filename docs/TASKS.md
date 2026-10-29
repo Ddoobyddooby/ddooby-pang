@@ -32,7 +32,7 @@
 - [x] **W1-12** 🧪 `core/engine.ts` — `resolveSwap` (특수 블록 없이): 스왑 → 매치 → 제거 → 낙하 → 리필 → 연쇄 → 셔플 ⛓W1-08~11
   - 테스트: 매치 없는 스왑은 `valid:false` + `swapBack`, 연쇄 단계 수, cascade 상한 assert
 - [x] **W1-13** 🧪 seed 1~1000 초기 보드 테스트: 매치 0, 가능한 수 ≥ 1, 같은 seed 재생성 결과 동일
-- [ ] **W1-14** 🧪 퍼즈 테스트: 랜덤 seed + 랜덤 유효 스왑 1000회 → 예외·빈칸 없음, resolve 후 매치 0
+- [x] **W1-14** 🧪 퍼즈 테스트: 랜덤 seed + 랜덤 유효 스왑 1000회 → 예외·빈칸 없음, resolve 후 매치 0
 
 ### view (최소)
 - [ ] **W1-15** `view/BlockSprite.ts` — 색별 단색 도형
