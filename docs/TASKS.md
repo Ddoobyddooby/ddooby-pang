@@ -13,7 +13,7 @@
   - 완료: `npm run dev`로 빈 Phaser 캔버스(720x1280, FIT) 표시
 - [x] **W1-02** Vitest 설정, `npm test` 스크립트
   - 완료: 샘플 테스트 1개 통과
-- [ ] **W1-03** ESLint + Prettier, `src/core/**`에서 `phaser`·`view`·`scenes` import 금지 규칙
+- [x] **W1-03** ESLint + Prettier, `src/core/**`에서 `phaser`·`view`·`scenes` import 금지 규칙
   - 완료: core에서 phaser import 시 lint 에러
 - [ ] **W1-04** 폴더 구조 생성 (`core/ modes/ scenes/ view/ data/ storage/`), `config.ts` 뼈대
 

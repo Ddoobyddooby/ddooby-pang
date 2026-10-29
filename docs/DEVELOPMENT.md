@@ -16,6 +16,9 @@
 3. VSCode로 열기: `code .`
    - `code` 명령이 없으면 VSCode에서 `Cmd+Shift+P` → "Shell Command: Install 'code' command in PATH"
 4. 의존성 설치: VSCode 터미널(`` Ctrl+` ``)에서 `npm install`
+5. 추천 확장 설치: 처음 열면 오른쪽 아래에 "추천 확장을 설치할까요?" 알림이 뜬다 → 설치
+   - ESLint, Prettier, Vitest (목록은 `.vscode/extensions.json`)
+   - 설치하면 저장할 때 자동 포맷되고, 규칙 위반은 빨간 밑줄로 보인다
 
 ## 2. 매일 쓰는 명령
 
@@ -27,6 +30,8 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 | `npm test` | 테스트 한 번 실행 |
 | `npm run test:watch` | 파일을 저장할 때마다 테스트 자동 재실행. 끄려면 `q` |
 | `npm run typecheck` | 타입 에러만 확인 |
+| `npm run lint` | ESLint 규칙 검사 (core 의존성 규칙 포함) |
+| `npm run format` | Prettier로 코드 정리 (md 문서는 제외) |
 | `npm run build` | 타입체크 + 배포용 빌드 (`dist/`) |
 
 ## 3. 게임 화면 확인하기
@@ -56,6 +61,16 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 테스트 파일 위치: `tests/**/*.test.ts`
 - 테스트가 실패하는 걸 직접 보고 싶으면 `tests/sample.test.ts`의 `toBe(63)`을 `toBe(64)`로 바꿔 저장해본다 (확인 후 되돌리기)
 
+### W1-03 ESLint + Prettier
+- `npm run lint` → 아무 출력 없이 끝나면 정상
+- core 규칙 직접 확인: `src/core/test.ts` 파일을 만들고 아래를 넣어본다 → VSCode에 빨간 밑줄, `npm run lint`에 에러 3개. 확인 후 파일 삭제
+  ```ts
+  import Phaser from 'phaser';
+  export const a = [Phaser, Math.random(), window];
+  ```
+- 같은 코드를 `src/main.ts`에 쓰면 에러가 안 난다 (core만 막는 규칙)
+- 코드 파일을 저장할 때 따옴표·들여쓰기가 자동 정리되면 Prettier 확장이 잘 붙은 것
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -64,3 +79,25 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 | `vite: command not found` 등 | `npm install`을 안 했거나 실패했다. 다시 실행 |
 | 휴대폰에서 `Network` 주소가 안 열림 | 같은 Wi-Fi인지 확인. macOS 방화벽이 Node 연결을 막고 있는지 확인 |
 | 화면이 갱신 안 됨 | 브라우저 강력 새로고침 `Cmd+Shift+R` |
+
+## 6. Study for App
+
+> 태스크마다 같이 공부하면 좋은 개념. **이 프로젝트의 어느 파일에서 쓰이는지**를 같이 적었으니 코드를 열어놓고 읽으면 좋다.
+
+### W1-01 프로젝트 세팅
+- **Vite**: 개발 서버 + 번들러. 저장하면 바로 반영되는 HMR, `npm run build`가 만드는 `dist/`의 정체 → `vite.config.ts`
+- **TypeScript strict 옵션**: `strict`, `noUncheckedIndexedAccess`(배열 `a[i]`가 `undefined`일 수 있다고 봄)가 왜 버그를 줄이는지 → `tsconfig.json`
+- **Phaser 게임 설정과 Scene**: `new Phaser.Game(config)`, Scene의 `preload / create / update` 생명주기, `Scale.FIT`으로 여러 화면 크기 대응 → `src/main.ts`
+- 참고: [Vite 가이드](https://vite.dev/guide/), [TS tsconfig 레퍼런스](https://www.typescriptlang.org/tsconfig/), [Phaser 3 Scenes](https://docs.phaser.io/phaser/concepts/scenes)
+
+### W1-02 Vitest
+- **단위 테스트의 구조**: `describe`(묶음) / `it`(한 가지 동작) / `expect(...).toBe(...)`(기대값) → `tests/sample.test.ts`
+- **왜 게임 로직부터 테스트하나**: 매치·낙하·연쇄는 눈으로 확인하기 어렵고, 고치다가 다른 곳이 깨지기 쉽다. 테스트가 안전망이 된다
+- **watch 모드**: `npm run test:watch`를 띄워두고 코드를 고치면 바로 결과가 보인다 (TDD의 빨강 → 초록 흐름)
+- 참고: [Vitest 시작하기](https://vitest.dev/guide/)
+
+### W1-03 ESLint + Prettier
+- **린터와 포매터의 차이**: ESLint는 "잘못될 수 있는 코드"를 잡고, Prettier는 "모양"만 맞춘다. 둘이 충돌하지 않게 `eslint-config-prettier`로 겹치는 규칙을 끈다 → `eslint.config.js`
+- **Flat config**: ESLint 9부터의 설정 방식. 배열 순서대로 덮어쓰고, `files`로 특정 폴더에만 규칙을 건다
+- **린트로 아키텍처 지키기**: `no-restricted-imports`로 `src/core`가 Phaser·view를 못 가져오게 막았다. "규칙을 문서에만 쓰지 말고 도구로 강제한다"는 생각이 핵심
+- 참고: [ESLint 설정](https://eslint.org/docs/latest/use/configure/configuration-files), [typescript-eslint](https://typescript-eslint.io/getting-started/), [Prettier 왜 쓰나](https://prettier.io/docs/why-prettier)

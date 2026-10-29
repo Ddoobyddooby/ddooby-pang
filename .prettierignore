@@ -1,0 +1,9 @@
+dist/
+coverage/
+android/
+package-lock.json
+.omc/
+.playwright-mcp/
+
+# 문서는 손으로 정리한다
+*.md

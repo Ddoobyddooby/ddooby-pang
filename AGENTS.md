@@ -16,7 +16,8 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 MVP 개발 중).
 - `docs/TASKS.md`의 위에서부터 첫 번째 미완료 태스크를 진행한다. 한 번에 태스크 하나.
 - 태스크의 **완료 기준**을 실제로 확인한 뒤에만 체크박스를 `[x]`로 바꾼다. 🧪 표시는 테스트 통과가 조건이다.
 - 규칙이나 설계를 바꿔야 하면 코드보다 문서(SPEC / PLAN)를 먼저 고친다.
-- 태스크를 마치면 `docs/DEVELOPMENT.md` 4절 "작업별 확인 방법"에 사용자가 직접 확인할 절차를 추가한다. 새 명령이 생기면 2절도 갱신한다.
+- 태스크를 마치면 `docs/DEVELOPMENT.md` 4절 "작업별 확인 방법"에 사용자가 직접 확인할 절차를, 6절 "Study for App"에 그 태스크에서 공부할 개념(쓰인 파일 포함)을 추가한다. 새 명령이 생기면 2절도 갱신한다.
+- 태스크 하나 = 커밋 하나 (`[feat] W1-xx 설명`). 커밋 전에 `npm run lint && npm test && npm run build`가 통과해야 한다.
 - `AGENTS.md`는 `CLAUDE.md`와 첫 줄 제목만 다른 사본이다. `CLAUDE.md`를 고치면 같이 맞춘다.
 
 ## 아키텍처 규칙 (어기지 않는다)
@@ -34,7 +35,8 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 MVP 개발 중).
 - `npm run typecheck`: `tsc --noEmit`
 - `npm run build`: 타입체크 + 프로덕션 빌드 (`dist/`)
 - `npm test`: Vitest 한 번 실행 (`tests/**/*.test.ts`) / `npm run test:watch`: 감시 모드
-- `npm run lint`: ESLint (W1-03에서 추가 예정)
+- `npm run lint`: ESLint (`src/core/**`의 phaser·view·scenes import, `Math.random`, DOM 사용을 에러로 막는다)
+- `npm run format`: Prettier (`*.md`는 제외)
 
 버전 고정 이유: Phaser는 SPEC대로 3.x(최신은 4.x). TypeScript는 typescript-eslint가 `<6.1`만 지원해서 `~6.0`.
 

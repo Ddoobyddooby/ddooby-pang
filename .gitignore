@@ -15,7 +15,9 @@ android/local.properties
 .env
 .env.*
 .DS_Store
-.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 .idea/
 
 # Playwright MCP 스크린샷·로그
