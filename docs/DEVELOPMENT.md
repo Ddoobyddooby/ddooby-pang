@@ -195,6 +195,26 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 이동이 늘거나 연쇄가 나서 글자가 길어지면 알약 폭도 같이 늘어난다
 - 위치·크기는 `src/config.ts`의 `HUD`
 
+### D-05 말랑 친구들 블록
+- `npm run dev` (예: `?seed=1234`) → 블록마다 눈·볼터치·입이 있고, 색마다 모양이 다르다
+- 블록 그림은 게임 시작 때 한 번 텍스처로 구워 두고 재사용한다. 표정을 바꿀 땐 텍스처만 갈아끼운다
+- 블록 크기는 `src/config.ts`의 `VIEW.blockScale`
+
+### D-06 말랑 움직임
+- `?demo` → 블록이 떨어져 착지할 때 납작했다 길쭉해졌다 돌아오고, 스왑할 때 살짝 커지고, 터지기 직전 눈이 `><`가 된다
+- 움직임은 크기만 바꾸고 위치는 안 바꾼다. Console에 `view ≠ board`가 없어야 한다
+
+### D-07 ~ D-09 연쇄 이펙트
+- `?demo` → 블록이 터질 때 그 블록 색의 하트 조각이 튄다. 연쇄 2단계부터 노란 별이 섞이고 칭찬 문구가 뜬다
+  - 2 `이안팡!` → 3 `이서팡!` (화면 흔들림 + 블록들이 `^^`) → 4 `보라팡!!` → 5 이상 `사랑해!!!`
+- 연쇄가 끝나면 문구가 사라지고 모든 블록이 평소 표정으로 돌아온다
+- 이펙트는 애니메이션 진행을 기다리게 하지 않는다. 입력 잠금 시간이 이전과 같다
+- 문구 바꾸기: `src/config.ts`의 `FX.praise` / 문구 모양·속도: `src/view/fx/FxDirector.ts` 맨 위 `PRAISE`
+
+### D-11 이펙트 미리보기 (개발 모드 전용)
+- `npm run dev` 화면을 클릭한 뒤 키보드 **1~5**를 누르면 그 연쇄 단계의 연출이 보드 가운데 행에서 터진다. 문구를 바꾼 뒤 바로 확인할 때 쓴다
+- `npm run build` 결과물에서는 키가 반응하지 않는다
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -376,3 +396,27 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **WOFF2**: 웹용으로 압축한 글꼴 형식. 같은 글꼴도 TTF보다 훨씬 작다 (2.1MB → 343KB)
 - **원본과 결과물 분리**: `public/`은 앱에 그대로 실리므로 원본은 `assets/fonts-src/`에 두고, 만든 결과물만 `public/`에 둔다. `npm run fonts:subset`으로 언제든 다시 만들 수 있다
 - **투명한 캔버스**: Phaser `transparent: true`면 캔버스 뒤의 HTML 배경이 비친다. 같은 그라데이션을 두 곳(캔버스, 페이지)에서 그리면 기준 높이가 달라 이음새가 생기므로 한 곳에서만 그린다 → `src/main.ts`, `index.html`
+
+### D-05 말랑 친구들 블록
+- **텍스처를 한 번 구워 재사용**: 블록 그림 27장(색 7 × 표정 3 + 특수 4 + 파티클 2)을 시작할 때 canvas에 그려 텍스처로 등록한다. 블록 64개가 매 프레임 도형을 다시 그리지 않아서 휴대폰에서 가볍다 → `src/view/theme/textures.ts`
+- **표정 = 텍스처 교체**: `setTexture('block-0-happy')`처럼 이미지만 바꾼다 → `src/view/BlockSprite.ts`
+- **큰 그림을 줄여 쓰기**: 160px로 그려 `setDisplaySize`로 칸 크기에 맞춘다. 고해상도 화면에서도 선명하다
+- **이름 충돌 조심**: Phaser 오브젝트에는 이미 `body`(물리 몸체) 같은 속성이 있다. 내 필드 이름이 겹치면 이상하게 동작하니 `faceImage`처럼 구체적으로 짓는다
+
+### D-06 말랑 움직임
+- **크기만 트윈하기**: 착지 눌림·스왑 팝은 `scaleX/scaleY`만 바꾼다. 위치를 건드리면 "화면 위치 = 게임 상태" 디버그 체크가 깨진다 → `BlockSprite.squish`, `pop`
+- **트윈 이어 붙이기**: 납작 → 길쭉 → 원래를 `onComplete`로 연결, 왕복은 `yoyo`
+- **`killTweensOf`**: 사라지는 블록에 남아 있는 트윈을 먼저 멈춰야 파괴된 오브젝트를 건드리는 오류가 안 난다 → `BoardView.removeSprite`
+
+### D-07 ~ D-09 연쇄 이펙트
+- **알림(hook)으로 분리**: BoardView는 "연쇄 N단계 매치가 났다"만 알리고, 어떤 연출을 할지는 FxDirector가 정한다. 2주차 특수 블록 연출도 FxDirector에만 더하면 된다 → `BoardViewHooks`, `src/view/fx/FxDirector.ts`
+- **서로를 필요로 하는 두 객체 만들기**: BoardView는 FxDirector에 알려야 하고, FxDirector는 BoardView의 표정을 바꿔야 한다. 빈 `hooks` 객체를 먼저 만들어 넘기고 나중에 채운다 → `GameScene.create`
+- **파티클 이미터 재사용**: 이미터를 한 번 만들고 `explode(개수, x, y)`로 그때그때 터뜨린다. 흰 하트에 `setParticleTint`로 블록 색을 입힌다
+- **타이머 하나만 두기**: 웃는 표정 타이머가 여러 개면 서로 엇갈려 표정이 안 풀린다. 새 연쇄가 오면 기존 타이머를 취소하고 다시 건다 → `FxDirector.beHappy`
+- **카메라 흔들림**: `cameras.main.shake`는 화면(카메라)만 흔들고 오브젝트 위치는 그대로다
+- 참고: [Phaser Particles](https://docs.phaser.io/phaser/concepts/gameobjects/particles), [Phaser Camera shake](https://docs.phaser.io/api-documentation/class/cameras-scene2d-effects-shake)
+
+### D-11 이펙트 미리보기
+- **개발 전용 코드**: `import.meta.env.DEV` 안의 코드는 배포 빌드에서 통째로 빠진다
+- **키보드 입력**: `this.input.keyboard.on('keydown', …)`로 숫자 키를 받는다
+- **연출과 상태 분리 덕분에 가능한 기능**: 블록을 실제로 지우지 않고 "지운 것처럼" 연출만 재생할 수 있다
