@@ -19,8 +19,11 @@
         margin: 0;
         padding: 0;
         height: 100%;
-        background: #1b1b2f;
         overflow: hidden;
+      }
+      html {
+        /* src/config.ts THEME.sky와 같은 값. 캔버스 밖 여백(letterbox)을 하늘로 잇는다 */
+        background: linear-gradient(to bottom, #bfe4ff, #ffd9ea) no-repeat fixed;
       }
       #game {
         width: 100%;
