@@ -113,6 +113,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - `NO_MOVE` 보드(테스트 파일 맨 위)를 보고 정말 둘 수가 없는지 직접 찾아보자. 그 보드를 셔플하면 수가 생긴다
 - 변경 사항: `shuffle` 이벤트가 `{ id, to }` 대신 `{ block, to }`를 담도록 바꿨다 (PLAN 4.2도 수정). 셔플이 실패해 보드를 새로 만들면 색과 id가 바뀌기 때문
 
+### W1-12 처리 루프 (resolveSwap)
+- `npm test` → `tests/core/engine.test.ts` 9개 통과
+- 테스트의 `CASCADE` 보드를 종이에 그려서 따라가 보자: (3,0)↔(3,1) 스왑 → 세로 RRR 제거 → P가 3칸 떨어져 맨 아랫줄 PPP → 연쇄
+- 결과의 `steps`가 애니메이션 대본이다. `[swap]` → `[match, remove]` → `[fall, refill]` → (연쇄 반복) → `[shuffle]`(필요할 때만)
+- 아직 화면에는 연결되지 않았다 (W1-18에서 연결)
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -207,3 +213,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **기준 구현과 비교하는 테스트**: 빠른 `hasAnyMove`를 느리지만 확실한 전수 탐색과 랜덤 보드 300개로 비교했다
 - **"불가능한 입력" 만들기**: 수 없는 보드는 `(c + 2r) % 4` 같은 규칙적인 패턴으로 만들었다. 이번에도 "3색 3개씩이면 못 푼다"는 내 가정이 틀려서 테스트가 먼저 실패했다
 - 참고: [Fisher-Yates (위키백과)](https://ko.wikipedia.org/wiki/피셔-예이츠_셔플)
+
+### W1-12 처리 루프 (resolveSwap)
+- **게임 루프를 함수 하나로**: 입력(상태 + 스왑) → 출력(새 상태 + 단계별 이벤트). 화면과 시간에 상관없이 "결과"를 한 번에 계산하고, 화면은 그걸 천천히 재생한다. Redux의 reducer와 같은 생각이다 → `src/core/engine.ts`
+- **오케스트레이션**: engine은 직접 계산을 거의 안 한다. matcher, gravity, moves를 순서대로 부르고 이벤트를 모은다. 각 모듈을 따로 테스트했기 때문에 engine 테스트는 "흐름"에만 집중할 수 있다
+- **불변 조건(invariant)과 assert**: "resolve가 끝나면 빈칸 0, 매치 0, 수 ≥ 1"을 매번 검사하고 어기면 바로 에러. 버그가 화면에서 이상하게 보이기 전에 원인 근처에서 멈추게 한다 → `assertInvariants`
+- **무한 루프 방지 상한**: 연쇄가 50번을 넘으면 에러. 테스트에서는 색을 1개로 만들어 일부러 무한 연쇄를 일으켜 상한이 동작하는지 확인했다
+- **상태를 "덮어쓰지 않는" 루프**: `board = ...`로 지역 변수만 갈아끼우고, 들어온 `state`는 그대로 둔다. 그래서 매치 없는 스왑은 원래 `state` 객체를 그대로 돌려줄 수 있다
+- 참고: [Redux: reducer 개념](https://redux.js.org/tutorials/fundamentals/part-3-state-actions-reducers), [Invariant (위키백과)](https://en.wikipedia.org/wiki/Invariant_(mathematics)#Invariants_in_computer_science)
