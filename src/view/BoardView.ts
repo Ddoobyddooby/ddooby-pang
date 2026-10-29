@@ -7,6 +7,7 @@ import type { Block, Board, GameEvent, Pos } from '../core/types';
 import { BlockSprite } from './BlockSprite';
 import { EventTracker } from './eventTracker';
 import { cellAt, cellCenter, type Layout } from './layout';
+import { ensureTextures } from './theme/textures';
 import { tween } from './tween';
 
 export class BoardView {
@@ -19,6 +20,7 @@ export class BoardView {
     board: Board,
     private readonly layout: Layout,
   ) {
+    ensureTextures(scene);
     const { x, y, width, height } = layout;
     scene.add.rectangle(x, y, width, height, VIEW.boardBackground).setOrigin(0);
 
@@ -134,12 +136,16 @@ export class BoardView {
     const sprite = this.sprites.get(id);
     if (!sprite) return Promise.resolve();
     this.sprites.delete(id);
+    sprite.removing = true;
     return tween(this.scene, {
       targets: sprite,
       scale: 0,
       alpha: 0,
       duration: ANIM.remove,
       ease: 'Back.easeIn',
-    }).then(() => sprite.destroy());
+    }).then(() => {
+      this.scene.tweens.killTweensOf(sprite);
+      sprite.destroy();
+    });
   }
 }
