@@ -76,6 +76,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - `npm run dev` → W1-01과 같은 화면이 그대로 나와야 한다 (BootScene을 `src/scenes/`로 옮기기만 했다)
 - 수치 바꿔보기: `src/config.ts`의 `GAME.backgroundColor`를 `'#004400'`로 바꾸고 저장 → 브라우저 배경이 초록으로 바뀐다 (확인 후 되돌리기)
 
+### W1-05 core 타입
+- `npm test` → `tests/core/types.test.ts` 5개 통과
+- `npm run typecheck` → 통과. **타입 테스트는 typecheck가 실제 검사를 한다** (런타임엔 타입이 없으니까)
+- 직접 확인: `src/core/types.ts`에서 `Color`의 `| 5`를 지우고 `npm run typecheck` → 에러. 되돌리기
+- VSCode에서 `GameEvent` 위에 마우스를 올리면 이벤트 종류가 다 보인다
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -113,3 +119,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **`as const`**: 객체를 읽기 전용 + 리터럴 타입으로 만든다. `GAME.width`가 `number`가 아니라 `720` 타입이 되고, 실수로 값을 바꾸는 코드를 컴파일러가 막는다
 - **ES 모듈 `import / export`**: 파일 하나가 모듈 하나. `export class BootScene` → `import { BootScene } from './scenes/BootScene'` → `src/main.ts`
 - 참고: [TS const assertions](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-4.html#const-assertions), [MDN 모듈](https://developer.mozilla.org/ko/docs/Web/JavaScript/Guide/Modules)
+
+### W1-05 core 타입
+- **유니온 타입과 판별 유니온(discriminated union)**: `GameEvent`는 `type` 필드 값으로 종류를 구분한다. `if (e.type === 'fall')` 안에서는 TS가 `e.moves`가 있다는 걸 안다. 이벤트 기반 설계의 핵심 도구 → `src/core/types.ts`
+- **`readonly`와 불변 데이터**: 보드를 직접 고치지 않고 매번 새 보드를 만든다. `readonly`를 붙이면 실수로 고치는 코드를 컴파일러가 막는다. 버그 추적과 되돌리기(undo)가 쉬워진다
+- **2차원 보드를 1차원 배열로**: `cells[r * cols + c]`. 복사·비교가 단순해진다
+- **`interface` vs `type`**: 객체 모양은 `interface`, 유니온·조합은 `type`으로 쓰는 게 일반적
+- **타입 테스트**: `expectTypeOf`로 "타입이 내가 의도한 모양인지"를 테스트한다 → `tests/core/types.test.ts`
+- 참고: [TS 핸드북: Narrowing](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions), [Vitest 타입 테스트](https://vitest.dev/guide/testing-types)

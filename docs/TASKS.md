@@ -18,7 +18,7 @@
 - [x] **W1-04** 폴더 구조 생성 (`core/ modes/ scenes/ view/ data/ storage/`), `config.ts` 뼈대
 
 ### core
-- [ ] **W1-05** 🧪 `core/types.ts` — Color, Block, Pos, Board, GameState, GameEvent, MatchGroup
+- [x] **W1-05** 🧪 `core/types.ts` — Color, Block, Pos, Board, GameState, GameEvent, MatchGroup
 - [ ] **W1-06** 🧪 `core/rng.ts` — mulberry32 순수 함수 `next(state) → [value, state]`
   - 완료: 같은 seed → 같은 수열
 - [ ] **W1-07** 🧪 테스트 헬퍼 `parseBoard()` / `printBoard()` (문자열 ↔ Board)
