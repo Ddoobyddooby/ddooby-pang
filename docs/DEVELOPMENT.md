@@ -32,6 +32,7 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 | `npm run typecheck` | 타입 에러만 확인 |
 | `npm run lint` | ESLint 규칙 검사 (core 의존성 규칙 포함) |
 | `npm run format` | Prettier로 코드 정리 (md 문서는 제외) |
+| `npm run fonts:subset` | Jua 글꼴을 상용 한글 2,350자 + 영문·기호만 남긴 WOFF2로 다시 만든다 (원본: `assets/fonts-src/`) |
 | `npm run build` | 타입체크 + 배포용 빌드 (`dist/`) |
 
 ## 3. 게임 화면 확인하기
@@ -179,12 +180,15 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 ### D-03 Jua 글꼴
 - `npm run dev` → 타이틀과 표시줄이 둥근 Jua 글꼴로 보이면 정상
 - Console에 `document.fonts.check('48px Jua')` 입력 → `true`
-- 글꼴 파일은 `public/fonts/Jua-Regular.ttf` (라이선스 `OFL.txt`). 인터넷이 없어도 앱 안의 파일을 쓴다. 글꼴을 못 불러와도 2초 뒤에는 기본 글꼴로 게임이 시작된다
+- 글꼴 파일은 `public/fonts/Jua-subset.woff2` (343KB, 라이선스 `OFL.txt`). 원본 2.1MB에서 상용 한글 2,350자 + 영문·기호만 남겼다. 인터넷이 없어도 앱 안의 파일을 쓴다. 글꼴을 못 불러와도 2초 뒤에는 기본 글꼴로 게임이 시작된다
+- 개발자도구 Network 탭에서 `Jua-subset.woff2`가 약 343KB로 받아지는지 확인
+- 2,350자에 없는 글자(드문 한글, 일부 기호)는 기본 글꼴로 보인다. 원본 Jua에도 `·` `…` `×`는 없다
 
 ### D-04 배경 + 웨이퍼 보드판
 - `npm run dev` → 하늘색에서 분홍으로 넘어가는 하늘, 천천히 좌우로 움직이는 구름, 깜빡이는 작은 별, 베이지색 웨이퍼 보드판
 - 블록이 위에서 떨어질 때 보드판 밖(하늘)으로 비치지 않는다
 - 구름·별 위치와 보드판 두께는 `src/config.ts`의 `DECOR`에서 바꾼다
+- 하늘 그라데이션은 웹페이지 배경(`index.html`) 하나로 그리고 게임 화면은 투명하다. 창 크기를 바꿔도 하늘이 한 장으로 이어진다. **하늘 색을 바꿀 땐 `index.html`과 `THEME.sky` 둘 다**
 
 ### D-10 HUD
 - 분홍 Jua 타이틀(흰 테두리)과 그 아래 흰 알약 모양 표시줄(`seed · 이동 · 연쇄`)
@@ -368,3 +372,7 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **외곽선 글자**: Text 스타일의 `stroke` / `strokeThickness`로 흰 테두리를 둘러 어떤 배경에서도 읽히게 한다 → `src/view/Hud.ts`
 - **내용에 맞춰 다시 그리기**: 글자를 바꾼 뒤 `text.width`를 읽고, 알약 Graphics를 `clear()` 후 그 폭으로 다시 그린다 → `Hud.setInfo`
 - **화면 조각을 작은 클래스로**: GameScene은 `hud.setInfo('…')`만 부르고, 어떻게 그릴지는 `Hud`가 안다. 모드 화면을 만들 때 HUD만 갈아끼우기 쉽다
+- **글꼴 서브셋(subset)**: 쓸 글자만 남겨 용량을 줄인다. 한글 상용 2,350자는 옛 한글 인코딩(EUC-KR) 범위와 같아서 그 범위를 돌며 글자를 만든다 → `scripts/subset-font.mjs`
+- **WOFF2**: 웹용으로 압축한 글꼴 형식. 같은 글꼴도 TTF보다 훨씬 작다 (2.1MB → 343KB)
+- **원본과 결과물 분리**: `public/`은 앱에 그대로 실리므로 원본은 `assets/fonts-src/`에 두고, 만든 결과물만 `public/`에 둔다. `npm run fonts:subset`으로 언제든 다시 만들 수 있다
+- **투명한 캔버스**: Phaser `transparent: true`면 캔버스 뒤의 HTML 배경이 비친다. 같은 그라데이션을 두 곳(캔버스, 페이지)에서 그리면 기준 높이가 달라 이음새가 생기므로 한 곳에서만 그린다 → `src/main.ts`, `index.html`
