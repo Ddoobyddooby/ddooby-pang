@@ -101,3 +101,28 @@ export const FX = {
   happyFromLevel: 3,
   happyMs: 600,
 } as const;
+
+/** 배경 장식 (구름·별)과 웨이퍼 보드판 모양 */
+export const DECOR = {
+  /** x, y = 화면 좌표, scale = 크기 배율, drift = 좌우 이동 거리(px), ms = 왕복 시간 */
+  clouds: [
+    { x: 130, y: 90, scale: 1.0, drift: 60, ms: 24000 },
+    { x: 560, y: 150, scale: 0.8, drift: 50, ms: 32000 },
+    { x: 300, y: 1050, scale: 1.2, drift: 70, ms: 38000 },
+    { x: 620, y: 1180, scale: 0.9, drift: 55, ms: 28000 },
+  ],
+  cloudAlpha: 0.9,
+  stars: [
+    { x: 80, y: 250 },
+    { x: 650, y: 60 },
+    { x: 400, y: 1130 },
+    { x: 60, y: 1000 },
+    { x: 670, y: 980 },
+    { x: 220, y: 40 },
+  ],
+  starRadius: 10,
+  twinkleMs: 1400,
+  twinkleAlpha: { min: 0.3, max: 1 },
+  /** 보드판: 칸 영역보다 사방으로 이만큼 크다 */
+  frame: { pad: 10, radius: 18, border: 4, grainLines: 4, grainAlpha: 0.6 },
+} as const;

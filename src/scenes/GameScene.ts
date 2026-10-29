@@ -13,6 +13,8 @@ import type { GameState, Pos } from '../core/types';
 import { BoardView } from '../view/BoardView';
 import { SwipeInput } from '../view/input';
 import { createLayout } from '../view/layout';
+import { Background } from '../view/theme/Background';
+import { drawBoardFrame } from '../view/theme/BoardFrame';
 
 const COLORS = 5;
 
@@ -42,6 +44,8 @@ export class GameScene extends Phaser.Scene {
       seed: this.seed,
     });
     const layout = createLayout(BOARD.rows, BOARD.cols);
+    new Background(this);
+    drawBoardFrame(this, layout);
     this.view = new BoardView(this, this.state.board, layout);
 
     this.add
