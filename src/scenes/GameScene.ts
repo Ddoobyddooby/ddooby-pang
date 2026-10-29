@@ -45,7 +45,7 @@ export class GameScene extends Phaser.Scene {
     this.view = new BoardView(this, this.state.board, layout);
 
     this.add
-      .text(GAME.width / 2, 80, 'ddooby-pang', { fontSize: '48px', color: '#ffffff' })
+      .text(GAME.width / 2, 80, 'Ddooby-Pang', { fontSize: '48px', color: '#ffffff' })
       .setOrigin(0.5);
     this.info = this.add
       .text(GAME.width / 2, 150, '', { fontSize: '26px', color: '#b8b8d0' })

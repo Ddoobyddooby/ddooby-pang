@@ -40,6 +40,7 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
    ```
    ➜  Local:   http://localhost:5173/
    ➜  Network: http://192.168.x.x:5173/
+   ➜  VPN : http://100.x.x.x:5173/
    ```
 2. **PC 브라우저**: `Local` 주소를 연다 (`Cmd` + 클릭)
 3. **휴대폰 크기로 보기**: Chrome 개발자도구(`Cmd+Option+I`) → 기기 툴바(`Cmd+Shift+M`) → iPhone 등 선택
