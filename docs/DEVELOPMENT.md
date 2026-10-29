@@ -119,6 +119,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 결과의 `steps`가 애니메이션 대본이다. `[swap]` → `[match, remove]` → `[fall, refill]` → (연쇄 반복) → `[shuffle]`(필요할 때만)
 - 아직 화면에는 연결되지 않았다 (W1-18에서 연결)
 
+### W1-13 seed 1~1000 초기 보드
+- `npm test` → `tests/core/initialBoard.test.ts` 통과 (색 5종·6종 × seed 1000개)
+- SPEC 10절 수용 기준 2개(시작 보드 매치 0 + 수 ≥ 1, 같은 seed → 같은 보드)를 이 테스트가 확인한다
+- `tests/core/__snapshots__/initialBoard.test.ts.snap`을 열면 seed 1001의 시작 보드가 그림으로 저장돼 있다
+- 보드 생성 코드를 일부러 바꿔서 스냅샷이 다르게 나오면 테스트가 실패한다. **의도한 변경이면** `npx vitest run -u`로 스냅샷을 갱신한다 (기존 스테이지의 시작 보드가 바뀐다는 뜻이니 신중하게)
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -221,3 +227,10 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **무한 루프 방지 상한**: 연쇄가 50번을 넘으면 에러. 테스트에서는 색을 1개로 만들어 일부러 무한 연쇄를 일으켜 상한이 동작하는지 확인했다
 - **상태를 "덮어쓰지 않는" 루프**: `board = ...`로 지역 변수만 갈아끼우고, 들어온 `state`는 그대로 둔다. 그래서 매치 없는 스왑은 원래 `state` 객체를 그대로 돌려줄 수 있다
 - 참고: [Redux: reducer 개념](https://redux.js.org/tutorials/fundamentals/part-3-state-actions-reducers), [Invariant (위키백과)](https://en.wikipedia.org/wiki/Invariant_(mathematics)#Invariants_in_computer_science)
+
+### W1-13 seed 1~1000 초기 보드
+- **수용 기준을 테스트로 옮기기**: SPEC의 "seed 1~1000에서 매치 0, 수 ≥ 1"을 그대로 코드로 적었다. 문서의 약속이 자동으로 지켜지는지 매번 확인된다 → `tests/core/initialBoard.test.ts`
+- **스냅샷 테스트**: 결과를 파일에 저장해두고 다음 실행 결과와 비교한다. "값이 맞는지"보다 "**바뀌었는지**"를 잡는 용도. 여기서는 스테이지 1의 시작 보드가 몰래 바뀌는 걸 막는다
+- **결정성(determinism)의 가치**: 같은 seed → 같은 보드. 조카가 "3번 스테이지 시작하자마자 이상해"라고 하면 seed로 똑같은 보드를 다시 만들어볼 수 있다
+- **`describe.each`**: 테스트 묶음 전체를 여러 설정(색 5종, 6종)으로 반복한다
+- 참고: [Vitest 스냅샷](https://vitest.dev/guide/snapshot.html)

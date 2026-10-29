@@ -5,10 +5,27 @@ import { BOARD } from '../config';
 import { getBlock, indexOf, inBounds, isAdjacent, swapBlocks } from './board';
 import { applyGravity, refill } from './gravity';
 import { findMatches } from './matcher';
-import { hasAnyMove, shuffle } from './moves';
+import { createPlayableBoard, hasAnyMove, shuffle } from './moves';
+import { createRng } from './rng';
 import type { Board, GameEvent, GameState, Pos, ResolveResult } from './types';
 
 const COLOR_COUNT = 6;
+
+/** 게임 시작 상태. 같은 seed면 항상 같은 보드 (SPEC 6절 seed, 10절 수용 기준) */
+export function createInitialState(options: {
+  rows: number;
+  cols: number;
+  colors: number;
+  seed: number;
+}): GameState {
+  const [board, rngState] = createPlayableBoard(
+    options.rows,
+    options.cols,
+    options.colors,
+    createRng(options.seed),
+  );
+  return { board, rngState, colors: options.colors };
+}
 
 function invalid(state: GameState, steps: GameEvent[][]): ResolveResult {
   return {

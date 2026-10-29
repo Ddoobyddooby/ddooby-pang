@@ -1,0 +1,12 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`스테이지 데이터 예시(SPEC 6절 seed 1001)의 보드가 고정돼 있다 1`] = `
+"R  Y  R  Y  B  P  G  P
+B  Y  R  R  B  G  P  B
+G  G  P  P  Y  G  Y  B
+G  R  G  B  G  B  G  P
+P  G  B  R  G  G  R  Y
+Y  B  R  P  Y  B  P  B
+P  R  G  G  Y  Y  P  Y
+P  Y  R  Y  G  G  R  G"
+`;
