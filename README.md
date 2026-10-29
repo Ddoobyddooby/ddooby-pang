@@ -15,6 +15,16 @@
 
 Phaser 3 · TypeScript (strict) · Vite · Capacitor (Android) · Vitest
 
+## 시작하기
+
+Node.js 20.19 이상이 필요하다.
+
+```bash
+npm install
+npm run dev     # http://localhost:5173
+npm run build   # 타입체크 + dist/ 빌드
+```
+
 ## 문서
 
 | 문서 | 내용 |

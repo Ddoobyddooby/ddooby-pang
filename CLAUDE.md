@@ -27,11 +27,13 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 MVP 개발 중).
 
 ## 명령어
 
-W1-01 ~ W1-03 이후 사용 가능 (생기면 여기를 실제 명령으로 갱신한다).
+- `npm run dev`: 개발 서버 (http://localhost:5173)
+- `npm run typecheck`: `tsc --noEmit`
+- `npm run build`: 타입체크 + 프로덕션 빌드 (`dist/`)
+- `npm test`: Vitest (W1-02에서 추가 예정)
+- `npm run lint`: ESLint (W1-03에서 추가 예정)
 
-- `npm run dev`: 개발 서버
-- `npm test`: Vitest
-- `npm run lint`: ESLint
+버전 고정 이유: Phaser는 SPEC대로 3.x(최신은 4.x). TypeScript는 typescript-eslint가 `<6.1`만 지원해서 `~6.0`.
 
 ## Git
 

@@ -9,7 +9,7 @@
 ## 1주차 — 코어 엔진
 
 ### 세팅
-- [ ] **W1-01** Vite + TypeScript(strict) 프로젝트 생성, Phaser 3 설치
+- [x] **W1-01** Vite + TypeScript(strict) 프로젝트 생성, Phaser 3 설치
   - 완료: `npm run dev`로 빈 Phaser 캔버스(720x1280, FIT) 표시
 - [ ] **W1-02** Vitest 설정, `npm test` 스크립트
   - 완료: 샘플 테스트 1개 통과
