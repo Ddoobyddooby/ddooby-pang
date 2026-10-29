@@ -10,8 +10,9 @@ import { BOARD } from '../config';
 import { createInitialState, resolveSwap } from '../core/engine';
 import { findHint } from '../core/moves';
 import type { GameState, Pos } from '../core/types';
-import { BoardView } from '../view/BoardView';
+import { BoardView, type BoardViewHooks } from '../view/BoardView';
 import { Hud } from '../view/Hud';
+import { FxDirector } from '../view/fx/FxDirector';
 import { SwipeInput } from '../view/input';
 import { createLayout } from '../view/layout';
 import { Background } from '../view/theme/Background';
@@ -47,7 +48,10 @@ export class GameScene extends Phaser.Scene {
     const layout = createLayout(BOARD.rows, BOARD.cols);
     new Background(this);
     drawBoardFrame(this, layout);
-    this.view = new BoardView(this, this.state.board, layout);
+    const hooks: BoardViewHooks = {}; // FxDirector가 BoardView를 필요로 해서 알림 연결은 나중에 채운다
+    this.view = new BoardView(this, this.state.board, layout, hooks);
+    const fx = new FxDirector(this, layout, this.view);
+    hooks.onMatch = (level, removed) => fx.playMatch(level, removed);
 
     this.hud = new Hud(this, 'Ddooby-Pang');
     this.updateInfo();

@@ -7,8 +7,15 @@ import type { Block, Board, GameEvent, Pos } from '../core/types';
 import { BlockSprite } from './BlockSprite';
 import { EventTracker } from './eventTracker';
 import { cellAt, cellCenter, type Layout } from './layout';
-import { ensureTextures } from './theme/textures';
+import { cascadeToLevel } from './fx/fxLevels';
+import { removedFromMatch, type RemovedCell } from './fx/matchInfo';
+import { ensureTextures, type Face } from './theme/textures';
 import { tween } from './tween';
+
+export interface BoardViewHooks {
+  /** match 이벤트를 재생하기 시작할 때 동기로 부른다. 연출은 기다리지 않는다 */
+  onMatch?(level: number, removed: readonly RemovedCell[]): void;
+}
 
 export class BoardView {
   private readonly sprites = new Map<number, BlockSprite>();
@@ -19,6 +26,7 @@ export class BoardView {
     private readonly scene: Phaser.Scene,
     board: Board,
     private readonly layout: Layout,
+    private readonly hooks: BoardViewHooks = {},
   ) {
     ensureTextures(scene);
     const { x, y, width, height } = layout;
@@ -40,6 +48,13 @@ export class BoardView {
   async play(steps: readonly (readonly GameEvent[])[]): Promise<void> {
     for (const step of steps) {
       await Promise.all(step.map((event) => this.playEvent(event)));
+    }
+  }
+
+  /** 모든 블록의 표정을 바꾼다. 사라지는 중인 블록은 건너뛴다 */
+  setFaces(face: Face): void {
+    for (const sprite of this.sprites.values()) {
+      if (!sprite.removing) sprite.setFace(face);
     }
   }
 
@@ -97,6 +112,9 @@ export class BoardView {
         return Promise.resolve();
 
       case 'match':
+        this.hooks.onMatch?.(cascadeToLevel(event.cascade), removedFromMatch(event.groups));
+        return Promise.resolve();
+
       case 'activate':
       case 'score':
         return Promise.resolve();
