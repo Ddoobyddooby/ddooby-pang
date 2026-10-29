@@ -46,6 +46,16 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 4. **실제 휴대폰으로 보기**: PC와 같은 Wi-Fi에 연결한 뒤 휴대폰 브라우저로 `Network` 주소를 연다
 5. 에러가 나면 개발자도구의 **Console** 탭을 확인한다
 
+**URL 옵션 (개발용)**
+
+| 주소 | 동작 |
+|---|---|
+| `http://localhost:5173/` | 매번 다른 보드 (화면 위에 seed가 표시된다) |
+| `http://localhost:5173/?seed=1001` | 항상 같은 시작 보드. 버그를 봤으면 seed를 적어두고 이 주소로 재현 |
+| `http://localhost:5173/?demo` | 힌트 수를 자동으로 둔다 (`?seed=42&demo`처럼 같이 써도 된다) |
+
+개발 모드(`npm run dev`)에서는 매 턴 화면과 게임 상태가 같은지 검사한다. Console에 `[game] view ≠ board`가 찍히면 버그이니 seed와 함께 기록해두자.
+
 ## 4. 작업별 확인 방법
 
 ### W1-01 프로젝트 세팅
@@ -149,6 +159,16 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 확인할 것: 조금만 끌면(칸의 30% 미만) 반응 없음 / 대각선으로 끌면 더 많이 움직인 방향 / 보드 끝에서 바깥으로 밀면 반응 없음 / 한 번 누르면 스왑은 한 번만
 - 휴대폰으로도 확인: `npm run dev`의 `Network` 주소를 휴대폰에서 열고 손가락으로 밀어보기 (터치도 같은 코드로 처리된다)
 - `npm test` → `tests/view/input.test.ts` 5개 통과
+
+### W1-18 GameScene (1주차 완료)
+- `npm run dev` → 블록을 밀어서 같은 색 3개를 맞추면 터지고, 위에서 블록이 떨어지고, 연쇄가 일어난다. 화면 위에 `seed · 이동 수 · 연쇄 xN`이 보인다
+- 확인할 것:
+  - 매치가 안 되는 방향으로 밀면 블록이 바뀌었다가 **되돌아오고** 이동 수가 늘지 않는다
+  - 애니메이션 중에 다른 블록을 밀어도 **무시**된다
+  - 수가 없어지면 블록이 섞인다 (자주 일어나진 않는다)
+  - Console에 빨간 에러(`view ≠ board`)가 없다
+- `?seed=1001`로 열면 매번 같은 보드, `?demo`로 열면 자동 플레이
+- **1주차 완료 기준**: 브라우저에서 3매치·연쇄가 돈다 + `npm test` 전부 통과 → 둘 다 충족
 
 ## 5. 문제 해결
 
@@ -292,3 +312,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **입력과 규칙의 분리**: 입력은 "(3,3)과 (3,4)를 바꾸고 싶다"만 전한다. 그게 유효한지는 core가 판단한다. 그래서 W2-13에서 탭-탭 입력을 추가해도 core는 그대로다
 - **이벤트 리스너 정리**: 씬이 끝날 때(`shutdown`) `off`로 리스너를 떼야 씬을 다시 시작할 때 입력이 두 번 들어오지 않는다
 - 참고: [Phaser Input](https://docs.phaser.io/phaser/concepts/input), [MDN Pointer events](https://developer.mozilla.org/ko/docs/Web/API/Pointer_events)
+
+### W1-18 GameScene
+- **게임 루프의 전체 흐름**: 입력(`SwipeInput`) → 규칙(`resolveSwap`, core) → 재생(`BoardView.play`) → 상태 교체. Scene은 이 셋을 잇는 접착제 역할만 한다 → `src/scenes/GameScene.ts`
+- **busy 플래그 (입력 잠금)**: 애니메이션이 끝나기 전에 다음 입력을 받으면 화면과 상태가 어긋난다. `await play()` 동안 입력을 끄고, 끝나면 켠다. 작은 상태 머신(대기 ↔ 재생 중)이다
+- **화면은 상태를 따라간다**: Scene은 `result.state`로 상태를 통째로 바꾼다. 블록 위치를 화면에서 계산하지 않는다
+- **Scene 생명주기와 전환**: `BootScene.create()` → `this.scene.start('Game')`. 나중에 메뉴·결과 화면도 같은 방식으로 이어진다
+- **개발 전용 코드**: `import.meta.env.DEV`일 때만 디버그 체크와 `window.__ddooby` 훅이 켜진다. 배포 빌드에서는 빠진다. 브라우저 Console에서 `__ddooby.state()`로 현재 보드를 볼 수 있다
+- **URL 파라미터로 디버그 옵션**: `URLSearchParams`로 `?seed`, `?demo`를 읽는다. 코드를 안 고치고 상황을 재현할 수 있다
+- 참고: [Phaser Scene 전환](https://docs.phaser.io/phaser/concepts/scenes#starting-a-scene), [Vite 환경 변수](https://vite.dev/guide/env-and-mode), [MDN URLSearchParams](https://developer.mozilla.org/ko/docs/Web/API/URLSearchParams)
