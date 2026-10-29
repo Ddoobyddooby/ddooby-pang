@@ -144,6 +144,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 애니메이션 속도 바꿔보기: `src/config.ts`의 `ANIM.fallPerCell`을 `300`으로 → 낙하가 느려져서 동작이 잘 보인다. 되돌리기
 - `npm test` → `tests/view/eventTracker.test.ts` 3개 + 퍼즈 테스트가 view의 `EventTracker`도 검사한다
 
+### W1-17 스와이프 입력
+- `npm run dev` → "블록을 밀어보세요" 화면. 블록을 마우스로 눌러 옆으로 끌면 위 글자가 `swap (3,3) → (3,4)`처럼 바뀐다 (아직 블록은 안 움직인다. W1-18에서 연결)
+- 확인할 것: 조금만 끌면(칸의 30% 미만) 반응 없음 / 대각선으로 끌면 더 많이 움직인 방향 / 보드 끝에서 바깥으로 밀면 반응 없음 / 한 번 누르면 스왑은 한 번만
+- 휴대폰으로도 확인: `npm run dev`의 `Network` 주소를 휴대폰에서 열고 손가락으로 밀어보기 (터치도 같은 코드로 처리된다)
+- `npm test` → `tests/view/input.test.ts` 5개 통과
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -278,3 +284,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **테스트 가능한 부분을 떼어내기**: Phaser는 테스트에서 돌리기 어렵다. 위치 추적(`EventTracker`)만 순수 코드로 분리해 퍼즈 테스트 5000수로 검증하고, Phaser 쪽은 얇게 유지했다
 - **런타임 디버그 체크**: 데모가 매 턴 "스프라이트 실제 위치 = core 보드"를 확인한다. 테스트로 못 잡는 화면 쪽 버그를 개발 중에 바로 알 수 있다
 - 참고: [Phaser Tweens](https://docs.phaser.io/phaser/concepts/tweens), [easings.net (ease 그래프)](https://easings.net/ko), [MDN async/await](https://developer.mozilla.org/ko/docs/Learn/JavaScript/Asynchronous/Promises)
+
+### W1-17 스와이프 입력
+- **포인터 이벤트 3종**: `pointerdown`(누름) → `pointermove`(끄는 중) → `pointerup`(뗌). Phaser는 마우스와 터치를 "포인터" 하나로 합쳐서 준다 → `src/view/input.ts`
+- **입력 판정을 순수 함수로**: "누른 칸 + 끈 거리 → 상대 칸"을 `swipeTarget`으로 떼어내 테스트했다. Phaser 이벤트 연결(`SwipeInput`)은 이 함수를 부르기만 한다
+- **문턱값(threshold)과 데드존**: 손가락은 누를 때 조금씩 흔들린다. 칸의 30%를 넘어야 스와이프로 인정해서 실수 입력을 막는다. 값은 `VIEW.swipeThreshold`
+- **입력과 규칙의 분리**: 입력은 "(3,3)과 (3,4)를 바꾸고 싶다"만 전한다. 그게 유효한지는 core가 판단한다. 그래서 W2-13에서 탭-탭 입력을 추가해도 core는 그대로다
+- **이벤트 리스너 정리**: 씬이 끝날 때(`shutdown`) `off`로 리스너를 떼야 씬을 다시 시작할 때 입력이 두 번 들어오지 않는다
+- 참고: [Phaser Input](https://docs.phaser.io/phaser/concepts/input), [MDN Pointer events](https://developer.mozilla.org/ko/docs/Web/API/Pointer_events)

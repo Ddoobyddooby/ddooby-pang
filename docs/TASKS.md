@@ -37,7 +37,7 @@
 ### view (최소)
 - [x] **W1-15** `view/BlockSprite.ts` — 색별 단색 도형
 - [x] **W1-16** `view/BoardView.ts` — `Map<id, sprite>`, `play(steps)` (swap / swapBack / remove / fall / refill 트윈)
-- [ ] **W1-17** `view/input.ts` — 스와이프 입력 → `{a, b}`
+- [x] **W1-17** `view/input.ts` — 스와이프 입력 → `{a, b}`
 - [ ] **W1-18** 👀 `GameScene` 임시 버전: 보드 표시 + 입력 + resolve + 재생, 애니메이션 중 입력 차단
 
 **1주차 완료 기준**: 브라우저에서 3매치·연쇄가 돈다 + `npm test` 전부 통과
