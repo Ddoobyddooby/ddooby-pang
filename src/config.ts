@@ -50,7 +50,7 @@ export const ANIM = {
 export const VIEW = {
   board: { x: 20, y: 200, size: 680 },
   /** 칸 대비 블록 크기 */
-  blockScale: 0.84,
+  blockScale: 0.95,
   boardBackground: 0xfff8ec,
   /** 칸 크기 대비 이만큼 끌면 스와이프로 본다 */
   swipeThreshold: 0.3,
@@ -98,6 +98,22 @@ export const FX = {
   },
   happyFromLevel: 3,
   happyMs: 600,
+  /** 파티클 크기 (이미터 scale: 텍스처 대비 배율, 시작 → 끝) */
+  heartScale: { start: 0.525, end: 0.15 },
+  starScale: { start: 0.45, end: 0.15 },
+  /** 칭찬 문구 모양과 움직임 (ms, px). 문구·색·크기 배율은 위의 praise / praiseScale / THEME에 있다 */
+  praiseStyle: {
+    fontSize: 72,
+    strokeThickness: 12,
+    /** 보드 높이 대비 문구 y 위치 */
+    yRatio: 0.3,
+    popScale: 1.25,
+    popMs: 150,
+    settleMs: 100,
+    holdMs: 500,
+    riseMs: 400,
+    rise: 30,
+  },
 } as const;
 
 /** 배경 장식 (구름·별)과 웨이퍼 보드판 모양 */

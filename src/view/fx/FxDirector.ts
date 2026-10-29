@@ -15,20 +15,6 @@ const PARTICLE_DEPTH = 10;
 const PRAISE_DEPTH = 20;
 /** preview가 터뜨리는 행 */
 const PREVIEW_ROW = 3;
-/** 칭찬 문구 모양과 움직임 (ms, px). 문구·색·크기 배율은 config의 FX / THEME에 있다 */
-const PRAISE = {
-  fontSize: 72,
-  strokeThickness: 12,
-  /** 보드 높이 대비 문구 y 위치 */
-  yRatio: 0.3,
-  popScale: 1.25,
-  popMs: 150,
-  settleMs: 100,
-  holdMs: 500,
-  riseMs: 400,
-  rise: 30,
-};
-
 export class FxDirector {
   private readonly hearts: Phaser.GameObjects.Particles.ParticleEmitter;
   private readonly stars: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -49,7 +35,7 @@ export class FxDirector {
         angle: { min: 200, max: 340 },
         gravityY: 500,
         lifespan: 700,
-        scale: { start: 0.35, end: 0.1 },
+        scale: FX.heartScale,
         alpha: { start: 1, end: 0 },
       })
       .setDepth(PARTICLE_DEPTH);
@@ -60,7 +46,7 @@ export class FxDirector {
         angle: { min: 0, max: 360 },
         rotate: { start: 0, end: 180 },
         lifespan: 600,
-        scale: { start: 0.3, end: 0.1 },
+        scale: FX.starScale,
         alpha: { start: 1, end: 0 },
       })
       .setDepth(PARTICLE_DEPTH);
@@ -120,14 +106,14 @@ export class FxDirector {
     const text = scene.add
       .text(
         this.layout.x + this.layout.width / 2,
-        this.layout.y + this.layout.height * PRAISE.yRatio,
+        this.layout.y + this.layout.height * FX.praiseStyle.yRatio,
         praise,
         {
           fontFamily: THEME.font,
-          fontSize: `${PRAISE.fontSize * scale}px`,
+          fontSize: `${FX.praiseStyle.fontSize * scale}px`,
           color,
           stroke: '#ffffff',
-          strokeThickness: PRAISE.strokeThickness,
+          strokeThickness: FX.praiseStyle.strokeThickness,
         },
       )
       .setOrigin(0.5)
@@ -138,21 +124,21 @@ export class FxDirector {
     // 0 → 1.25 → 1, 잠깐 유지, 위로 떠오르며 사라진다. 도중에 치워지면 killTweensOf로 끊긴다
     scene.tweens.add({
       targets: text,
-      scale: PRAISE.popScale,
-      duration: PRAISE.popMs,
+      scale: FX.praiseStyle.popScale,
+      duration: FX.praiseStyle.popMs,
       ease: 'Quad.easeOut',
       onComplete: () =>
         scene.tweens.add({
           targets: text,
           scale: 1,
-          duration: PRAISE.settleMs,
+          duration: FX.praiseStyle.settleMs,
           onComplete: () =>
             scene.tweens.add({
               targets: text,
-              y: text.y - PRAISE.rise,
+              y: text.y - FX.praiseStyle.rise,
               alpha: 0,
-              delay: PRAISE.holdMs,
-              duration: PRAISE.riseMs,
+              delay: FX.praiseStyle.holdMs,
+              duration: FX.praiseStyle.riseMs,
               onComplete: () => {
                 text.destroy();
                 if (this.praiseText === text) this.praiseText = undefined;
