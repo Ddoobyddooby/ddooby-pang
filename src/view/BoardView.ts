@@ -62,6 +62,8 @@ export class BoardView {
     switch (event.type) {
       case 'swap':
       case 'swapBack':
+        this.sprites.get(idA!)?.pop(ANIM.swapPop, ANIM.swap);
+        this.sprites.get(idB!)?.pop(ANIM.swapPop, ANIM.swap);
         return Promise.all([
           this.moveTo(idA!, event.b, ANIM.swap, 'Sine.easeInOut'),
           this.moveTo(idB!, event.a, ANIM.swap, 'Sine.easeInOut'),
@@ -75,7 +77,7 @@ export class BoardView {
       case 'fall':
         return Promise.all(
           event.moves.map(({ id, from, to }) =>
-            this.moveTo(id, to, ANIM.fallPerCell * (to.r - from.r), 'Quad.easeIn'),
+            this.moveTo(id, to, ANIM.fallPerCell * (to.r - from.r), 'Quad.easeIn', true),
           ),
         ).then(() => undefined);
 
@@ -83,7 +85,7 @@ export class BoardView {
         return Promise.all(
           event.blocks.map(({ block, at, dropFrom }) => {
             this.addSprite(block, { r: at.r - dropFrom, c: at.c });
-            return this.moveTo(block.id, at, ANIM.refillPerCell * dropFrom, 'Quad.easeIn');
+            return this.moveTo(block.id, at, ANIM.refillPerCell * dropFrom, 'Quad.easeIn', true);
           }),
         ).then(() => undefined);
 
@@ -123,12 +125,20 @@ export class BoardView {
     return sprite;
   }
 
-  private moveTo(id: number, pos: Pos, duration: number, ease: string): Promise<void> {
+  /** landing: 도착하는 순간 말랑하게 눌린다 (기다리지 않는다) */
+  private moveTo(
+    id: number,
+    pos: Pos,
+    duration: number,
+    ease: string,
+    landing = false,
+  ): Promise<void> {
     const sprite = this.sprites.get(id);
     if (!sprite) throw new Error(`스프라이트 ${id}가 없다`);
     const { x, y } = cellCenter(this.layout, pos);
     return tween(this.scene, { targets: sprite, x, y, duration, ease }).then(() => {
       sprite.setPosition(x, y); // 시간이 0이라 트윈을 건너뛴 경우에도 위치를 맞춘다
+      if (landing) sprite.squish();
     });
   }
 
@@ -137,10 +147,13 @@ export class BoardView {
     if (!sprite) return Promise.resolve();
     this.sprites.delete(id);
     sprite.removing = true;
+    this.scene.tweens.killTweensOf(sprite); // 착지 눌림·스왑 팝이 남아 있으면 끊고 이어서 줄어든다
+    sprite.setFace('squint'); // 터지기 직전 `><`
     return tween(this.scene, {
       targets: sprite,
       scale: 0,
       alpha: 0,
+      delay: ANIM.squintHold,
       duration: ANIM.remove,
       ease: 'Back.easeIn',
     }).then(() => {

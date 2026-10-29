@@ -2,7 +2,7 @@
 // 표정은 텍스처를 바꿔 끼우는 것으로 처리한다. 특수 블록 표시는 임시 (W2-07에서 다듬는다).
 
 import Phaser from 'phaser';
-import { VIEW } from '../config';
+import { ANIM, VIEW } from '../config';
 import type { Block } from '../core/types';
 import { blockKey, specialKey, type Face } from './theme/textures';
 
@@ -33,5 +33,33 @@ export class BlockSprite extends Phaser.GameObjects.Container {
   setFace(face: Face): this {
     this.faceImage.setTexture(blockKey(this.blockColor, face));
     return this;
+  }
+
+  /** 착지 눌림. scale만 바꾸므로 위치는 그대로다. 기다리지 않는다 */
+  squish(): void {
+    if (this.removing) return;
+    const part = ANIM.squish / 3;
+    const step = (scaleX: number, scaleY: number, next?: () => void) =>
+      this.scene.tweens.add({
+        targets: this,
+        scaleX,
+        scaleY,
+        duration: part,
+        ease: 'Sine.easeInOut',
+        onComplete: next,
+      });
+    step(1.2, 0.8, () => step(0.9, 1.1, () => step(1, 1)));
+  }
+
+  /** 잠깐 scale배까지 커졌다 돌아온다 (전체 길이 duration). 위치는 그대로, 기다리지 않는다 */
+  pop(scale: number, duration: number): void {
+    if (this.removing) return;
+    this.scene.tweens.add({
+      targets: this,
+      scale,
+      duration: duration / 2,
+      yoyo: true,
+      ease: 'Sine.easeOut',
+    });
   }
 }
