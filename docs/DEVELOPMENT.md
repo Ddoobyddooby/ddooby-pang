@@ -87,6 +87,14 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 한 파일만 돌리기: `npx vitest run rng`
 - VSCode 왼쪽 **테스트(플라스크 아이콘)** 탭에서 테스트별로 ▶ 실행할 수도 있다 (Vitest 확장)
 
+### W1-07 보드 테스트 헬퍼
+- `npm test` → `tests/helpers/board.test.ts` 7개 통과
+- 표기법은 `tests/helpers/board.ts` 맨 위 주석에 있다. 앞으로 core 테스트는 전부 이 표기로 보드를 적는다
+  ```
+  R Y G      R=빨강 Y=노랑 G=초록 B=파랑 P=보라 O=주황
+  B* C .     * 폭탄  C 컬러  . 빈칸  - | 라인  + 슈퍼
+  ```
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -141,3 +149,10 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **`[0,1)` → 정수**: `Math.floor(v * n)`으로 0~n-1. 블록 색을 고를 때 쓴다
 - **기준 구현(oracle)으로 테스트**: 결과값을 손으로 적는 대신, 검증된 원본 구현과 비교한다 → `tests/core/rng.test.ts`
 - 참고: [MDN 비트 연산자](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Operators#비트_시프트_연산자), [PRNG (위키백과)](https://ko.wikipedia.org/wiki/유사난수_생성기)
+
+### W1-07 보드 테스트 헬퍼
+- **테스트를 읽기 쉽게 만드는 DSL**: `{ id: 1, color: 0 }` 64개를 손으로 쓰는 대신 `R G B` 문자열로 보드를 그린다. 테스트가 "그림"이 되어 무엇을 검사하는지 한눈에 보인다 → `tests/helpers/board.ts`
+- **왕복(round-trip) 테스트**: `printBoard(parseBoard(text)) === text`. 변환 함수 쌍을 검증하는 간단하고 강력한 방법
+- **실패 메시지도 기능이다**: 잘못된 표기에 "1행의 칸 수가 다르다"처럼 위치를 알려주면 테스트를 고치는 시간이 줄어든다
+- **문자열 처리**: `trim`, `split(/\s+/)`(공백 여러 개로 자르기), `padEnd`(폭 맞추기), `flat`(2차원 → 1차원)
+- 참고: [MDN String](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/String), [MDN 정규식](https://developer.mozilla.org/ko/docs/Web/JavaScript/Guide/Regular_expressions)
