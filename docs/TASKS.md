@@ -11,7 +11,7 @@
 ### 세팅
 - [x] **W1-01** Vite + TypeScript(strict) 프로젝트 생성, Phaser 3 설치
   - 완료: `npm run dev`로 빈 Phaser 캔버스(720x1280, FIT) 표시
-- [ ] **W1-02** Vitest 설정, `npm test` 스크립트
+- [x] **W1-02** Vitest 설정, `npm test` 스크립트
   - 완료: 샘플 테스트 1개 통과
 - [ ] **W1-03** ESLint + Prettier, `src/core/**`에서 `phaser`·`view`·`scenes` import 금지 규칙
   - 완료: core에서 phaser import 시 lint 에러

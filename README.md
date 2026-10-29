@@ -49,8 +49,11 @@ Node.js 20.19 이상이 필요하다.
 ```bash
 npm install
 npm run dev     # http://localhost:5173
+npm test        # Vitest
 npm run build   # 타입체크 + dist/ 빌드
 ```
+
+자세한 사용법은 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## 문서
 
@@ -59,3 +62,4 @@ npm run build   # 타입체크 + dist/ 빌드
 | [SPEC.md](SPEC.md) | 무엇을 / 왜: 게임 규칙, 점수, 스테이지 스키마, 수용 기준 |
 | [docs/PLAN.md](docs/PLAN.md) | 어떻게: 구현 계획 |
 | [docs/TASKS.md](docs/TASKS.md) | 작업 단위 |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | 개발 가이드: VSCode에서 실행하고 확인하는 방법 |
