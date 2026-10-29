@@ -3,7 +3,6 @@
 export const GAME = {
   width: 720,
   height: 1280,
-  backgroundColor: '#2d2d44',
 } as const;
 
 export const BOARD = {
@@ -60,6 +59,7 @@ export const VIEW = {
 /** 달콤 디저트 테마 색·글꼴 (스펙 2절) */
 export const THEME = {
   font: 'Jua',
+  /** 실제 하늘은 index.html의 CSS 그라데이션. 값을 바꿀 땐 둘 다 */
   sky: { top: 0xbfe4ff, bottom: 0xffd9ea },
   cloud: 0xffffff,
   star: 0xffe27a,

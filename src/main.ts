@@ -8,7 +8,7 @@ new Phaser.Game({
   parent: 'game',
   width: GAME.width,
   height: GAME.height,
-  backgroundColor: GAME.backgroundColor,
+  transparent: true, // 하늘은 index.html의 html 그라데이션 하나만 쓴다
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

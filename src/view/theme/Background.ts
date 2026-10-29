@@ -1,24 +1,15 @@
-// 솜사탕 하늘 배경: 세로 그라데이션 + 천천히 움직이는 구름 + 반짝이는 별. 깊이는 가장 아래.
+// 솜사탕 하늘 장식: 천천히 움직이는 구름 + 반짝이는 별. 깊이는 가장 아래.
+// 하늘 그라데이션은 캔버스가 아니라 index.html의 html에 있다 (캔버스는 투명).
 
 import Phaser from 'phaser';
-import { DECOR, GAME, THEME } from '../../config';
+import { DECOR, THEME } from '../../config';
 
 const DEPTH = -100;
 
 export class Background {
   constructor(private readonly scene: Phaser.Scene) {
-    this.drawSky();
     DECOR.clouds.forEach((c) => this.addCloud(c));
     DECOR.stars.forEach((s, i) => this.addStar(s.x, s.y, i));
-  }
-
-  private drawSky(): void {
-    const { top, bottom } = THEME.sky;
-    this.scene.add
-      .graphics()
-      .setDepth(DEPTH)
-      .fillGradientStyle(top, top, bottom, bottom, 1)
-      .fillRect(0, 0, GAME.width, GAME.height);
   }
 
   private addCloud(c: (typeof DECOR.clouds)[number]): void {
