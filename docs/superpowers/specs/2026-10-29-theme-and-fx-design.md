@@ -77,10 +77,10 @@ public/fonts/Jua-Regular.ttf
 - **BoardView → FxDirector는 알림만** 보낸다. BoardView는 어떤 연출이 나오는지 모른다
   ```ts
   interface BoardViewHooks {
-    onMatch?(level: number, removed: { at: Pos; color: Color | null }[]): void;
-    onLand?(ids: number[]): void;
+    onMatch?(level: number, removed: readonly { at: Pos; color: Color | null }[]): void;
   }
   ```
+- 착지 눌림·스왑 팝·터지기 전 `><`는 블록 움직임의 일부라 `BoardView`/`BlockSprite` 안에서 처리한다 (별도 알림 없음)
 - **연출은 재생을 기다리게 하지 않는다.** `play(steps)`의 완료 시점과 입력 잠금 시간은 그대로다. 터지기 전 `><` 표정만 기존 remove 애니메이션 안에서 처리한다
 - **FxDirector는 모드를 모른다.** 경쟁 / 스토리 모드 모두 GameScene에서 같은 방식으로 연결한다
 

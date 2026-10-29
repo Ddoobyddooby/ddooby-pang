@@ -1,0 +1,118 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+  .phone { width: 100%; max-width: 260px; margin: 0 auto; display: block; border-radius: 22px; box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+  .jua { font-family: 'Jua', 'Apple SD Gothic Neo', sans-serif; }
+  .row6 { display:flex; justify-content:center; gap:6px; margin:10px 0 2px; }
+  .row6 svg { width:38px; height:38px; }
+</style>
+
+<h2>블록 스타일: 어떤 블록이 제일 귀엽고 "우리 게임" 같나요?</h2>
+<p class="subtitle">배경은 A(솜사탕 하늘) + 보드판은 C(웨이퍼)로 고정했습니다. 세 시안 모두 <b>색마다 모양(실루엣)이 달라서</b> 색을 헷갈려도 구분됩니다.</p>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe4ff"/><stop offset="1" stop-color="#ffd9ea"/></linearGradient>
+
+    <!-- 공통 실루엣 -->
+    <path id="s0" d="M0,-40 a40,40 0 1,1 -0.1,0z"/>
+    <rect id="s1" x="-38" y="-38" width="76" height="76" rx="16"/>
+    <path id="s2" d="M0,-44 L40,0 L0,44 L-40,0 Z"/>
+    <path id="s3" d="M0,-40 Q8,-40 40,30 Q42,38 32,38 L-32,38 Q-42,38 -40,30 Q-8,-40 0,-40 Z"/>
+    <path id="s4" d="M0,-42 L36,-21 L36,21 L0,42 L-36,21 L-36,-21 Z"/>
+    <path id="s5" d="M0,-44 L12,-14 L43,-13 L18,7 L27,38 L0,20 L-27,38 L-18,7 L-43,-13 L-12,-14 Z"/>
+
+    <!-- A. 젤리 사탕 (1차안) -->
+    <symbol id="a0" viewBox="-50 -50 100 100"><use href="#s0" fill="#ff6b7a" stroke="#e04a5c" stroke-width="5"/><path d="M-18,-6 q18,-22 36,0 q-18,22 -36,0" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".75"/><ellipse cx="-14" cy="-22" rx="13" ry="6" fill="#fff" opacity=".55"/></symbol>
+    <symbol id="a1" viewBox="-50 -50 100 100"><use href="#s1" fill="#ffd84d" stroke="#e8b622" stroke-width="5"/><path d="M-22,-10 h44 M-22,6 h44" stroke="#f0bf2c" stroke-width="5" stroke-linecap="round"/><ellipse cx="-14" cy="-24" rx="13" ry="5" fill="#fff" opacity=".6"/></symbol>
+    <symbol id="a2" viewBox="-50 -50 100 100"><use href="#s2" fill="#5fd99a" stroke="#34b877" stroke-width="5" stroke-linejoin="round"/><ellipse cx="-8" cy="-16" rx="10" ry="5" fill="#fff" opacity=".6" transform="rotate(-40 -8 -16)"/></symbol>
+    <symbol id="a3" viewBox="-50 -50 100 100"><use href="#s3" fill="#6aaeff" stroke="#3f88e6" stroke-width="5" stroke-linejoin="round"/><ellipse cx="-6" cy="-6" rx="9" ry="5" fill="#fff" opacity=".6"/></symbol>
+    <symbol id="a4" viewBox="-50 -50 100 100"><use href="#s4" fill="#b37cf0" stroke="#8f55d6" stroke-width="5" stroke-linejoin="round"/><circle r="12" fill="#fff" opacity=".35"/><ellipse cx="-12" cy="-22" rx="11" ry="5" fill="#fff" opacity=".55"/></symbol>
+    <symbol id="a5" viewBox="-50 -50 100 100"><use href="#s5" fill="#ffa25a" stroke="#ee8031" stroke-width="5" stroke-linejoin="round"/><circle cx="-8" cy="-2" r="3" fill="#c96a24"/><circle cx="8" cy="4" r="3" fill="#c96a24"/><circle cx="0" cy="14" r="3" fill="#c96a24"/></symbol>
+
+    <!-- B. 말랑 친구들: 같은 실루엣 + 얼굴(눈·볼터치·입) -->
+    <g id="face"><ellipse cx="-11" cy="-2" rx="4.5" ry="6" fill="#3b2b3a"/><ellipse cx="11" cy="-2" rx="4.5" ry="6" fill="#3b2b3a"/><circle cx="-9.5" cy="-4.5" r="1.8" fill="#fff"/><circle cx="12.5" cy="-4.5" r="1.8" fill="#fff"/><ellipse cx="-21" cy="8" rx="6" ry="3.5" fill="#ff7fa8" opacity=".55"/><ellipse cx="21" cy="8" rx="6" ry="3.5" fill="#ff7fa8" opacity=".55"/><path d="M-5,8 q5,5 10,0" fill="none" stroke="#3b2b3a" stroke-width="2.6" stroke-linecap="round"/></g>
+    <symbol id="f0" viewBox="-50 -50 100 100"><use href="#s0" fill="#ff7b88" stroke="#e45a6b" stroke-width="5"/><ellipse cx="-14" cy="-24" rx="12" ry="5" fill="#fff" opacity=".55"/><use href="#face"/></symbol>
+    <symbol id="f1" viewBox="-50 -50 100 100"><use href="#s1" fill="#ffdb5e" stroke="#e8b622" stroke-width="5"/><ellipse cx="-14" cy="-25" rx="12" ry="5" fill="#fff" opacity=".6"/><use href="#face"/></symbol>
+    <symbol id="f2" viewBox="-50 -50 100 100"><use href="#s2" fill="#6be0a4" stroke="#34b877" stroke-width="5" stroke-linejoin="round"/><use href="#face" transform="translate(0,4) scale(.85)"/></symbol>
+    <symbol id="f3" viewBox="-50 -50 100 100"><use href="#s3" fill="#78b6ff" stroke="#3f88e6" stroke-width="5" stroke-linejoin="round"/><use href="#face" transform="translate(0,14) scale(.85)"/></symbol>
+    <symbol id="f4" viewBox="-50 -50 100 100"><use href="#s4" fill="#bc8af2" stroke="#8f55d6" stroke-width="5" stroke-linejoin="round"/><ellipse cx="-12" cy="-24" rx="10" ry="4" fill="#fff" opacity=".55"/><use href="#face"/></symbol>
+    <symbol id="f5" viewBox="-50 -50 100 100"><use href="#s5" fill="#ffab69" stroke="#ee8031" stroke-width="5" stroke-linejoin="round"/><use href="#face" transform="translate(0,4) scale(.72)"/></symbol>
+
+    <!-- C. 디저트 아이콘: 실루엣 자체가 다른 디저트 -->
+    <symbol id="d0" viewBox="-50 -50 100 100"><!-- 딸기 -->
+      <path d="M0,42 C-30,22 -42,-4 -30,-22 C-20,-34 -6,-30 0,-24 C6,-30 20,-34 30,-22 C42,-4 30,22 0,42Z" fill="#ff5d73" stroke="#e03e57" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M-16,-30 L-4,-22 L0,-40 L4,-22 L16,-30 L8,-18 L-8,-18 Z" fill="#4fcf7e" stroke="#2fae5f" stroke-width="3" stroke-linejoin="round"/>
+      <g fill="#ffe7a8"><ellipse cx="-14" cy="-2" rx="2.5" ry="3.5"/><ellipse cx="10" cy="-6" rx="2.5" ry="3.5"/><ellipse cx="-2" cy="10" rx="2.5" ry="3.5"/><ellipse cx="16" cy="12" rx="2.5" ry="3.5"/><ellipse cx="-14" cy="18" rx="2.5" ry="3.5"/></g>
+    </symbol>
+    <symbol id="d1" viewBox="-50 -50 100 100"><!-- 푸딩 -->
+      <path d="M-30,38 L-24,-14 Q0,-26 24,-14 L30,38 Q0,46 -30,38Z" fill="#ffd95a" stroke="#e8b622" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M-24,-14 Q0,-30 24,-14 L22,-2 Q14,4 8,-2 Q0,6 -8,-2 Q-14,4 -22,-2Z" fill="#b86a2e"/>
+      <circle cx="0" cy="-26" r="7" fill="#ff5d73"/>
+    </symbol>
+    <symbol id="d2" viewBox="-50 -50 100 100"><!-- 마카롱 -->
+      <ellipse cx="0" cy="-14" rx="40" ry="18" fill="#6be0a4" stroke="#34b877" stroke-width="5"/>
+      <rect x="-36" y="-6" width="72" height="12" rx="6" fill="#fff6e8"/>
+      <ellipse cx="0" cy="16" rx="40" ry="18" fill="#6be0a4" stroke="#34b877" stroke-width="5"/>
+      <ellipse cx="-14" cy="-20" rx="12" ry="4" fill="#fff" opacity=".5"/>
+    </symbol>
+    <symbol id="d3" viewBox="-50 -50 100 100"><!-- 컵케이크 -->
+      <path d="M-28,4 L-20,40 L20,40 L28,4 Z" fill="#f3d29b" stroke="#d9a866" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M-12,8 L-9,38 M0,8 L0,38 M12,8 L9,38" stroke="#d9a866" stroke-width="3"/>
+      <path d="M-34,6 Q-40,-14 -20,-18 Q-18,-38 0,-36 Q18,-38 20,-18 Q40,-14 34,6 Z" fill="#78b6ff" stroke="#3f88e6" stroke-width="5" stroke-linejoin="round"/>
+      <circle cx="0" cy="-40" r="6" fill="#ff5d73"/>
+    </symbol>
+    <symbol id="d4" viewBox="-50 -50 100 100"><!-- 도넛 -->
+      <circle r="40" fill="#f3d29b" stroke="#d9a866" stroke-width="4"/>
+      <path d="M0,-36 C20,-36 36,-22 36,-2 C36,6 30,4 28,10 C24,18 18,12 12,20 C4,28 -6,20 -12,24 C-22,28 -30,18 -34,6 C-38,-18 -20,-36 0,-36Z" fill="#bc8af2" stroke="#8f55d6" stroke-width="4"/>
+      <circle r="12" fill="#fff8ec" stroke="#d9a866" stroke-width="3"/>
+      <g stroke-width="4" stroke-linecap="round"><path d="M-20,-14 l5,-3" stroke="#fff"/><path d="M16,-22 l4,4" stroke="#ffd95a"/><path d="M22,0 l5,2" stroke="#6be0a4"/><path d="M-24,6 l2,5" stroke="#ff5d73"/></g>
+    </symbol>
+    <symbol id="d5" viewBox="-50 -50 100 100"><!-- 별 쿠키 -->
+      <use href="#s5" fill="#ffab69" stroke="#d9772e" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M0,-28 L7,-10 L26,-9 L11,3 L16,22 L0,12 L-16,22 L-11,3 L-26,-9 L-7,-10 Z" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="4 4" opacity=".8"/>
+    </symbol>
+
+    <!-- 5x5 보드 배치 (색 번호) -->
+    <g id="layout-a"><use href="#a0" x="0" y="0" width="36" height="36"/><use href="#a1" x="38" y="0" width="36" height="36"/><use href="#a2" x="76" y="0" width="36" height="36"/><use href="#a0" x="114" y="0" width="36" height="36"/><use href="#a4" x="152" y="0" width="36" height="36"/><use href="#a3" x="0" y="38" width="36" height="36"/><use href="#a5" x="38" y="38" width="36" height="36"/><use href="#a1" x="76" y="38" width="36" height="36"/><use href="#a2" x="114" y="38" width="36" height="36"/><use href="#a3" x="152" y="38" width="36" height="36"/><use href="#a4" x="0" y="76" width="36" height="36"/><use href="#a2" x="38" y="76" width="36" height="36"/><use href="#a0" x="76" y="76" width="36" height="36"/><use href="#a5" x="114" y="76" width="36" height="36"/><use href="#a1" x="152" y="76" width="36" height="36"/><use href="#a1" x="0" y="114" width="36" height="36"/><use href="#a0" x="38" y="114" width="36" height="36"/><use href="#a3" x="76" y="114" width="36" height="36"/><use href="#a4" x="114" y="114" width="36" height="36"/><use href="#a2" x="152" y="114" width="36" height="36"/><use href="#a5" x="0" y="152" width="36" height="36"/><use href="#a3" x="38" y="152" width="36" height="36"/><use href="#a4" x="76" y="152" width="36" height="36"/><use href="#a1" x="114" y="152" width="36" height="36"/><use href="#a0" x="152" y="152" width="36" height="36"/></g>
+    <g id="layout-f"><use href="#f0" x="0" y="0" width="36" height="36"/><use href="#f1" x="38" y="0" width="36" height="36"/><use href="#f2" x="76" y="0" width="36" height="36"/><use href="#f0" x="114" y="0" width="36" height="36"/><use href="#f4" x="152" y="0" width="36" height="36"/><use href="#f3" x="0" y="38" width="36" height="36"/><use href="#f5" x="38" y="38" width="36" height="36"/><use href="#f1" x="76" y="38" width="36" height="36"/><use href="#f2" x="114" y="38" width="36" height="36"/><use href="#f3" x="152" y="38" width="36" height="36"/><use href="#f4" x="0" y="76" width="36" height="36"/><use href="#f2" x="38" y="76" width="36" height="36"/><use href="#f0" x="76" y="76" width="36" height="36"/><use href="#f5" x="114" y="76" width="36" height="36"/><use href="#f1" x="152" y="76" width="36" height="36"/><use href="#f1" x="0" y="114" width="36" height="36"/><use href="#f0" x="38" y="114" width="36" height="36"/><use href="#f3" x="76" y="114" width="36" height="36"/><use href="#f4" x="114" y="114" width="36" height="36"/><use href="#f2" x="152" y="114" width="36" height="36"/><use href="#f5" x="0" y="152" width="36" height="36"/><use href="#f3" x="38" y="152" width="36" height="36"/><use href="#f4" x="76" y="152" width="36" height="36"/><use href="#f1" x="114" y="152" width="36" height="36"/><use href="#f0" x="152" y="152" width="36" height="36"/></g>
+    <g id="layout-d"><use href="#d0" x="0" y="0" width="36" height="36"/><use href="#d1" x="38" y="0" width="36" height="36"/><use href="#d2" x="76" y="0" width="36" height="36"/><use href="#d0" x="114" y="0" width="36" height="36"/><use href="#d4" x="152" y="0" width="36" height="36"/><use href="#d3" x="0" y="38" width="36" height="36"/><use href="#d5" x="38" y="38" width="36" height="36"/><use href="#d1" x="76" y="38" width="36" height="36"/><use href="#d2" x="114" y="38" width="36" height="36"/><use href="#d3" x="152" y="38" width="36" height="36"/><use href="#d4" x="0" y="76" width="36" height="36"/><use href="#d2" x="38" y="76" width="36" height="36"/><use href="#d0" x="76" y="76" width="36" height="36"/><use href="#d5" x="114" y="76" width="36" height="36"/><use href="#d1" x="152" y="76" width="36" height="36"/><use href="#d1" x="0" y="114" width="36" height="36"/><use href="#d0" x="38" y="114" width="36" height="36"/><use href="#d3" x="76" y="114" width="36" height="36"/><use href="#d4" x="114" y="114" width="36" height="36"/><use href="#d2" x="152" y="114" width="36" height="36"/><use href="#d5" x="0" y="152" width="36" height="36"/><use href="#d3" x="38" y="152" width="36" height="36"/><use href="#d4" x="76" y="152" width="36" height="36"/><use href="#d1" x="114" y="152" width="36" height="36"/><use href="#d0" x="152" y="152" width="36" height="36"/></g>
+
+    <!-- A 배경 + C 보드 -->
+    <g id="frame">
+      <rect width="240" height="420" fill="url(#sky)"/>
+      <g fill="#fff" opacity=".9"><ellipse cx="45" cy="70" rx="30" ry="12"/><ellipse cx="62" cy="62" rx="18" ry="12"/><ellipse cx="190" cy="100" rx="34" ry="13"/><ellipse cx="205" cy="91" rx="18" ry="12"/><ellipse cx="40" cy="380" rx="40" ry="14"/><ellipse cx="200" cy="395" rx="44" ry="15"/></g>
+      <g fill="#ffe27a"><path d="M200,26 l3,7 7,1 -5,5 1,7 -6,-3 -6,3 1,-7 -5,-5 7,-1z"/><path d="M26,118 l2,5 5,1 -4,3 1,5 -4,-2 -4,2 1,-5 -4,-3 5,-1z"/></g>
+      <text x="120" y="46" text-anchor="middle" class="jua" font-size="28" fill="#ff6b9a" stroke="#fff" stroke-width="5" paint-order="stroke">Ddooby-Pang</text>
+      <rect x="70" y="60" width="100" height="22" rx="11" fill="#fff" opacity=".85"/>
+      <text x="120" y="76" text-anchor="middle" class="jua" font-size="13" fill="#8a7aa8">이동 12 · 연쇄 x3</text>
+      <rect x="19" y="120" width="202" height="202" rx="14" fill="#f3d29b" stroke="#d9a866" stroke-width="4"/>
+      <path d="M19,154 h202 M19,194 h202 M19,234 h202 M19,274 h202" stroke="#e8bf80" stroke-width="2" opacity=".6"/>
+      <rect x="24" y="125" width="192" height="192" rx="10" fill="#fff8ec" opacity=".85"/>
+    </g>
+  </defs>
+</svg>
+
+<div class="cards">
+  <div class="card" data-choice="jelly" onclick="toggleSelect(this)">
+    <div class="card-image"><div style="display:flex;flex-direction:column;align-items:center;width:100%;padding:14px 8px"><svg class="phone" viewBox="0 0 240 420"><use href="#frame"/><use href="#layout-a" x="26" y="127"/></svg>
+      <div class="row6"><svg viewBox="-50 -50 100 100"><use href="#a0" x="-50" y="-50" width="100" height="100"/></svg><svg viewBox="-50 -50 100 100"><use href="#a1" x="-50" y="-50" width="100" height="100"/></svg><svg viewBox="-50 -50 100 100"><use href="#a2" x="-50" y="-50" width="100" height="100"/></svg><svg viewBox="-50 -50 100 100"><use href="#a3" x="-50" y="-50" width="100" height="100"/></svg><svg viewBox="-50 -50 100 100"><use href="#a4" x="-50" y="-50" width="100" height="100"/></svg><svg viewBox="-50 -50 100 100"><use href="#a5" x="-50" y="-50" width="100" height="100"/></svg></div></div>
+    </div>
+    <div class="card-body"><h3>A. 젤리 사탕</h3><p>1차안 그대로. 광택 있는 사탕·젤리. 깔끔하지만 <b>캔디크러시와 가장 비슷</b>해 보인다</p></div>
+  </div>
+
+  <div class="card" data-choice="friends" onclick="toggleSelect(this)">
+    <div class="card-image"><div style="display:flex;flex-direction:column;align-items:center;width:100%;padding:14px 8px"><svg class="phone" viewBox="0 0 240 420"><use href="#frame"/><use href="#layout-f" x="26" y="127"/></svg>
+      <div class="row6"><svg viewBox="-50 -50 100 100"><use href="#f0" x="-50" y="-50" width="100" height="100"/></svg><svg viewBox="-50 -50 100 100"><use href="#f1" x="-50" y="-50" width="100" height="100"/></svg><svg viewBox="-50 -50 100 100"><use href="#f2" x="-50" y="-50" width="100" height="100"/></svg><svg viewBox="-50 -50 100 100"><use href="#f3" x="-50" y="-50" width="100" height="100"/></svg><svg viewBox="-50 -50 100 100"><use href="#f4" x="-50" y="-50" width="100" height="100"/></svg><svg viewBox="-50 -50 100 100"><use href="#f5" x="-50" y="-50" width="100" height="100"/></svg></div></div>
+    </div>
+    <div class="card-body"><h3>B. 말랑 친구들</h3><p>같은 모양에 <b>눈·볼터치·입</b>을 그린 캐릭터 블록. 터질 때 눈 감기, 연쇄 때 웃는 얼굴 등 표정 연출이 가능해서 <b>가장 '우리 게임'다움</b>. 칸이 작을 땐 얼굴이 조금 복잡해 보일 수 있음</p></div>
+  </div>
+
+  <div class="card" data-choice="dessert" onclick="toggleSelect(this)">
+    <div class="card-image"><div style="display:flex;flex-direction:column;align-items:center;width:100%;padding:14px 8px"><svg class="phone" viewBox="0 0 240 420"><use href="#frame"/><use href="#layout-d" x="26" y="127"/></svg>
+      <div class="row6"><svg viewBox="-50 -50 100 100"><use href="#d0" x="-50" y="-50" width="100" height="100"/></svg><svg viewBox="-50 -50 100 100"><use href="#d1" x="-50" y="-50" width="100" height="100"/></svg><svg viewBox="-50 -50 100 100"><use href="#d2" x="-50" y="-50" width="100" height="100"/></svg><svg viewBox="-50 -50 100 100"><use href="#d3" x="-50" y="-50" width="100" height="100"/></svg><svg viewBox="-50 -50 100 100"><use href="#d4" x="-50" y="-50" width="100" height="100"/></svg><svg viewBox="-50 -50 100 100"><use href="#d5" x="-50" y="-50" width="100" height="100"/></svg></div></div>
+    </div>
+    <div class="card-body"><h3>C. 디저트 가게</h3><p>딸기 · 푸딩 · 마카롱 · 컵케이크 · 도넛 · 별 쿠키. 사탕이 아니라 <b>디저트</b>라 캔디크러시 느낌이 덜하고, 아이가 이름을 부르며 놀 수 있음. 그리는 코드는 가장 많음</p></div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px">섞기도 가능합니다. 예: "C 디저트에 B 얼굴 붙이기"</p>

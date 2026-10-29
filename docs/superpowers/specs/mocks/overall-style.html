@@ -1,0 +1,123 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+  .phone { width: 100%; max-width: 260px; margin: 0 auto; display: block; border-radius: 22px; box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+  .jua { font-family: 'Jua', 'Apple SD Gothic Neo', sans-serif; }
+</style>
+
+<h2>전체 분위기: 어떤 화면이 제일 마음에 드세요?</h2>
+<p class="subtitle">배경 · 보드 판 · 타이틀 느낌을 비교하는 시안입니다. 블록은 세 시안 모두 같고(사탕 모양 1차안), 다음 화면에서 따로 고릅니다.</p>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <!-- 블록 6종: 지금 게임의 색+모양 구분을 유지하면서 사탕 느낌만 입힘 -->
+    <symbol id="b0" viewBox="-50 -50 100 100">
+      <circle r="40" fill="#ff6b7a" stroke="#e04a5c" stroke-width="5"/>
+      <path d="M-18,-6 q18,-22 36,0 q-18,22 -36,0" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".75"/>
+      <ellipse cx="-14" cy="-22" rx="13" ry="6" fill="#fff" opacity=".55"/>
+    </symbol>
+    <symbol id="b1" viewBox="-50 -50 100 100">
+      <rect x="-38" y="-38" width="76" height="76" rx="16" fill="#ffd84d" stroke="#e8b622" stroke-width="5"/>
+      <path d="M-22,-10 h44 M-22,6 h44" stroke="#f0bf2c" stroke-width="5" stroke-linecap="round"/>
+      <ellipse cx="-14" cy="-24" rx="13" ry="5" fill="#fff" opacity=".6"/>
+    </symbol>
+    <symbol id="b2" viewBox="-50 -50 100 100">
+      <path d="M0,-44 L40,0 L0,44 L-40,0 Z" fill="#5fd99a" stroke="#34b877" stroke-width="5" stroke-linejoin="round"/>
+      <ellipse cx="-8" cy="-16" rx="10" ry="5" fill="#fff" opacity=".6" transform="rotate(-40 -8 -16)"/>
+    </symbol>
+    <symbol id="b3" viewBox="-50 -50 100 100">
+      <path d="M0,-40 Q8,-40 40,30 Q42,38 32,38 L-32,38 Q-42,38 -40,30 Q-8,-40 0,-40 Z" fill="#6aaeff" stroke="#3f88e6" stroke-width="5" stroke-linejoin="round"/>
+      <ellipse cx="-6" cy="-6" rx="9" ry="5" fill="#fff" opacity=".6"/>
+    </symbol>
+    <symbol id="b4" viewBox="-50 -50 100 100">
+      <path d="M0,-42 L36,-21 L36,21 L0,42 L-36,21 L-36,-21 Z" fill="#b37cf0" stroke="#8f55d6" stroke-width="5" stroke-linejoin="round"/>
+      <circle r="12" fill="#fff" opacity=".35"/>
+      <ellipse cx="-12" cy="-22" rx="11" ry="5" fill="#fff" opacity=".55"/>
+    </symbol>
+    <symbol id="b5" viewBox="-50 -50 100 100">
+      <path d="M0,-44 L12,-14 L43,-13 L18,7 L27,38 L0,20 L-27,38 L-18,7 L-43,-13 L-12,-14 Z" fill="#ffa25a" stroke="#ee8031" stroke-width="5" stroke-linejoin="round"/>
+      <circle cx="-8" cy="-2" r="3" fill="#c96a24"/><circle cx="8" cy="4" r="3" fill="#c96a24"/><circle cx="0" cy="14" r="3" fill="#c96a24"/>
+    </symbol>
+
+    <!-- 5x5 미니 보드 -->
+    <g id="miniBoard">
+      <use href="#b0" x="0"  y="0"  width="36" height="36"/><use href="#b1" x="38" y="0"  width="36" height="36"/><use href="#b2" x="76" y="0"  width="36" height="36"/><use href="#b0" x="114" y="0"  width="36" height="36"/><use href="#b4" x="152" y="0"  width="36" height="36"/>
+      <use href="#b3" x="0"  y="38" width="36" height="36"/><use href="#b5" x="38" y="38" width="36" height="36"/><use href="#b1" x="76" y="38" width="36" height="36"/><use href="#b2" x="114" y="38" width="36" height="36"/><use href="#b3" x="152" y="38" width="36" height="36"/>
+      <use href="#b4" x="0"  y="76" width="36" height="36"/><use href="#b2" x="38" y="76" width="36" height="36"/><use href="#b0" x="76" y="76" width="36" height="36"/><use href="#b5" x="114" y="76" width="36" height="36"/><use href="#b1" x="152" y="76" width="36" height="36"/>
+      <use href="#b1" x="0"  y="114" width="36" height="36"/><use href="#b0" x="38" y="114" width="36" height="36"/><use href="#b3" x="76" y="114" width="36" height="36"/><use href="#b4" x="114" y="114" width="36" height="36"/><use href="#b2" x="152" y="114" width="36" height="36"/>
+      <use href="#b5" x="0"  y="152" width="36" height="36"/><use href="#b3" x="38" y="152" width="36" height="36"/><use href="#b4" x="76" y="152" width="36" height="36"/><use href="#b1" x="114" y="152" width="36" height="36"/><use href="#b0" x="152" y="152" width="36" height="36"/>
+    </g>
+
+    <linearGradient id="skyA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe4ff"/><stop offset="1" stop-color="#ffd9ea"/></linearGradient>
+    <pattern id="checkB" width="24" height="24" patternUnits="userSpaceOnUse">
+      <rect width="24" height="24" fill="#fff4f7"/><rect width="12" height="12" fill="#ffc9d8"/><rect x="12" y="12" width="12" height="12" fill="#ffc9d8"/>
+      <circle cx="18" cy="6" r="2" fill="#fff"/><circle cx="6" cy="18" r="2" fill="#fff"/>
+    </pattern>
+    <linearGradient id="skyC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset="1" stop-color="#ffd3e6"/></linearGradient>
+  </defs>
+</svg>
+
+<div class="cards">
+  <!-- A -->
+  <div class="card" data-choice="sky" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <svg class="phone" viewBox="0 0 240 420">
+        <rect width="240" height="420" fill="url(#skyA)"/>
+        <g fill="#fff" opacity=".9">
+          <ellipse cx="45" cy="70" rx="30" ry="12"/><ellipse cx="62" cy="62" rx="18" ry="12"/>
+          <ellipse cx="190" cy="105" rx="34" ry="13"/><ellipse cx="205" cy="96" rx="18" ry="12"/>
+          <ellipse cx="40" cy="380" rx="40" ry="14"/><ellipse cx="200" cy="395" rx="44" ry="15"/>
+        </g>
+        <g fill="#ffe27a"><path d="M200,30 l3,7 7,1 -5,5 1,7 -6,-3 -6,3 1,-7 -5,-5 7,-1z"/><path d="M28,120 l2,5 5,1 -4,3 1,5 -4,-2 -4,2 1,-5 -4,-3 5,-1z"/></g>
+        <text x="120" y="48" text-anchor="middle" class="jua" font-size="28" fill="#ff6b9a" stroke="#fff" stroke-width="5" paint-order="stroke">Ddooby-Pang</text>
+        <rect x="70" y="62" width="100" height="22" rx="11" fill="#fff" opacity=".85"/>
+        <text x="120" y="78" text-anchor="middle" class="jua" font-size="13" fill="#8a7aa8">이동 12 · 연쇄 x3</text>
+        <rect x="21" y="118" width="198" height="198" rx="18" fill="#fff" opacity=".55" stroke="#fff" stroke-width="3"/>
+        <use href="#miniBoard" x="26" y="123" transform="scale(1)"/>
+      </svg>
+    </div>
+    <div class="card-body"><h3>A. 솜사탕 하늘</h3><p>하늘색→분홍 그라데이션, 둥실 구름과 작은 별. 보드는 반투명 흰 판. 가장 밝고 깔끔하고, 블록이 잘 보인다</p></div>
+  </div>
+
+  <!-- B -->
+  <div class="card" data-choice="tablecloth" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <svg class="phone" viewBox="0 0 240 420">
+        <rect width="240" height="420" fill="url(#checkB)"/>
+        <rect x="0" y="0" width="240" height="96" fill="#ff8fb1"/>
+        <path d="M0,96 q15,14 30,0 q15,14 30,0 q15,14 30,0 q15,14 30,0 q15,14 30,0 q15,14 30,0 q15,14 30,0 q15,14 30,0 v-6 h-240z" fill="#ff8fb1"/>
+        <text x="120" y="46" text-anchor="middle" class="jua" font-size="28" fill="#fff" stroke="#e2557f" stroke-width="5" paint-order="stroke">Ddooby-Pang</text>
+        <text x="120" y="76" text-anchor="middle" class="jua" font-size="13" fill="#fff">이동 12 · 연쇄 x3</text>
+        <circle cx="120" cy="222" r="118" fill="#fff" opacity=".0"/>
+        <rect x="17" y="120" width="206" height="206" rx="26" fill="#fff" stroke="#ffd0dc" stroke-width="6"/>
+        <rect x="23" y="126" width="194" height="194" rx="20" fill="#fff6e8"/>
+        <use href="#miniBoard" x="26" y="129"/>
+        <g opacity=".9"><circle cx="40" cy="370" r="14" fill="#ffd84d" stroke="#e8b622" stroke-width="3"/><circle cx="205" cy="365" r="16" fill="#b37cf0" stroke="#8f55d6" stroke-width="3"/><circle cx="120" cy="392" r="10" fill="#5fd99a" stroke="#34b877" stroke-width="3"/></g>
+      </svg>
+    </div>
+    <div class="card-body"><h3>B. 딸기우유 테이블</h3><p>분홍 체크 식탁보 + 물결 리본 HUD, 보드는 쿠키 접시. 가장 '디저트 가게' 느낌, 배경 무늬가 블록과 겹쳐 보일 수 있음</p></div>
+  </div>
+
+  <!-- C -->
+  <div class="card" data-choice="candyland" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <svg class="phone" viewBox="0 0 240 420">
+        <rect width="240" height="420" fill="url(#skyC)"/>
+        <ellipse cx="60" cy="430" rx="120" ry="70" fill="#9ce8c9"/>
+        <ellipse cx="200" cy="440" rx="110" ry="75" fill="#ffb3cf"/>
+        <g><rect x="28" y="330" width="4" height="40" fill="#fff"/><circle cx="30" cy="326" r="16" fill="#ff8fb1"/><path d="M30,326 m-10,0 a10,10 0 1,1 10,10 a6,6 0 1,1 -6,-6" fill="none" stroke="#fff" stroke-width="3"/></g>
+        <g><rect x="208" y="340" width="4" height="36" fill="#fff"/><circle cx="210" cy="336" r="14" fill="#6aaeff"/><path d="M210,336 m-8,0 a8,8 0 1,1 8,8 a5,5 0 1,1 -5,-5" fill="none" stroke="#fff" stroke-width="3"/></g>
+        <path d="M150,370 l14,-40 14,40z" fill="#ffd84d"/><circle cx="164" cy="326" r="10" fill="#fff"/>
+        <text x="120" y="48" text-anchor="middle" class="jua" font-size="28" fill="#ff8a3d" stroke="#fff" stroke-width="5" paint-order="stroke">Ddooby-Pang</text>
+        <rect x="70" y="62" width="100" height="22" rx="11" fill="#ffffff" opacity=".85"/>
+        <text x="120" y="78" text-anchor="middle" class="jua" font-size="13" fill="#c27a4a">이동 12 · 연쇄 x3</text>
+        <rect x="19" y="116" width="202" height="202" rx="14" fill="#f3d29b" stroke="#d9a866" stroke-width="4"/>
+        <path d="M19,150 h202 M19,190 h202 M19,230 h202 M19,270 h202" stroke="#e8bf80" stroke-width="2" opacity=".6"/>
+        <rect x="24" y="121" width="192" height="192" rx="10" fill="#fff8ec" opacity=".85"/>
+        <use href="#miniBoard" x="26" y="123"/>
+      </svg>
+    </div>
+    <div class="card-body"><h3>C. 사탕 나라 언덕</h3><p>노랑→분홍 하늘, 민트·딸기 언덕과 롤리팝 나무, 보드는 웨이퍼 판. 이야기(스토리 모드 맵)로 확장하기 좋음</p></div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px">타이틀 글꼴은 세 시안 모두 둥글고 귀여운 무료 한글 글꼴 <b>Jua</b>(Google Fonts)를 썼습니다. 섞고 싶은 조합(예: "A 배경 + C 보드")이 있으면 터미널에 적어주세요.</p>

@@ -1,0 +1,177 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+  .jua { font-family: 'Jua', 'Apple SD Gothic Neo', sans-serif; }
+  .stage { width: 100%; max-width: 300px; display:block; margin: 0 auto; border-radius: 18px; overflow: hidden; }
+
+  /* 공통 루프: 3초 */
+  @keyframes squish { 0%,20% { transform: scale(1,1); } 28% { transform: scale(1.25,.75); } 36% { transform: scale(.85,1.15);} 44%,100% { transform: scale(1,1);} }
+  @keyframes pop { 0%,30% { transform: scale(1); opacity:1;} 42% { transform: scale(1.3); opacity:1;} 52%,100% { transform: scale(0); opacity:0;} }
+  @keyframes faceNormal { 0%,30% { opacity:1;} 31%,100% { opacity:0;} }
+  @keyframes faceSquint { 0%,30% { opacity:0;} 31%,52% { opacity:1;} 53%,100% {opacity:0;} }
+  @keyframes burst { 0%,40% { transform: translate(0,0) scale(0); opacity:0;} 44% { opacity:1; transform: translate(0,0) scale(1);} 75% { opacity:1;} 90%,100% { transform: translate(var(--dx), var(--dy)) scale(.4); opacity:0;} }
+  @keyframes praise { 0%,45% { transform: translate(0,0) scale(0) rotate(-8deg); opacity:0;} 55% { transform: scale(1.25) rotate(4deg); opacity:1;} 62% { transform: scale(.95) rotate(-2deg);} 68%,85% { transform: scale(1) rotate(0); opacity:1;} 100% { transform: translate(0,-14px) scale(1); opacity:0;} }
+  @keyframes shake { 0%,44% { transform: translate(0,0);} 46% { transform: translate(-4px,2px);} 48% { transform: translate(4px,-2px);} 50% { transform: translate(-3px,-1px);} 52% { transform: translate(3px,1px);} 54%,100% { transform: translate(0,0);} }
+  @keyframes shakeBig { 0%,44% { transform: translate(0,0);} 46% { transform: translate(-7px,3px);} 48% { transform: translate(7px,-3px);} 50% { transform: translate(-6px,-2px);} 52% { transform: translate(6px,2px);} 54% { transform: translate(-3px,1px);} 56%,100% { transform: translate(0,0);} }
+  @keyframes happy { 0%,45% { opacity:0;} 50%,90% { opacity:1;} 100% { opacity:0;} }
+  @keyframes neutral { 0%,45% { opacity:1;} 50%,90% { opacity:0;} 100% { opacity:1;} }
+
+  .squish { transform-box: fill-box; transform-origin: 50% 100%; animation: squish 3s infinite; }
+  .pop { transform-box: fill-box; transform-origin: center; animation: pop 3s infinite; }
+  .fN { animation: faceNormal 3s infinite; } .fS { animation: faceSquint 3s infinite; }
+  .bit { transform-box: fill-box; transform-origin: center; animation: burst 3s infinite; }
+  .praise { transform-box: fill-box; transform-origin: center; animation: praise 3s infinite; }
+  .shake { animation: shake 3s infinite; } .shakeBig { animation: shakeBig 3s infinite; }
+  .happy { animation: happy 3s infinite; } .neutral { animation: neutral 3s infinite; }
+  .lv { text-align:center; margin: 6px 0 0; font-size: 13px; color: #666; }
+</style>
+
+<h2>연쇄 효과: 단계가 올라갈수록 이렇게 커집니다</h2>
+<p class="subtitle">3초마다 반복 재생됩니다. 왼쪽부터 <b>연쇄 1 → 2 → 3 → 4 이상</b>. 아래에서 <b>칭찬 문구 스타일</b>을 골라주세요.</p>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe4ff"/><stop offset="1" stop-color="#ffd9ea"/></linearGradient>
+    <g id="eyes"><ellipse cx="-11" cy="-2" rx="4.5" ry="6" fill="#3b2b3a"/><ellipse cx="11" cy="-2" rx="4.5" ry="6" fill="#3b2b3a"/><circle cx="-9.5" cy="-4.5" r="1.8" fill="#fff"/><circle cx="12.5" cy="-4.5" r="1.8" fill="#fff"/></g>
+    <g id="cheeks"><ellipse cx="-21" cy="8" rx="6" ry="3.5" fill="#ff7fa8" opacity=".55"/><ellipse cx="21" cy="8" rx="6" ry="3.5" fill="#ff7fa8" opacity=".55"/></g>
+    <g id="faceN"><use href="#eyes"/><use href="#cheeks"/><path d="M-5,8 q5,5 10,0" fill="none" stroke="#3b2b3a" stroke-width="2.6" stroke-linecap="round"/></g>
+    <!-- 터질 때: > < 눈 -->
+    <g id="faceS"><path d="M-16,-7 l7,5 -7,5 M16,-7 l-7,5 7,5" fill="none" stroke="#3b2b3a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><use href="#cheeks"/><ellipse cx="0" cy="10" rx="5" ry="4" fill="#3b2b3a"/></g>
+    <!-- 신남: ^ ^ 눈 + 큰 웃음 -->
+    <g id="faceH"><path d="M-16,0 q5,-8 10,0 M6,0 q5,-8 10,0" fill="none" stroke="#3b2b3a" stroke-width="3" stroke-linecap="round"/><use href="#cheeks"/><path d="M-8,6 q8,10 16,0 z" fill="#3b2b3a"/></g>
+
+    <path id="s0" d="M0,-40 a40,40 0 1,1 -0.1,0z"/>
+    <rect id="s1" x="-38" y="-38" width="76" height="76" rx="16"/>
+    <path id="s2" d="M0,-44 L40,0 L0,44 L-40,0 Z"/>
+    <path id="s3" d="M0,-40 Q8,-40 40,30 Q42,38 32,38 L-32,38 Q-42,38 -40,30 Q-8,-40 0,-40 Z"/>
+    <path id="s4" d="M0,-42 L36,-21 L36,21 L0,42 L-36,21 L-36,-21 Z"/>
+
+    <!-- 터지는 블록 (빨강 원) -->
+    <g id="popRed"><g class="pop"><use href="#s0" fill="#ff7b88" stroke="#e45a6b" stroke-width="5"/><ellipse cx="-14" cy="-24" rx="12" ry="5" fill="#fff" opacity=".55"/><g class="fN"><use href="#faceN"/></g><g class="fS"><use href="#faceS"/></g></g></g>
+    <!-- 옆에서 지켜보는 블록: 연쇄 3+ 에서 웃는다 -->
+    <g id="watchY"><use href="#s1" fill="#ffdb5e" stroke="#e8b622" stroke-width="5"/><g class="neutral"><use href="#faceN"/></g><g class="happy"><use href="#faceH"/></g></g>
+    <g id="watchB"><use href="#s3" fill="#78b6ff" stroke="#3f88e6" stroke-width="5" stroke-linejoin="round"/><g transform="translate(0,14) scale(.85)"><g class="neutral"><use href="#faceN"/></g><g class="happy"><use href="#faceH"/></g></g></g>
+    <g id="calmY"><use href="#s1" fill="#ffdb5e" stroke="#e8b622" stroke-width="5"/><use href="#faceN"/></g>
+    <g id="calmB"><use href="#s3" fill="#78b6ff" stroke="#3f88e6" stroke-width="5" stroke-linejoin="round"/><use href="#faceN" transform="translate(0,14) scale(.85)"/></g>
+    <!-- 착지 말랑 -->
+    <g id="landP"><g class="squish"><use href="#s4" fill="#bc8af2" stroke="#8f55d6" stroke-width="5" stroke-linejoin="round"/><use href="#faceN"/></g></g>
+    <g id="landG"><g class="squish"><use href="#s2" fill="#6be0a4" stroke="#34b877" stroke-width="5" stroke-linejoin="round"/><use href="#faceN" transform="translate(0,4) scale(.85)"/></g></g>
+
+    <!-- 파티클 조각들 -->
+    <path id="heart" d="M0,6 C-10,-2 -8,-10 -3,-10 C-1,-10 0,-8 0,-7 C0,-8 1,-10 3,-10 C8,-10 10,-2 0,6Z"/>
+    <path id="star" d="M0,-7 L2,-2 7,-2 3,1 5,6 0,3 -5,6 -3,1 -7,-2 -2,-2Z"/>
+  </defs>
+</svg>
+
+<!-- 하나의 보드 조각(3x3)을 만드는 템플릿 함수 대신, 단계별로 직접 배치 -->
+<div class="cards">
+  <!-- 연쇄 1 -->
+  <div class="card"><div class="card-image" style="padding:10px;display:block;height:auto">
+    <svg class="stage" viewBox="0 -20 300 250">
+      <rect y="-20" width="300" height="250" fill="url(#sky)"/>
+      <rect x="20" y="40" width="260" height="170" rx="14" fill="#f3d29b" stroke="#d9a866" stroke-width="4"/>
+      <rect x="26" y="46" width="248" height="158" rx="10" fill="#fff8ec" opacity=".85"/>
+      <g transform="translate(70,90) scale(.42)"><use href="#popRed"/></g>
+      <g transform="translate(150,90) scale(.42)"><use href="#popRed"/></g>
+      <g transform="translate(230,90) scale(.42)"><use href="#popRed"/></g>
+      <g transform="translate(70,165) scale(.42)"><use href="#landP"/></g>
+      <g transform="translate(150,165) scale(.42)"><use href="#calmY"/></g>
+      <g transform="translate(230,165) scale(.42)"><use href="#landG"/></g>
+      <g fill="#ff7b88">
+        <g transform="translate(70,90)"><use href="#heart" class="bit" style="--dx:-14px;--dy:-22px"/></g>
+        <g transform="translate(150,90)"><use href="#heart" class="bit" style="--dx:14px;--dy:-20px"/></g>
+        <g transform="translate(230,90)"><use href="#heart" class="bit" style="--dx:16px;--dy:-18px"/></g>
+      </g>
+    </svg>
+    <p class="lv"><b>연쇄 1</b> · 터질 때 &gt;&lt; 눈 + 하트 조각 1~2개, 떨어진 블록 착지 말랑</p>
+  </div></div>
+
+  <!-- 연쇄 2 -->
+  <div class="card"><div class="card-image" style="padding:10px;display:block;height:auto">
+    <svg class="stage" viewBox="0 -20 300 250">
+      <rect y="-20" width="300" height="250" fill="url(#sky)"/>
+      <rect x="20" y="40" width="260" height="170" rx="14" fill="#f3d29b" stroke="#d9a866" stroke-width="4"/>
+      <rect x="26" y="46" width="248" height="158" rx="10" fill="#fff8ec" opacity=".85"/>
+      <g transform="translate(70,90) scale(.42)"><use href="#popRed"/></g>
+      <g transform="translate(150,90) scale(.42)"><use href="#popRed"/></g>
+      <g transform="translate(230,90) scale(.42)"><use href="#popRed"/></g>
+      <g transform="translate(70,165) scale(.42)"><use href="#landP"/></g>
+      <g transform="translate(150,165) scale(.42)"><use href="#calmY"/></g>
+      <g transform="translate(230,165) scale(.42)"><use href="#landG"/></g>
+      <g fill="#ff7b88">
+        <g transform="translate(70,90)"><use href="#heart" class="bit" style="--dx:-22px;--dy:-26px"/></g><g transform="translate(70,90)"><use href="#heart" class="bit" style="--dx:18px;--dy:-12px"/></g>
+        <g transform="translate(150,90)"><use href="#heart" class="bit" style="--dx:-10px;--dy:-30px"/></g><g transform="translate(150,90)"><use href="#heart" class="bit" style="--dx:20px;--dy:-24px"/></g>
+        <g transform="translate(230,90)"><use href="#heart" class="bit" style="--dx:24px;--dy:-16px"/></g><g transform="translate(230,90)"><use href="#heart" class="bit" style="--dx:-12px;--dy:-26px"/></g>
+      </g>
+      <g fill="#ffe27a"><g transform="translate(150,90)"><use href="#star" class="bit" style="--dx:-26px;--dy:4px"/></g><g transform="translate(150,90)"><use href="#star" class="bit" style="--dx:26px;--dy:6px"/></g></g>
+      <g class="praise"><text x="150" y="30" text-anchor="middle" class="jua" font-size="28" fill="#ff6b9a" stroke="#fff" stroke-width="6" paint-order="stroke">맛있다!</text></g>
+    </svg>
+    <p class="lv"><b>연쇄 2</b> · 조각 2배 + 반짝이 별, 칭찬 문구 등장</p>
+  </div></div>
+
+  <!-- 연쇄 3 -->
+  <div class="card"><div class="card-image" style="padding:10px;display:block;height:auto">
+    <svg class="stage" viewBox="0 -20 300 250">
+      <g class="shake">
+      <rect y="-20" width="300" height="250" fill="url(#sky)"/>
+      <rect x="20" y="40" width="260" height="170" rx="14" fill="#f3d29b" stroke="#d9a866" stroke-width="4"/>
+      <rect x="26" y="46" width="248" height="158" rx="10" fill="#fff8ec" opacity=".85"/>
+      <g transform="translate(70,90) scale(.42)"><use href="#popRed"/></g>
+      <g transform="translate(150,90) scale(.42)"><use href="#popRed"/></g>
+      <g transform="translate(230,90) scale(.42)"><use href="#popRed"/></g>
+      <g transform="translate(70,165) scale(.42)"><use href="#watchY"/></g>
+      <g transform="translate(150,165) scale(.42)"><use href="#watchB"/></g>
+      <g transform="translate(230,165) scale(.42)"><use href="#watchY"/></g>
+      <g fill="#ff7b88">
+        <g transform="translate(70,90)"><use href="#heart" class="bit" style="--dx:-30px;--dy:-26px"/></g><g transform="translate(70,90)"><use href="#heart" class="bit" style="--dx:22px;--dy:-14px"/></g><g transform="translate(70,90)"><use href="#heart" class="bit" style="--dx:-6px;--dy:24px"/></g>
+        <g transform="translate(150,90)"><use href="#heart" class="bit" style="--dx:-14px;--dy:-34px"/></g><g transform="translate(150,90)"><use href="#heart" class="bit" style="--dx:26px;--dy:-26px"/></g><g transform="translate(150,90)"><use href="#heart" class="bit" style="--dx:4px;--dy:28px"/></g>
+        <g transform="translate(230,90)"><use href="#heart" class="bit" style="--dx:30px;--dy:-18px"/></g><g transform="translate(230,90)"><use href="#heart" class="bit" style="--dx:-14px;--dy:-30px"/></g>
+      </g>
+      <g fill="#ffe27a"><g transform="translate(150,90)"><use href="#star" class="bit" style="--dx:-34px;--dy:6px"/></g><g transform="translate(150,90)"><use href="#star" class="bit" style="--dx:34px;--dy:8px"/></g><g transform="translate(230,90)"><use href="#star" class="bit" style="--dx:-30px;--dy:-10px"/></g></g>
+      <g class="praise"><text x="150" y="32" text-anchor="middle" class="jua" font-size="34" fill="#ff9a3c" stroke="#fff" stroke-width="7" paint-order="stroke">달콤해!</text></g>
+      </g>
+    </svg>
+    <p class="lv"><b>연쇄 3</b> · 화면 살짝 흔들림, 주변 블록이 ^^ 웃음, 문구 더 크게</p>
+  </div></div>
+
+  <!-- 연쇄 4+ -->
+  <div class="card"><div class="card-image" style="padding:10px;display:block;height:auto">
+    <svg class="stage" viewBox="0 -20 300 250">
+      <g class="shakeBig">
+      <rect y="-20" width="300" height="250" fill="url(#sky)"/>
+      <rect x="20" y="40" width="260" height="170" rx="14" fill="#f3d29b" stroke="#d9a866" stroke-width="4"/>
+      <rect x="26" y="46" width="248" height="158" rx="10" fill="#fff8ec" opacity=".85"/>
+      <g transform="translate(70,90) scale(.42)"><use href="#popRed"/></g>
+      <g transform="translate(150,90) scale(.42)"><use href="#popRed"/></g>
+      <g transform="translate(230,90) scale(.42)"><use href="#popRed"/></g>
+      <g transform="translate(70,165) scale(.42)"><use href="#watchY"/></g>
+      <g transform="translate(150,165) scale(.42)"><use href="#watchB"/></g>
+      <g transform="translate(230,165) scale(.42)"><use href="#watchY"/></g>
+      <g fill="#ff7b88">
+        <g transform="translate(70,90)"><use href="#heart" class="bit" style="--dx:-36px;--dy:-30px"/></g><g transform="translate(70,90)"><use href="#heart" class="bit" style="--dx:28px;--dy:-18px"/></g><g transform="translate(70,90)"><use href="#heart" class="bit" style="--dx:-8px;--dy:30px"/></g>
+        <g transform="translate(150,90)"><use href="#heart" class="bit" style="--dx:-18px;--dy:-40px"/></g><g transform="translate(150,90)"><use href="#heart" class="bit" style="--dx:30px;--dy:-30px"/></g><g transform="translate(150,90)"><use href="#heart" class="bit" style="--dx:6px;--dy:34px"/></g>
+        <g transform="translate(230,90)"><use href="#heart" class="bit" style="--dx:36px;--dy:-22px"/></g><g transform="translate(230,90)"><use href="#heart" class="bit" style="--dx:-16px;--dy:-36px"/></g><g transform="translate(230,90)"><use href="#heart" class="bit" style="--dx:20px;--dy:30px"/></g>
+      </g>
+      <g fill="#ffe27a"><g transform="translate(150,90)"><use href="#star" class="bit" style="--dx:-40px;--dy:6px"/></g><g transform="translate(150,90)"><use href="#star" class="bit" style="--dx:40px;--dy:8px"/></g><g transform="translate(230,90)"><use href="#star" class="bit" style="--dx:-36px;--dy:-12px"/></g><g transform="translate(70,90)"><use href="#star" class="bit" style="--dx:38px;--dy:-14px"/></g></g>
+      <g fill="#b9e8ff"><g transform="translate(150,90)"><use href="#star" class="bit" style="--dx:-20px;--dy:40px"/></g><g transform="translate(230,90)"><use href="#star" class="bit" style="--dx:22px;--dy:38px"/></g></g>
+      <g class="praise"><text x="150" y="34" text-anchor="middle" class="jua" font-size="40" fill="#b37cf0" stroke="#fff" stroke-width="8" paint-order="stroke">뚜비팡!!</text></g>
+      </g>
+    </svg>
+    <p class="lv"><b>연쇄 4 이상</b> · 흔들림 강하게, 조각 최대, 게임 이름을 외친다</p>
+  </div></div>
+</div>
+
+<h3 style="margin-top:22px">칭찬 문구 스타일은 어떤 게 좋을까요?</h3>
+<div class="options">
+  <div class="option" data-choice="words-food" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>디저트 말투</h3><p>연쇄 2 "맛있다!" → 3 "달콤해!" → 4 "최고야!" → 5+ "뚜비팡!!" (위 시안)</p></div>
+  </div>
+  <div class="option" data-choice="words-cheer" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>응원 말투</h3><p>"좋아!" → "멋져!" → "대단해!" → "뚜비팡!!" — 더 쉬운 말이라 어린 아이도 바로 이해</p></div>
+  </div>
+  <div class="option" data-choice="words-sound" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content"><h3>의성어</h3><p>"팡!" → "팡팡!" → "팡팡팡!" → "뚜비팡!!" — 짧고 리듬감, 글을 못 읽어도 재밌음</p></div>
+  </div>
+</div>
