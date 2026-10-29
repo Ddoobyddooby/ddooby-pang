@@ -69,7 +69,11 @@ export type GameEvent =
       readonly blocks: readonly { block: Block; at: Pos; dropFrom: number }[];
     }
   | { readonly type: 'score'; readonly delta: number; readonly cascade: number; readonly at: Pos }
-  | { readonly type: 'shuffle'; readonly mapping: readonly { id: number; to: Pos }[] };
+  | {
+      readonly type: 'shuffle';
+      /** 셔플 후 전체 배치. 셔플 상한을 넘어 새로 생성하면 새 id가 들어 있다 (없어진 id는 제거) */
+      readonly mapping: readonly { block: Block; to: Pos }[];
+    };
 
 export type GameEventType = GameEvent['type'];
 

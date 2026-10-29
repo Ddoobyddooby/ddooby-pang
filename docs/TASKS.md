@@ -27,7 +27,7 @@
   - 테스트: 3I, 4I(H/V), 5I, L, T, +, 6+, 칸을 공유하지 않는 같은 색 두 그룹
 - [x] **W1-10** 🧪 `core/gravity.ts` — 낙하(`fall` 이벤트), 리필(`refill` 이벤트)
   - 테스트: 한 열 여러 빈칸, 빈칸 사이에 블록, 리필 후 빈칸 0
-- [ ] **W1-11** 🧪 `core/moves.ts` — `hasAnyMove`, `findHint`, `shuffle`
+- [x] **W1-11** 🧪 `core/moves.ts` — `hasAnyMove`, `findHint`, `shuffle`
   - 테스트: 수 없는 보드 → 셔플 후 매치 0 + 수 ≥ 1
 - [ ] **W1-12** 🧪 `core/engine.ts` — `resolveSwap` (특수 블록 없이): 스왑 → 매치 → 제거 → 낙하 → 리필 → 연쇄 → 셔플 ⛓W1-08~11
   - 테스트: 매치 없는 스왑은 `valid:false` + `swapBack`, 연쇄 단계 수, cascade 상한 assert

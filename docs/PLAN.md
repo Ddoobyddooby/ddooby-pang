@@ -131,7 +131,7 @@ type GameEvent =
   | { type: 'fall'; moves: { id: number; from: Pos; to: Pos }[] }
   | { type: 'refill'; blocks: { block: Block; at: Pos; dropFrom: number }[] }
   | { type: 'score'; delta: number; cascade: number; at: Pos }
-  | { type: 'shuffle'; mapping: { id: number; to: Pos }[] };
+  | { type: 'shuffle'; mapping: { block: Block; to: Pos }[] };  // 셔플 후 전체 배치. 상한 초과로 새로 생성하면 새 id가 섞여 있다
 
 interface ResolveResult {
   state: GameState;
