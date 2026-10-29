@@ -46,6 +46,7 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 2. **PC 브라우저**: `Local` 주소를 연다 (`Cmd` + 클릭)
 3. **휴대폰 크기로 보기**: Chrome 개발자도구(`Cmd+Option+I`) → 기기 툴바(`Cmd+Shift+M`) → iPhone 등 선택
 4. **실제 휴대폰으로 보기**: PC와 같은 Wi-Fi에 연결한 뒤 휴대폰 브라우저로 `Network` 주소를 연다
+   - 밖에서는 Tailscale로: PC와 휴대폰을 같은 Tailscale에 연결하고 `http://<PC 이름>.<tailnet>.ts.net:5173/` 또는 `100.x.x.x:5173`을 연다. `.ts.net` 주소는 `vite.config.ts`의 `allowedHosts`에 넣어 두어서 열린다
 5. 에러가 나면 개발자도구의 **Console** 탭을 확인한다
 
 **URL 옵션 (개발용)**
