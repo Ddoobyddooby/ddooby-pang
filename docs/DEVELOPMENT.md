@@ -95,6 +95,10 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
   B* C .     * 폭탄  C 컬러  . 빈칸  - | 라인  + 슈퍼
   ```
 
+### W1-08 보드 생성
+- `npm test` → `tests/core/board.test.ts` 통과. 색 3~6종 × seed 200개씩 만든 보드에 시작 매치가 없는지 검사한다
+- 테스트가 진짜 잡는지 보기: `src/core/board.ts`의 `if (!banned.has(k as Color))`를 지워 저장 → `npm run test:watch`에서 실패가 뜨고, 실패 메시지에 문제의 보드가 그림으로 찍힌다. 되돌리기
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -156,3 +160,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **실패 메시지도 기능이다**: 잘못된 표기에 "1행의 칸 수가 다르다"처럼 위치를 알려주면 테스트를 고치는 시간이 줄어든다
 - **문자열 처리**: `trim`, `split(/\s+/)`(공백 여러 개로 자르기), `padEnd`(폭 맞추기), `flat`(2차원 → 1차원)
 - 참고: [MDN String](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/String), [MDN 정규식](https://developer.mozilla.org/ko/docs/Web/JavaScript/Guide/Regular_expressions)
+
+### W1-08 보드 생성
+- **불변 업데이트 패턴**: `cells.slice()`로 복사 → 한 칸만 바꿈 → `{ ...board, cells }`로 새 객체. 원본은 그대로라 "바뀌기 전 보드"를 언제든 다시 볼 수 있다 → `setBlock`, `swapBlocks`
+- **제약을 지키며 채우는 생성 (greedy)**: 칸을 순서대로 채우면서 "왼쪽 2칸 또는 위 2칸과 같은 색"만 피하면 매치가 절대 생기지 않는다. 다시 뽑는 방식보다 빠르고 항상 끝난다 → `createBoard`
+- **맨해튼 거리**: `|Δr| + |Δc| === 1`이면 상하좌우로 붙어 있다 → `isAdjacent`
+- **파라미터화 테스트**: `it.each([3,4,5,6])`로 같은 테스트를 여러 입력에 돌린다. 실패 메시지에 seed와 보드 그림을 넣어서 바로 재현할 수 있게 했다
+- **뮤테이션 테스트(개념)**: 코드를 일부러 망가뜨렸을 때 테스트가 실패하는지 본다. 통과만 하는 테스트는 아무것도 지켜주지 않을 수 있다
+- 참고: [MDN 전개 구문](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Operators/Spread_syntax), [Vitest test.each](https://vitest.dev/api/#test-each)
