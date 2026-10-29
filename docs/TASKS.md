@@ -19,7 +19,7 @@
 
 ### core
 - [x] **W1-05** 🧪 `core/types.ts` — Color, Block, Pos, Board, GameState, GameEvent, MatchGroup
-- [ ] **W1-06** 🧪 `core/rng.ts` — mulberry32 순수 함수 `next(state) → [value, state]`
+- [x] **W1-06** 🧪 `core/rng.ts` — mulberry32 순수 함수 `next(state) → [value, state]`
   - 완료: 같은 seed → 같은 수열
 - [ ] **W1-07** 🧪 테스트 헬퍼 `parseBoard()` / `printBoard()` (문자열 ↔ Board)
 - [ ] **W1-08** 🧪 `core/board.ts` — 초기 생성(매치 회피), get/set/clone, 인접 판정 ⛓W1-06

@@ -82,6 +82,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 직접 확인: `src/core/types.ts`에서 `Color`의 `| 5`를 지우고 `npm run typecheck` → 에러. 되돌리기
 - VSCode에서 `GameEvent` 위에 마우스를 올리면 이벤트 종류가 다 보인다
 
+### W1-06 RNG
+- `npm test` → `tests/core/rng.test.ts` 6개 통과 (같은 seed → 같은 수열, 원본 mulberry32와 일치, 분포 균등)
+- 한 파일만 돌리기: `npx vitest run rng`
+- VSCode 왼쪽 **테스트(플라스크 아이콘)** 탭에서 테스트별로 ▶ 실행할 수도 있다 (Vitest 확장)
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -127,3 +132,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **`interface` vs `type`**: 객체 모양은 `interface`, 유니온·조합은 `type`으로 쓰는 게 일반적
 - **타입 테스트**: `expectTypeOf`로 "타입이 내가 의도한 모양인지"를 테스트한다 → `tests/core/types.test.ts`
 - 참고: [TS 핸드북: Narrowing](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions), [Vitest 타입 테스트](https://vitest.dev/guide/testing-types)
+
+### W1-06 RNG
+- **의사난수(PRNG)와 seed**: 컴퓨터의 "랜덤"은 공식으로 만든 수열이다. 시작값(seed)이 같으면 수열도 같다. 덕분에 "seed 1001에서 버그"처럼 버그를 재현할 수 있다 → `src/core/rng.ts`
+- **왜 `Math.random`을 금지했나**: seed를 지정할 수 없어서 테스트가 매번 다른 보드로 돌고, 실패를 재현할 수 없다
+- **순수 함수로 만든 RNG**: 내부에 상태를 숨기지 않고 `next(state) → [값, 새 상태]`로 상태를 밖으로 꺼냈다. 상태가 `GameState`에 들어가니 게임 전체가 결정적이 된다
+- **비트 연산**: `| 0`(32비트 정수로 자르기), `>>>`(부호 없는 오른쪽 시프트), `Math.imul`(32비트 곱셈). mulberry32가 짧은 코드로 빠른 이유
+- **`[0,1)` → 정수**: `Math.floor(v * n)`으로 0~n-1. 블록 색을 고를 때 쓴다
+- **기준 구현(oracle)으로 테스트**: 결과값을 손으로 적는 대신, 검증된 원본 구현과 비교한다 → `tests/core/rng.test.ts`
+- 참고: [MDN 비트 연산자](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Operators#비트_시프트_연산자), [PRNG (위키백과)](https://ko.wikipedia.org/wiki/유사난수_생성기)
