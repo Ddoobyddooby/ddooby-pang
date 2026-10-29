@@ -71,6 +71,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 같은 코드를 `src/main.ts`에 쓰면 에러가 안 난다 (core만 막는 규칙)
 - 코드 파일을 저장할 때 따옴표·들여쓰기가 자동 정리되면 Prettier 확장이 잘 붙은 것
 
+### W1-04 폴더 구조 + config
+- VSCode 탐색기에서 `src/` 아래 `core / modes / scenes / view / data / storage` 폴더가 보이면 정상 (빈 폴더는 `.gitkeep`으로 git에 올라가 있다)
+- `npm run dev` → W1-01과 같은 화면이 그대로 나와야 한다 (BootScene을 `src/scenes/`로 옮기기만 했다)
+- 수치 바꿔보기: `src/config.ts`의 `GAME.backgroundColor`를 `'#004400'`로 바꾸고 저장 → 브라우저 배경이 초록으로 바뀐다 (확인 후 되돌리기)
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -101,3 +106,10 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **Flat config**: ESLint 9부터의 설정 방식. 배열 순서대로 덮어쓰고, `files`로 특정 폴더에만 규칙을 건다
 - **린트로 아키텍처 지키기**: `no-restricted-imports`로 `src/core`가 Phaser·view를 못 가져오게 막았다. "규칙을 문서에만 쓰지 말고 도구로 강제한다"는 생각이 핵심
 - 참고: [ESLint 설정](https://eslint.org/docs/latest/use/configure/configuration-files), [typescript-eslint](https://typescript-eslint.io/getting-started/), [Prettier 왜 쓰나](https://prettier.io/docs/why-prettier)
+
+### W1-04 폴더 구조 + config
+- **계층형 구조와 의존 방향**: `scenes → view/modes → core`. 아래 계층은 위 계층을 모른다. 그래서 core만 떼어 테스트하거나, 나중에 Phaser 대신 다른 렌더러를 붙일 수 있다 → `README.md`의 아키텍처 그림
+- **설정값 분리 (매직 넘버 제거)**: 점수 `120`이 코드 곳곳에 박혀 있으면 조정할 때 다 찾아야 한다. `SCORE.match4`처럼 이름을 붙여 한 곳에 모은다 → `src/config.ts`
+- **`as const`**: 객체를 읽기 전용 + 리터럴 타입으로 만든다. `GAME.width`가 `number`가 아니라 `720` 타입이 되고, 실수로 값을 바꾸는 코드를 컴파일러가 막는다
+- **ES 모듈 `import / export`**: 파일 하나가 모듈 하나. `export class BootScene` → `import { BootScene } from './scenes/BootScene'` → `src/main.ts`
+- 참고: [TS const assertions](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-4.html#const-assertions), [MDN 모듈](https://developer.mozilla.org/ko/docs/Web/JavaScript/Guide/Modules)

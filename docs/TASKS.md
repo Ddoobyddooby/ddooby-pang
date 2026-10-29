@@ -15,7 +15,7 @@
   - 완료: 샘플 테스트 1개 통과
 - [x] **W1-03** ESLint + Prettier, `src/core/**`에서 `phaser`·`view`·`scenes` import 금지 규칙
   - 완료: core에서 phaser import 시 lint 에러
-- [ ] **W1-04** 폴더 구조 생성 (`core/ modes/ scenes/ view/ data/ storage/`), `config.ts` 뼈대
+- [x] **W1-04** 폴더 구조 생성 (`core/ modes/ scenes/ view/ data/ storage/`), `config.ts` 뼈대
 
 ### core
 - [ ] **W1-05** 🧪 `core/types.ts` — Color, Block, Pos, Board, GameState, GameEvent, MatchGroup
