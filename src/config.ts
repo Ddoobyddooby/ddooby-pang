@@ -6,8 +6,6 @@ export const GAME = {
 } as const;
 
 export const BOARD = {
-  rows: 8,
-  cols: 8,
   /** 한 번의 resolve에서 허용하는 최대 연쇄 수. 넘으면 버그로 보고 assert (3색은 정상으로도 56까지, PLAN 4.3) */
   maxCascade: 200,
   /** 초기 생성·셔플 재시도 상한 */
@@ -225,7 +223,7 @@ export const HUD = {
   title: { fontSize: 56, strokeThickness: 10 },
   panel: {
     padX: 36,
-    /** 오른쪽 열(일시정지·미션) 자리. 지금은 비워 둔다 */
+    /** 오른쪽 열 폭. 스토리는 남은 이동 배지, 타임어택은 비워 둔다 (일시정지 W4-04) */
     rightReserve: 170,
     label: { y: 12, fontSize: 24 },
     score: { y: 28, fontSize: 56 },
@@ -234,6 +232,30 @@ export const HUD = {
     /** 마지막 10초에 1초마다 통통 튀는 시간 글자 */
     pulse: { scale: 1.25, ms: 140 },
     seed: { fontSize: 18, inset: 12 },
+  },
+  /** 스토리 패널 (설계 5절). 위치는 패널 왼쪽 위 기준 (px), 시간은 ms */
+  story: {
+    /** 남은 이동이 이 이하면 빨강 + 이동할 때마다 통통 */
+    movesWarn: 5,
+    /** 미션 줄(최대 2) + 점수 줄: 글자 크기, 줄 간격, 줄 묶음의 세로 가운데 */
+    goalFontSize: 30,
+    scoreFontSize: 24,
+    lineGap: 42,
+    centerY: 85,
+    /** 수집 색 블록 그림 크기와 글자와의 간격 */
+    icon: { size: 40, gap: 12 },
+    /** 달성 체크 (코드로 그린다): 크기, 선 두께, 색, 한 번 통통 */
+    check: { size: 22, width: 7, color: 0x34b877, pulseScale: 1.5, pulseMs: 160 },
+    /** 남은 이동 배지: 반지름, 테두리, 숫자·"이동" 글자 */
+    badge: {
+      radius: 58,
+      border: 4,
+      countFontSize: 52,
+      countDy: -10,
+      labelFontSize: 22,
+      labelDy: 30,
+    },
+    maxGoalLines: 2,
   },
 } as const;
 

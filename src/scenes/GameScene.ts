@@ -1,4 +1,5 @@
-// GameScene: 보드 표시 + 입력 + resolve + 애니메이션 재생 + 타임어택 모드(타이머·점수) + HUD.
+// GameScene: 보드 표시 + 입력 + resolve + 애니메이션 재생 + 모드(타임어택 또는 스토리) + HUD.
+// 시작 데이터: { mode: 'timeattack' } | { mode: 'story', stageId } (없으면 타임어택).
 // 매 프레임 mode.tick, 스왑 전에 mode.canInput, 재생이 끝난 뒤 mode.isOver면 결과 화면('Result')으로 간다.
 // 화면 배치는 screenLayout(this.scale.height). 폭이 720보다 넓은 화면은 카메라로 가운데에 맞춘다.
 //
@@ -15,13 +16,18 @@ import { findHint } from '../core/moves';
 import type { GameState, Pos, SpecialKind } from '../core/types';
 import { BoardView, type BoardViewHooks } from '../view/BoardView';
 import { Hud } from '../view/Hud';
+import { StoryPanel } from '../view/StoryPanel';
+import { TimePanel } from '../view/TimePanel';
 import { FxDirector } from '../view/fx/FxDirector';
 import { BoardInput } from '../view/input';
 import { createLayout, screenLayout } from '../view/layout';
 import { addHills } from '../view/theme/Hills';
 import { recordTimeAttack } from '../storage/progress';
 import { commitSave, getSave } from './saveRegistry';
+import type { GameData } from './sceneData';
 import { getStages } from './stageRegistry';
+import type { GameMode } from '../modes/GameMode';
+import { StoryMode } from '../modes/StoryMode';
 import { TimeAttackMode } from '../modes/TimeAttackMode';
 import { Background } from '../view/theme/Background';
 import { drawBoardFrame } from '../view/theme/BoardFrame';
@@ -45,11 +51,16 @@ const SPECIAL_SAMPLES: [Pos, SpecialKind][] = [
 ];
 
 export class GameScene extends Phaser.Scene {
+  private startData: GameData = { mode: 'timeattack' };
   private state!: GameState;
   private view!: BoardView;
   private boardInput!: BoardInput;
   private hud!: Hud;
-  private mode!: TimeAttackMode;
+  private mode!: GameMode;
+  /** 모드별 패널과 모드 객체 (둘 중 하나만 있다) */
+  private timePanel?: TimePanel;
+  private storyPanel?: StoryPanel;
+  private storyMode?: StoryMode;
   private busy = false;
   private moves = 0;
   private seed = 0;
@@ -61,20 +72,40 @@ export class GameScene extends Phaser.Scene {
     super('Game');
   }
 
+  init(data?: GameData): void {
+    this.startData = data?.mode === 'story' ? data : { mode: 'timeattack' };
+  }
+
   create(): void {
     const params = new URLSearchParams(window.location.search);
-    const setting = getStages(this.registry).timeattack; // public/stages/timeattack.json
+    const stages = getStages(this.registry);
+    const stage =
+      this.startData.mode === 'story' ? stages.story[this.startData.stageId - 1] : undefined;
+    if (this.startData.mode === 'story' && !stage) {
+      throw new Error(`스테이지 ${this.startData.stageId}가 없다`);
+    }
+    // 보드 모양과 seed는 스테이지(스토리) 또는 timeattack.json(타임어택)에서 온다
+    const setting = stage ?? stages.timeattack;
     this.seed = Number(params.get('seed')) || setting.seed || Date.now() % 1_000_000;
+    this.storyMode = undefined;
+    this.timePanel = undefined;
+    this.storyPanel = undefined;
     this.moves = 0;
     this.busy = false;
     this.finished = false;
-    const time = Number(params.get('time'));
-    // DEV의 ?time=N(초)이 JSON 값보다 먼저다
-    this.timeLimitMs = import.meta.env.DEV && time > 0 ? time * 1000 : setting.timeLimit * 1000;
-    this.mode = new TimeAttackMode({
-      bestScore: getSave(this.registry).timeattack.bestScore,
-      timeLimitMs: this.timeLimitMs,
-    });
+    if (stage) {
+      this.storyMode = new StoryMode(stage); // 스토리는 시간 제한이 없다
+      this.mode = this.storyMode;
+    } else {
+      const time = Number(params.get('time'));
+      // DEV의 ?time=N(초)이 JSON 값보다 먼저다
+      this.timeLimitMs =
+        import.meta.env.DEV && time > 0 ? time * 1000 : stages.timeattack.timeLimit * 1000;
+      this.mode = new TimeAttackMode({
+        bestScore: getSave(this.registry).timeattack.bestScore,
+        timeLimitMs: this.timeLimitMs,
+      });
+    }
 
     this.state = createInitialState({
       rows: setting.rows,
@@ -97,7 +128,12 @@ export class GameScene extends Phaser.Scene {
     hooks.onActivate = (special, at, cleared) => fx.playActivate(special, at, cleared);
 
     this.hud = new Hud(this, 'Ddooby-Pang', screen);
-    if (import.meta.env.DEV) this.hud.setSeed(this.seed, screen);
+    if (import.meta.env.DEV) this.hud.setSeed(this.seed);
+    if (stage && this.storyMode) {
+      this.storyPanel = new StoryPanel(this, screen, this.storyMode.goalProgress());
+    } else {
+      this.timePanel = new TimePanel(this, screen);
+    }
     this.updateHud();
 
     this.boardInput = new BoardInput(
@@ -148,7 +184,9 @@ export class GameScene extends Phaser.Scene {
   private finish(): void {
     if (this.finished) return;
     this.finished = true;
-    commitSave(this.registry, recordTimeAttack(getSave(this.registry), this.mode.score()));
+    if (this.mode.kind === 'timeattack') {
+      commitSave(this.registry, recordTimeAttack(getSave(this.registry), this.mode.score()));
+    }
     this.scene.start('Result', { result: this.mode.result() });
   }
 
@@ -176,8 +214,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateHud(): void {
-    this.hud.setScore(this.mode.score());
-    this.hud.setTime(this.mode.timeLeftMs(), this.timeLimitMs);
+    if (this.storyMode && this.storyPanel) {
+      this.storyPanel.setProgress(this.storyMode.goalProgress(), this.storyMode.score());
+      this.storyPanel.setMoves(this.storyMode.movesLeft());
+    } else if (this.mode instanceof TimeAttackMode && this.timePanel) {
+      this.timePanel.setScore(this.mode.score());
+      this.timePanel.setTime(this.mode.timeLeftMs(), this.timeLimitMs);
+    }
   }
 
   private async demoLoop(): Promise<void> {
