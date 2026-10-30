@@ -1,12 +1,13 @@
 // 처리 루프 (PLAN 4.3): 스왑 → 매치 → 제거 → 낙하 → 리필 → (연쇄 반복) → 수 없으면 셔플
-// 1주차 범위: 특수 블록(W2-05), 컬러 블록 스왑(W2-06), 점수(W2-08)는 아직 없다.
+// 아직 없는 것: 컬러 블록 스왑(W2-06), 점수(W2-08).
 
-import { BOARD } from '../config';
-import { getBlock, indexOf, inBounds, isAdjacent, swapBlocks } from './board';
+import { BOARD, SPECIAL } from '../config';
+import { getBlock, indexOf, inBounds, isAdjacent, posOf, swapBlocks } from './board';
 import { applyGravity, refill } from './gravity';
 import { findMatches } from './matcher';
 import { createPlayableBoard, hasAnyMove, shuffle } from './moves';
 import { createRng } from './rng';
+import { chainActivate, decideSpecial, specialPosition } from './specials';
 import type { Board, GameEvent, GameState, Pos, ResolveResult } from './types';
 
 const COLOR_COUNT = 6;
@@ -44,8 +45,14 @@ function assertInvariants(board: Board): void {
   if (!hasAnyMove(board)) throw new Error('resolve 후 가능한 수가 없다');
 }
 
-export function resolveSwap(state: GameState, a: Pos, b: Pos): ResolveResult {
+export function resolveSwap(
+  state: GameState,
+  a: Pos,
+  b: Pos,
+  newSpecialInBlast = SPECIAL.newSpecialInBlast,
+): ResolveResult {
   const start = state.board;
+  const idx = (p: Pos) => indexOf(start, p);
   if (!inBounds(start, a) || !inBounds(start, b) || !isAdjacent(a, b)) return invalid(state, []);
   if (!getBlock(start, a) || !getBlock(start, b)) return invalid(state, []);
 
@@ -64,23 +71,58 @@ export function resolveSwap(state: GameState, a: Pos, b: Pos): ResolveResult {
       throw new Error(`연쇄가 ${BOARD.maxCascade}회를 넘었다 (무한 연쇄 의심)`);
     }
 
-    // 제거 (그룹끼리는 칸을 공유하지 않지만 안전하게 중복 제거)
-    const cells = board.cells.slice();
-    const removed: { id: number; at: Pos; bySpecial: boolean }[] = [];
-    for (const group of groups) {
-      for (const at of group.cells) {
-        const i = indexOf(board, at);
-        const block = cells[i];
-        if (!block) continue;
-        removed.push({ id: block.id, at, bySpecial: false });
-        if (block.color !== null) removedByColor[block.color]!++;
-        cells[i] = null;
+    // 특수 블록 결정 → 매치 칸에서 연쇄 발동 → 제거 → 새 특수 블록 배치 (PLAN 4.5)
+    const swapped = cascade === 0 ? [a, b] : [];
+    let nextId = board.nextId;
+    let created = groups.flatMap((group) => {
+      const special = decideSpecial(group);
+      if (!special) return [];
+      const color = special === 'color' ? null : group.color;
+      return [{ at: specialPosition(group, swapped), block: { id: nextId++, color, special } }];
+    });
+    const matched = groups.flatMap((g) => g.cells);
+    const chain = chainActivate(board, matched);
+    const activations = [...chain.activations];
+    let cleared = chain.cleared;
+
+    if (newSpecialInBlast === 'explode') {
+      const blasted = new Set(chain.activations.flatMap((e) => e.cleared).map(idx));
+      const hit = created.filter((n) => blasted.has(idx(n.at)));
+      if (hit.length > 0) {
+        // 지워진 칸을 비우고 새 블록을 놓은 보드에서, 걸린 새 블록부터 다시 퍼뜨린다
+        const placed = board.cells.slice();
+        for (const at of cleared) placed[idx(at)] = null;
+        for (const n of created) placed[idx(n.at)] = n.block;
+        const second = chainActivate(
+          { ...board, cells: placed },
+          hit.map((n) => n.at),
+        );
+        activations.push(...second.activations);
+        const gone = new Set(second.cleared.map(idx));
+        created = created.filter((n) => !gone.has(idx(n.at)));
+        const all = new Set([...cleared, ...second.cleared].map(idx));
+        cleared = [...all].sort((x, y) => x - y).map((i) => posOf(board, i));
       }
     }
-    board = { ...board, cells };
+
+    const inGroup = new Set(matched.map(idx));
+    const cells = board.cells.slice();
+    const removed: { id: number; at: Pos; bySpecial: boolean }[] = [];
+    for (const at of cleared) {
+      const i = idx(at);
+      const block = cells[i];
+      if (!block) continue;
+      removed.push({ id: block.id, at, bySpecial: !inGroup.has(i) });
+      if (block.color !== null) removedByColor[block.color]!++;
+      cells[i] = null;
+    }
+    for (const n of created) cells[idx(n.at)] = n.block;
+    board = { ...board, cells, nextId };
     steps.push([
       { type: 'match', groups, cascade },
+      ...activations,
       { type: 'remove', blocks: removed },
+      ...created.map((n): GameEvent => ({ type: 'create', block: n.block, at: n.at })),
     ]);
 
     // 낙하 + 리필은 동시에 재생한다

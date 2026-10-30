@@ -1,5 +1,6 @@
 // 퍼즈 테스트: 랜덤 seed + 랜덤 유효 스왑을 반복해 resolve가 깨지지 않는지 본다 (PLAN 8, 10절)
 import { describe, expect, it } from 'vitest';
+import { getBlock } from '../../src/core/board';
 import { createInitialState, resolveSwap } from '../../src/core/engine';
 import { findMatches } from '../../src/core/matcher';
 import { hasAnyMove, isValidSwap } from '../../src/core/moves';
@@ -19,7 +20,9 @@ function validSwaps(board: Board): { a: Pos; b: Pos }[] {
         out.push({ a, b: { r: r + 1, c } });
     }
   }
-  return out;
+  // shortcut: 컬러 블록 스왑 발동이 아직 없어 그 스왑은 뺀다, W2-06에서 이 필터를 지운다
+  const isColor = (p: Pos) => getBlock(board, p)?.special === 'color';
+  return out.filter(({ a, b }) => !isColor(a) && !isColor(b));
 }
 
 const key = (p: Pos) => `${p.r},${p.c}`;
@@ -75,9 +78,12 @@ function replay(before: Board, steps: readonly (readonly GameEvent[])[]): Map<st
           at.clear();
           for (const m of e.mapping) at.set(key(m.to), m.block.id);
           break;
+        case 'create':
+          if (at.has(key(e.at))) throw new Error(`create: ${key(e.at)}가 비어 있지 않다`);
+          at.set(key(e.at), e.block.id);
+          break;
         case 'match':
         case 'activate':
-        case 'create':
         case 'score':
           break;
       }
@@ -100,11 +106,12 @@ interface FuzzConfig {
   colors: number;
   games: number;
   swapsPerGame: number;
+  newSpecialInBlast?: 'keep' | 'explode';
 }
 
-function fuzz({ rows, cols, colors, games, swapsPerGame }: FuzzConfig) {
+function fuzz({ rows, cols, colors, games, swapsPerGame, newSpecialInBlast }: FuzzConfig) {
   let picker: RngState = createRng(rows * 1000 + colors); // 스왑 선택용 (게임 rng와 별개)
-  const stats = { swaps: 0, cascades: 0, maxCascade: 0, shuffles: 0 };
+  const stats = { swaps: 0, cascades: 0, maxCascade: 0, shuffles: 0, creates: 0, activates: 0 };
 
   for (let game = 1; game <= games; game++) {
     const seed = game * 7919 + colors;
@@ -113,13 +120,20 @@ function fuzz({ rows, cols, colors, games, swapsPerGame }: FuzzConfig) {
     for (let turn = 0; turn < swapsPerGame; turn++) {
       const where = `seed ${seed}, turn ${turn}\n${printBoard(state.board)}`;
       const options = validSwaps(state.board);
-      expect(options.length, where).toBeGreaterThan(0);
+      if (options.length === 0) break; // shortcut: 컬러 블록 스왑만 남은 판은 끝낸다, W2-06에서 지운다
 
       let pick: number;
       [pick, picker] = nextInt(picker, options.length);
       const { a, b } = options[pick]!;
 
-      const result = resolveSwap(state, a, b); // 예외가 나면 테스트 실패
+      let result: ReturnType<typeof resolveSwap>;
+      try {
+        result = resolveSwap(state, a, b, newSpecialInBlast);
+      } catch (e) {
+        throw new Error(`${(e as Error).message}\n${where}\nswap ${key(a)} ↔ ${key(b)}`, {
+          cause: e,
+        });
+      }
       expect(result.valid, where).toBe(true);
 
       const board = result.state.board;
@@ -143,6 +157,8 @@ function fuzz({ rows, cols, colors, games, swapsPerGame }: FuzzConfig) {
       stats.cascades += cascades;
       stats.maxCascade = Math.max(stats.maxCascade, cascades);
       if (result.steps.flat().some((e) => e.type === 'shuffle')) stats.shuffles++;
+      stats.creates += result.steps.flat().filter((e) => e.type === 'create').length;
+      stats.activates += result.steps.flat().filter((e) => e.type === 'activate').length;
 
       state = result.state;
     }
@@ -156,11 +172,28 @@ describe('fuzz: 랜덤 유효 스왑', () => {
     expect(stats.swaps).toBe(1000);
     expect(stats.cascades).toBeGreaterThanOrEqual(1000);
     if (colors <= 4) expect(stats.maxCascade).toBeGreaterThan(1); // 색이 적으면 연쇄가 실제로 일어난다
+    // 특수 블록이 실제로 생기고 발동한다
+    expect(stats.creates).toBeGreaterThan(0);
+    expect(stats.activates).toBeGreaterThan(0);
+  });
+
+  it("8x8, colors=4, newSpecialInBlast 'explode': 1000회", () => {
+    const stats = fuzz({
+      rows: 8,
+      cols: 8,
+      colors: 4,
+      games: 20,
+      swapsPerGame: 50,
+      newSpecialInBlast: 'explode',
+    });
+    expect(stats.swaps).toBe(1000);
+    expect(stats.activates).toBeGreaterThan(0);
   });
 
   it('5x5, colors=5: 셔플이 자주 일어나는 작은 보드 1000회', () => {
     const stats = fuzz({ rows: 5, cols: 5, colors: 5, games: 20, swapsPerGame: 50 });
-    expect(stats.swaps).toBe(1000);
+    // shortcut: 컬러 블록 스왑만 남아 일찍 끝나는 판이 있다, W2-06에서 toBe(1000)으로 되돌린다
+    expect(stats.swaps).toBeGreaterThanOrEqual(900);
     expect(stats.shuffles).toBeGreaterThan(0);
   });
 });

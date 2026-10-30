@@ -239,6 +239,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - "줄 → 줄 → 폭탄" 테스트에서 `activated` 순서와 `x` 그림으로 연쇄가 퍼지는 모양을 볼 수 있다
 - 휘말린 컬러 블록은 보드에서 가장 많은 색을 지운다 (PLAN 4.5). 바꾸고 싶으면 `src/core/specials.ts`의 `mostCommonColor`
 
+### W2-05 엔진에 특수 블록 연결
+- `npm test` → `tests/core/engine.test.ts`의 "특수 블록" 7개 + 퍼즈 테스트(특수 블록 생성·발동 수 확인, `'explode'` 모드 1000회) 통과
+- 화면: `npm run dev`에서 4개를 맞추면 줄무늬 블록, L/T 5개는 폭탄, 일자 5개는 무지개, 6개 이상은 슈퍼 블록이 그 자리에 생긴다. 특수 블록이 섞인 매치를 만들면 범위가 한꺼번에 사라진다 (발동 연출은 W2-07)
+- 알려진 한계 (W2-06에서 해결): 무지개 블록을 스왑하면 아직 되돌아온다. `?demo`는 힌트가 무지개 블록 스왑이면 거기서 멈춘다
+- B 방식 해보기: `src/config.ts`의 `SPECIAL.newSpecialInBlast`를 `'explode'`로 바꾸면, 특수 블록이 섞인 매치에서 새 특수 블록이 생기자마자 같이 터진다
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -478,3 +484,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **`Extract<유니온, 조건>`**: `GameEvent` 중 `type: 'activate'`인 모양만 뽑아 타입으로 쓴다. 이벤트 모양이 바뀌면 여기도 같이 따라간다
 - **결정적 순서**: 시작 칸은 넘겨받은 순서, 범위 칸은 행 우선. 같은 보드 → 같은 `activate` 순서라 리플레이·테스트가 흔들리지 않는다
 - 참고: [너비 우선 탐색 (위키백과)](https://ko.wikipedia.org/wiki/너비_우선_탐색), [TypeScript Extract](https://www.typescriptlang.org/docs/handbook/utility-types.html#extracttype-union)
+
+### W2-05 엔진에 특수 블록 연결
+- **작은 함수를 조립하는 오케스트레이터**: `resolveSwap`은 `decideSpecial` → `specialPosition` → `chainActivate`를 차례로 부르기만 한다. 각 부품은 W2-01~04에서 따로 테스트했으니, 여기서는 "조립 순서"만 검증하면 된다 (`src/core/engine.ts`)
+- **순서가 규칙을 만든다**: 폭발로 지울 칸을 다 정한 *다음에* 새 특수 블록을 놓으니, 'keep' 규칙은 코드 한 줄 없이 저절로 지켜진다. 'explode'만 추가 처리가 필요하다
+- **설정 스위치 + 기본값 매개변수**: `resolveSwap(state, a, b, newSpecialInBlast = SPECIAL.newSpecialInBlast)`. 게임은 config를 따르고, 테스트는 두 값을 직접 넘겨 둘 다 검사한다
+- **퍼즈 테스트가 찾은 것**: 3색 보드에서 연쇄가 56번까지 이어져 "무한 연쇄" 안전장치(50)에 걸렸다. 버그인지 보려고 색 수별 연쇄 길이를 측정해 보니 끝나는 연쇄였다 → 상한을 200으로. 안전장치가 울리면 먼저 "진짜 버그인가, 기준이 틀렸나"를 데이터로 가린다
+- **이벤트 계약**: 같은 step 안에서 `remove` 다음에 `create`가 와야 view(`EventTracker`)가 "빈칸에만 놓는다"는 검사를 통과한다. 퍼즈 테스트의 `replay`가 이 계약을 매 턴 확인한다
+- **`Error`의 `cause`**: 잡은 에러를 감싸 다시 던질 때 `new Error(msg, { cause: e })`로 원인을 붙이면 원래 스택이 사라지지 않는다 (`tests/core/fuzz.test.ts`)
+- 참고: [MDN Error cause](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Error/cause)

@@ -162,3 +162,123 @@ describe('resolveSwap', () => {
     expect(shuffles).toBeGreaterThan(0);
   });
 });
+
+// W2-05: 특수 블록 생성·발동 (PLAN 4.3, 4.5)
+describe('resolveSwap: 특수 블록', () => {
+  const p = (r: number, c: number) => ({ r, c });
+
+  /** 첫 match step (cascade 0)의 이벤트 */
+  function firstStep(result: ReturnType<typeof resolveSwap>) {
+    const step = result.steps[1]!;
+    const of = <T extends GameEvent['type']>(type: T) =>
+      step.filter((e): e is Extract<GameEvent, { type: T }> => e.type === type);
+    return {
+      types: step.map((e) => e.type),
+      activate: of('activate').map((e) => `${e.special}@${e.at.r},${e.at.c}`),
+      create: of('create').map((e) => ({
+        at: e.at,
+        special: e.block.special,
+        color: e.block.color,
+      })),
+      removed: of('remove')[0]!.blocks,
+    };
+  }
+
+  // (0,2) Y ↔ (1,2) R → 0행 R R R R
+  const FOUR = `
+    R R Y R B
+    G B R G Y
+    Y G B Y G
+  `;
+  const FOUR_WITH_LINE = `
+    R R Y R- B
+    G B R G  Y
+    Y G B Y  G
+  `;
+
+  it('4I 가로 → 스왑 칸에 세로줄(lineV) 생성, 이벤트 순서 match → remove → create', () => {
+    const result = resolveSwap(stateOf(FOUR, 5), p(0, 2), p(1, 2));
+    const step = firstStep(result);
+    expect(step.types).toEqual(['match', 'remove', 'create']);
+    expect(step.create).toEqual([{ at: p(0, 2), special: 'lineV', color: 0 }]);
+    expect(step.removed.map((b) => b.at)).toEqual([p(0, 0), p(0, 1), p(0, 2), p(0, 3)]);
+    expect(step.removed.every((b) => !b.bySpecial)).toBe(true);
+  });
+
+  it('새 블록 id는 board.nextId부터', () => {
+    const state = stateOf(FOUR, 5);
+    const create = resolveSwap(state, p(0, 2), p(1, 2))
+      .steps.flat()
+      .find((e) => e.type === 'create')!;
+    expect(create.type === 'create' && create.block.id).toBe(state.board.nextId);
+  });
+
+  it('매치에 섞인 줄 블록이 발동: 범위의 블록은 bySpecial로 제거', () => {
+    const result = resolveSwap(stateOf(FOUR_WITH_LINE, 5), p(0, 2), p(1, 2));
+    const step = firstStep(result);
+    expect(step.types).toEqual(['match', 'activate', 'remove', 'create']);
+    expect(step.activate).toEqual(['lineH@0,3']);
+    const extra = step.removed.filter((b) => b.bySpecial).map((b) => b.at);
+    expect(extra).toEqual([p(0, 4)]);
+    expect(result.removedByColor[3]).toBeGreaterThanOrEqual(1); // (0,4)의 B
+  });
+
+  it("'keep'(기본): 생성 칸이 발동 범위에 걸려도 새 특수 블록은 남는다", () => {
+    const step = firstStep(resolveSwap(stateOf(FOUR_WITH_LINE, 5), p(0, 2), p(1, 2), 'keep'));
+    expect(step.create).toEqual([{ at: p(0, 2), special: 'lineV', color: 0 }]);
+  });
+
+  it("'explode': 새 특수 블록이 바로 발동하고 create는 없다", () => {
+    const step = firstStep(resolveSwap(stateOf(FOUR_WITH_LINE, 5), p(0, 2), p(1, 2), 'explode'));
+    expect(step.types).toEqual(['match', 'activate', 'activate', 'remove']);
+    expect(step.activate).toEqual(['lineH@0,3', 'lineV@0,2']);
+    expect(step.create).toEqual([]);
+    // 새 세로줄이 2열을 지운다
+    const extra = step.removed.filter((b) => b.bySpecial).map((b) => b.at);
+    expect(extra).toEqual([p(0, 4), p(1, 2), p(2, 2)]);
+  });
+
+  it('특수 블록도 낙하한다 (id와 special 유지)', () => {
+    // (1,2) G ↔ (2,2) R → 1행 R R R. 위의 B-가 내려온다
+    const state = stateOf(
+      `
+        B- G Y
+        R  R G
+        Y  B R
+      `,
+      5,
+    );
+    const lineId = state.board.cells[0]!.id;
+    const result = resolveSwap(state, p(1, 2), p(2, 2));
+    const fall = result.steps[2]!.find((e) => e.type === 'fall')!;
+    expect(fall.type === 'fall' && fall.moves).toContainEqual({
+      id: lineId,
+      from: p(0, 0),
+      to: p(1, 0),
+    });
+  });
+
+  it('연쇄 중 생긴 4매치는 그룹 중앙에 생성', () => {
+    // (3,2) B ↔ (4,2) Y → 2열 Y Y Y. 0행 R이 (3,2)로 떨어져 3행 R R R R
+    const result = resolveSwap(
+      stateOf(
+        `
+          G B R Y
+          B G Y B
+          G B Y G
+          R R B R
+          Y G Y B
+        `,
+        5,
+      ),
+      p(3, 2),
+      p(4, 2),
+    );
+    const second = result.steps[3]!;
+    expect(second[0]).toMatchObject({ type: 'match', cascade: 1 });
+    expect(second.find((e) => e.type === 'create')).toMatchObject({
+      at: p(3, 1),
+      block: { special: 'lineV', color: 0 },
+    });
+  });
+});
