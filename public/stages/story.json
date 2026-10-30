@@ -5,7 +5,162 @@
     "cols": 8,
     "colors": 4,
     "moves": 25,
-    "goals": [{ "type": "score", "target": 2000 }],
+    "goals": [
+      {
+        "type": "score",
+        "target": 2000
+      }
+    ],
     "stars": [2000, 6000, 9000]
+  },
+  {
+    "id": 2,
+    "rows": 8,
+    "cols": 8,
+    "colors": 4,
+    "moves": 25,
+    "goals": [
+      {
+        "type": "score",
+        "target": 3000
+      }
+    ],
+    "stars": [3000, 7000, 10000]
+  },
+  {
+    "id": 3,
+    "rows": 8,
+    "cols": 8,
+    "colors": 4,
+    "moves": 22,
+    "goals": [
+      {
+        "type": "collect",
+        "color": "red",
+        "count": 25
+      }
+    ],
+    "stars": [2000, 5000, 8500]
+  },
+  {
+    "id": 4,
+    "rows": 8,
+    "cols": 8,
+    "colors": 5,
+    "moves": 25,
+    "goals": [
+      {
+        "type": "score",
+        "target": 1500
+      }
+    ],
+    "stars": [1500, 4000, 6000]
+  },
+  {
+    "id": 5,
+    "rows": 8,
+    "cols": 8,
+    "colors": 5,
+    "moves": 22,
+    "goals": [
+      {
+        "type": "collect",
+        "color": "yellow",
+        "count": 18
+      }
+    ],
+    "stars": [1500, 3200, 4500]
+  },
+  {
+    "id": 6,
+    "rows": 8,
+    "cols": 8,
+    "colors": 5,
+    "moves": 22,
+    "goals": [
+      {
+        "type": "collect",
+        "color": "red",
+        "count": 15
+      },
+      {
+        "type": "collect",
+        "color": "blue",
+        "count": 15
+      }
+    ],
+    "stars": [1500, 3200, 4500]
+  },
+  {
+    "id": 7,
+    "rows": 8,
+    "cols": 8,
+    "colors": 5,
+    "moves": 20,
+    "goals": [
+      {
+        "type": "score",
+        "target": 1300
+      },
+      {
+        "type": "collect",
+        "color": "green",
+        "count": 15
+      }
+    ],
+    "stars": [1300, 3100, 4500]
+  },
+  {
+    "id": 8,
+    "rows": 8,
+    "cols": 8,
+    "colors": 6,
+    "moves": 20,
+    "goals": [
+      {
+        "type": "score",
+        "target": 900
+      }
+    ],
+    "stars": [900, 2500, 4000]
+  },
+  {
+    "id": 9,
+    "rows": 8,
+    "cols": 8,
+    "colors": 6,
+    "moves": 18,
+    "goals": [
+      {
+        "type": "collect",
+        "color": "purple",
+        "count": 10
+      },
+      {
+        "type": "collect",
+        "color": "orange",
+        "count": 10
+      }
+    ],
+    "stars": [800, 2000, 3000]
+  },
+  {
+    "id": 10,
+    "rows": 8,
+    "cols": 8,
+    "colors": 6,
+    "moves": 18,
+    "goals": [
+      {
+        "type": "score",
+        "target": 900
+      },
+      {
+        "type": "collect",
+        "color": "red",
+        "count": 10
+      }
+    ],
+    "stars": [900, 2200, 3500]
   }
 ]
