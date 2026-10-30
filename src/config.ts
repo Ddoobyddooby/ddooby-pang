@@ -188,3 +188,33 @@ export const HUD = {
   title: { y: 80, fontSize: 56, strokeThickness: 10 },
   info: { y: 150, fontSize: 26, height: 44, padX: 40 },
 } as const;
+
+/** 결과 화면 (W2-12). dy = 화면 가운데 기준 세로 위치(px), 시간은 ms */
+export const RESULT = {
+  panel: { width: 560, height: 680, alpha: 0.92 },
+  title: { text: '끝!', dy: -250, fontSize: 96, strokeThickness: 12 },
+  scoreLabel: { text: '점수', dy: -130, fontSize: 40 },
+  score: { dy: -40, fontSize: 108, strokeThickness: 10 },
+  best: { label: '최고 점수', dy: 70, fontSize: 36 },
+  badge: {
+    text: '최고 기록!',
+    dy: 140,
+    fontSize: 40,
+    padX: 28,
+    height: 64,
+    /** 통통 튀는 크기와 한 번 커졌다 돌아오는 시간 */
+    bounceScale: 1.12,
+    bounceMs: 420,
+  },
+  button: {
+    text: '다시하기',
+    dy: 250,
+    width: 300,
+    height: 100,
+    fontSize: 48,
+    textColor: '#8a5a24',
+    /** 누르면 이만큼 줄었다가 돌아온 뒤 게임을 다시 시작한다 */
+    pressScale: 0.88,
+    pressMs: 90,
+  },
+} as const;

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { THEME } from '../config';
+import { previewResult } from './resultText';
 
 /** 글꼴이 늦거나 실패해도 게임은 이 시간 안에 시작한다 (오프라인, 느린 휴대폰) */
 const FONT_TIMEOUT_MS = 2000;
@@ -11,7 +12,12 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    void this.loadFont().then(() => this.scene.start('Game'));
+    void this.loadFont().then(() => {
+      // DEV 미리보기: ?result=N(&best=M)이면 게임 대신 결과 화면을 바로 띄운다
+      const preview = import.meta.env.DEV ? previewResult(window.location.search) : null;
+      if (preview) this.scene.start('Result', { result: preview });
+      else this.scene.start('Game');
+    });
   }
 
   private async loadFont(): Promise<void> {

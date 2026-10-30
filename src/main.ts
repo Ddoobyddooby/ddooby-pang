@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME } from './config';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
+import { ResultScene } from './scenes/ResultScene';
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -13,5 +14,5 @@ new Phaser.Game({
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, GameScene],
+  scene: [BootScene, GameScene, ResultScene],
 });
