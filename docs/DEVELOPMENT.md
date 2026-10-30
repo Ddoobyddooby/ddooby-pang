@@ -59,6 +59,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 | `?time=15` | (개발 모드) 제한 시간을 15초로. 마지막 10초 강조·결과 화면을 빨리 볼 때 |
 | `?specials` | (개발 모드) 시작 보드에 특수 블록 5종을 하나씩 놓는다 |
 | `?result=12450&best=9000` | (개발 모드) 게임 없이 결과 화면만 띄운다 (`best` 생략 시 0) |
+| `?result=3200&stage=2&stars=2&bonus=900` | (개발 모드) 스토리 결과 미리보기. `stars=0`이면 실패 화면. [다음 스테이지]까지 보려면 `&unlock=3`도 붙인다 |
+| `?stage=3` | (개발 모드) 메뉴를 건너뛰고 스토리 3번 스테이지로 |
+| `?unlock=5` | (개발 모드) 스테이지 5까지 열고 **저장까지 한다** (새로고침해도 유지). 되돌리기: `?unlock=1` |
+
+주소 옵션이 없으면 메뉴부터 시작한다. `?demo`, `?seed`, `?time`, `?specials`는 메뉴를 건너뛰고 바로 경쟁 모드로 간다. 스테이지 지도에서 **U 키**(개발 모드)를 누르면 다음 스테이지가 하나 열린다.
 
 개발 모드(`npm run dev`)에서는 매 턴 화면과 게임 상태가 같은지 검사한다. Console에 `[game] view ≠ board`가 찍히면 버그이니 seed와 함께 기록해두자.
 
@@ -324,6 +329,22 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 ### W3-04 경쟁 모드 설정 파일
 - `public/stages/timeattack.json`의 `timeLimit`을 `30`으로 바꾸고 새로고침 → 패널에 "남은 시간 0:30". 되돌리기
 - 개발용 `?time=15`는 이 파일보다 우선한다
+
+### W3-08 메뉴
+- `npm run dev` → 첫 화면이 메뉴. 타이틀 아래 친구들이 번갈아 통통 튀고, 버튼 안에 진행 상황(`스테이지 1 / 10 ★ 0`, `처음 도전!` 또는 `최고 12,450점`)
+- [스토리] → 지도, [경쟁 60초] → 게임. `?demo`, `?seed=7`은 예전처럼 바로 게임
+
+### W3-09 스테이지 지도
+- 메뉴 [스토리] → 아래 1번부터 위 10번까지 사탕 길. 지금 할 스테이지가 크게 숨쉬고, 잠긴 곳은 자물쇠(누르면 흔들림). [←] → 메뉴
+- `?unlock=3` → 1·2번 완료(아래에 별), 3번이 지금 할 곳. 지도에서 U 키 → 다음 스테이지가 튀어나오며 열린다
+- 별까지 넣어 보려면 개발자도구 Console에서 `localStorage.setItem('ddooby-pang/save', JSON.stringify({version:1, story:{unlocked:3, bestStars:{1:3,2:2}, bestScore:{}}, timeattack:{bestScore:12450}}))` 후 새로고침
+- 처음 상태로: `localStorage.removeItem('ddooby-pang/save')` 또는 `?unlock=1`
+
+### W3-11 결과 화면 (스토리)
+- `?unlock=3&result=3200&stage=2&stars=2&bonus=900`: "클리어!", 별 2개가 하나씩 차오름, `남은 이동 보너스 +900`, [다음 스테이지] [다시하기] [지도]
+- `?result=800&stage=4&stars=0`: "아쉬워요", 빈 별, [다시하기] [지도]
+- `?unlock=11&result=9000&stage=10&stars=3&bonus=300`: `모든 스테이지 클리어!`
+- `?result=12450&best=9000`: 경쟁 결과, [다시하기] [메뉴]
 
 ## 5. 문제 해결
 
@@ -656,3 +677,18 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 
 ### W3-04 경쟁 모드 설정 파일
 - **기본값과 설정 파일**: 실제 값은 `timeattack.json`, `config.TIMEATTACK`은 파일이 없을 때나 테스트에서 쓰는 기본값으로 남는다. 개발용 URL 옵션 > 설정 파일 > 기본값 순서로 우선한다 (`src/scenes/GameScene.ts`)
+
+### W3-08 메뉴
+- **어디로 갈지 정하는 것도 순수 함수로**: 주소(`?stage=3` 등)를 보고 첫 화면을 고르는 `bootRoute`, 메뉴 문구를 만드는 `storyLabel`은 Phaser 없이 테스트한다 (`src/scenes/bootRoute.ts`, `src/scenes/menuText.ts`)
+- **공통 컴포넌트**: 결과 화면의 버튼을 `addButton`으로 빼서 메뉴·지도·결과가 같이 쓴다. 한 화면 버튼끼리 `PressLock`을 나눠서 두 버튼을 동시에 눌러도 한 번만 이동한다 (`src/view/ui/Button.ts`)
+- **씬 사이 데이터 타입**: `GameData`, `ResultData`를 한 파일에 모아 두면 보내는 쪽·받는 쪽이 같은 모양을 쓴다 (`src/scenes/sceneData.ts`)
+
+### W3-09 스테이지 지도
+- **곡선 길 그리기**: 노드 점들로 `Spline` 곡선을 만들고 `getSpacedPoints`로 같은 간격의 점을 찍어 점선 길을 그린다 (`src/scenes/StageMapScene.ts`)
+- **트윈 조합**: 숨쉬기는 `yoyo + repeat`, 튀어나오기는 `tweens.chain`(여러 단계를 차례로), 흔들림은 `isTweening`으로 겹치지 않게
+- **씬이 끝나도 남겨야 하는 값**: "직전에 본 열린 스테이지 수"를 game registry에 두어 지도에 다시 왔을 때 비교한다. 씬 안 변수는 `scene.start` 때 사라진다
+- **배치·상태 계산 분리**: `mapNodes`(노드 위치), `nodeStates`(완료/지금/잠김)를 테스트한다 (`src/view/mapLayout.ts`)
+
+### W3-11 결과 화면 (스토리)
+- **화면 내용 결정 함수**: 결과를 받아 제목·별·보너스 줄·버튼 조합을 돌려주는 `resultView`를 표처럼 테스트한다. 씬은 받은 대로 그리기만 한다 (`src/scenes/resultText.ts`)
+- **Phaser 함정 하나**: `tweens.chain`의 맨 바깥 `delay`는 무시된다. 첫 단계 트윈 안에 넣어야 한다 (`src/scenes/ResultScene.ts`)
