@@ -83,19 +83,22 @@ function mostCommonColor(board: Board): Color | null {
 
 /**
  * start 칸들을 제거할 때 함께 발동하는 특수 블록을 BFS로 퍼뜨린다 (PLAN 4.5 연쇄 발동).
- * 블록마다 최대 한 번 발동. cleared는 start와 모든 발동 범위의 합집합 (행 우선 정렬)
+ * 블록마다 최대 한 번 발동. cleared는 start와 모든 발동 범위의 합집합 (행 우선 정렬).
+ * activated: 이미 발동한 칸 (컬러 스왑 발동). 제거는 되지만 다시 발동하지 않는다
  */
 export function chainActivate(
   board: Board,
   start: readonly Pos[],
+  activated: readonly Pos[] = [],
 ): { cleared: Pos[]; activations: ActivateEvent[] } {
+  const fired = new Set(activated.map((p) => indexOf(board, p)));
   const seen = new Set<number>();
   const queue: Pos[] = [];
   const add = (p: Pos) => {
     const i = indexOf(board, p);
     if (seen.has(i)) return;
     seen.add(i);
-    if (getBlock(board, p)?.special) queue.push(p);
+    if (getBlock(board, p)?.special && !fired.has(i)) queue.push(p);
   };
   start.forEach(add);
 

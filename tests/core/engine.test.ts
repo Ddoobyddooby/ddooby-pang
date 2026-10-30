@@ -282,3 +282,103 @@ describe('resolveSwap: 특수 블록', () => {
     });
   });
 });
+
+// W2-06: 컬러 블록 스왑 발동 (PLAN 4.3)
+describe('resolveSwap: 컬러 블록 스왑', () => {
+  const p = (r: number, c: number) => ({ r, c });
+
+  function firstStep(result: ReturnType<typeof resolveSwap>) {
+    const step = result.steps[1]!;
+    return {
+      types: step.map((e) => e.type),
+      activate: step.flatMap((e) =>
+        e.type === 'activate' ? [`${e.special}@${e.at.r},${e.at.c}`] : [],
+      ),
+      removed: step.flatMap((e) => (e.type === 'remove' ? e.blocks.map((b) => b.at) : [])),
+      bySpecial: step.every((e) => e.type !== 'remove' || e.blocks.every((b) => b.bySpecial)),
+    };
+  }
+
+  it('컬러 ↔ 일반: 매치가 없어도 valid, 스왑 후 자리에서 상대 색 전체 제거', () => {
+    const result = resolveSwap(
+      stateOf(
+        `
+          C Y R
+          G R B
+          Y B G
+        `,
+        5,
+      ),
+      p(0, 0),
+      p(0, 1),
+    );
+    expect(result.valid).toBe(true);
+    expect(result.steps[0]).toEqual([{ type: 'swap', a: p(0, 0), b: p(0, 1) }]);
+    const step = firstStep(result);
+    expect(step.types).toEqual(['match', 'activate', 'remove']);
+    expect(result.steps[1]![0]).toEqual({ type: 'match', groups: [], cascade: 0 });
+    expect(step.activate).toEqual(['color@0,1']); // 컬러 블록은 (0,1)로 옮겨졌다
+    // Y: 스왑 후 (0,0), (2,0) + 컬러 블록 자신 (0,1)
+    expect(step.removed).toEqual([p(0, 0), p(0, 1), p(2, 0)]);
+    expect(step.bySpecial).toBe(true);
+    expect(result.removedByColor[1]).toBeGreaterThanOrEqual(2);
+  });
+
+  it('일반 ↔ 컬러 (b 쪽이 컬러)도 같다', () => {
+    const step = firstStep(
+      resolveSwap(
+        stateOf(
+          `
+            Y C R
+            G R B
+            Y B G
+          `,
+          5,
+        ),
+        p(0, 0),
+        p(0, 1),
+      ),
+    );
+    expect(step.activate).toEqual(['color@0,0']);
+    expect(step.removed).toEqual([p(0, 0), p(0, 1), p(2, 0)]);
+  });
+
+  it('컬러 ↔ 특수 블록: 그 블록의 색을 지우고, 상대 특수 블록은 연쇄 발동', () => {
+    const step = firstStep(
+      resolveSwap(
+        stateOf(
+          `
+            C Y- R
+            G R  B
+            Y B  G
+          `,
+          5,
+        ),
+        p(0, 0),
+        p(0, 1),
+      ),
+    );
+    // Y- 는 (0,0)으로 옮겨졌다 → 0행 줄 제거
+    expect(step.activate).toEqual(['color@0,1', 'lineH@0,0']);
+    expect(step.removed).toEqual([p(0, 0), p(0, 1), p(0, 2), p(2, 0)]);
+  });
+
+  it('컬러 ↔ 컬러: 보드 전체, 발동은 하나', () => {
+    const result = resolveSwap(
+      stateOf(
+        `
+          C C R
+          G R B
+          Y B G
+        `,
+        5,
+      ),
+      p(0, 0),
+      p(0, 1),
+    );
+    const step = firstStep(result);
+    expect(step.activate).toEqual(['color@0,1']);
+    expect(step.removed).toHaveLength(9);
+    expect(result.valid).toBe(true);
+  });
+});

@@ -445,6 +445,19 @@ describe('chainActivate', () => {
     });
   });
 
+  it('activated에 있는 칸은 제거되지만 다시 발동하지 않는다', () => {
+    const result = chainActivate(
+      parseBoard(`
+        R- Y G B-
+        Y  G B Y
+      `),
+      [p(0, 0), p(0, 1), p(0, 2), p(0, 3)],
+      [p(0, 0)],
+    );
+    expect(result.activations.map((a) => a.at)).toEqual([p(0, 3)]);
+    expect(result.cleared).toContainEqual(p(0, 0));
+  });
+
   it('가장 많은 색이 동점이면 번호가 작은 색 (R=0)', () => {
     expect(
       chain(

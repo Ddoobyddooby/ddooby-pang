@@ -87,7 +87,7 @@
 - [x] **W2-05** 🧪 engine 통합 — `activate`, `create` 이벤트, 특수 블록이 낙하·셔플에서 유지
   - 새 특수 블록이 같은 턴 발동 범위에 걸릴 때: `SPECIAL.newSpecialInBlast` (`'keep'` 기본 / `'explode'`, PLAN 4.5)
   - 3색 보드는 연쇄가 정상적으로도 길어 `BOARD.maxCascade`를 50 → 200 (PLAN 4.3)
-- [ ] **W2-06** 🧪 컬러 블록 스왑 발동 (매치 없이), 상대가 특수 블록 / 컬러 블록인 경우
+- [x] **W2-06** 🧪 컬러 블록 스왑 발동 (매치 없이), 상대가 특수 블록 / 컬러 블록인 경우
 - [ ] **W2-07** 👀 특수 블록 표시 (아이콘/줄무늬) + 발동 이펙트 기본형
 
 ### 점수
@@ -114,6 +114,7 @@
 
 ### 데이터
 - [ ] **W3-01** 🧪 `data/stageSchema.ts` — 타입 + 런타임 검증 (필수 필드, colors 3~6, stars 오름차순, 색 이름)
+  - ⚠️ 시작 전에 사용자에게 확인: 최소 색 수를 3 → 4로 올릴지 (3색은 특수 블록 때문에 연쇄가 수십 번 이어짐, PLAN 4.3 측정값)
 - [ ] **W3-02** `data/stageLoader.ts` — `public/stages/story.json`, `timeattack.json` 로드, 실패 시 에러 표시
 - [ ] **W3-03** 스테이지 1~10 JSON 작성 (점수 미션 → 색 수집 → 복합 순, colors 4→6, moves 25→15)
 - [ ] **W3-04** 경쟁 모드 설정을 `timeattack.json`으로 이동 (`timeLimit: 60`)

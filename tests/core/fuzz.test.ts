@@ -1,6 +1,5 @@
 // 퍼즈 테스트: 랜덤 seed + 랜덤 유효 스왑을 반복해 resolve가 깨지지 않는지 본다 (PLAN 8, 10절)
 import { describe, expect, it } from 'vitest';
-import { getBlock } from '../../src/core/board';
 import { createInitialState, resolveSwap } from '../../src/core/engine';
 import { findMatches } from '../../src/core/matcher';
 import { hasAnyMove, isValidSwap } from '../../src/core/moves';
@@ -20,9 +19,7 @@ function validSwaps(board: Board): { a: Pos; b: Pos }[] {
         out.push({ a, b: { r: r + 1, c } });
     }
   }
-  // shortcut: 컬러 블록 스왑 발동이 아직 없어 그 스왑은 뺀다, W2-06에서 이 필터를 지운다
-  const isColor = (p: Pos) => getBlock(board, p)?.special === 'color';
-  return out.filter(({ a, b }) => !isColor(a) && !isColor(b));
+  return out;
 }
 
 const key = (p: Pos) => `${p.r},${p.c}`;
@@ -120,7 +117,7 @@ function fuzz({ rows, cols, colors, games, swapsPerGame, newSpecialInBlast }: Fu
     for (let turn = 0; turn < swapsPerGame; turn++) {
       const where = `seed ${seed}, turn ${turn}\n${printBoard(state.board)}`;
       const options = validSwaps(state.board);
-      if (options.length === 0) break; // shortcut: 컬러 블록 스왑만 남은 판은 끝낸다, W2-06에서 지운다
+      expect(options.length, where).toBeGreaterThan(0);
 
       let pick: number;
       [pick, picker] = nextInt(picker, options.length);
@@ -192,8 +189,7 @@ describe('fuzz: 랜덤 유효 스왑', () => {
 
   it('5x5, colors=5: 셔플이 자주 일어나는 작은 보드 1000회', () => {
     const stats = fuzz({ rows: 5, cols: 5, colors: 5, games: 20, swapsPerGame: 50 });
-    // shortcut: 컬러 블록 스왑만 남아 일찍 끝나는 판이 있다, W2-06에서 toBe(1000)으로 되돌린다
-    expect(stats.swaps).toBeGreaterThanOrEqual(900);
+    expect(stats.swaps).toBe(1000);
     expect(stats.shuffles).toBeGreaterThan(0);
   });
 });
