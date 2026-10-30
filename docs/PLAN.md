@@ -313,6 +313,11 @@ type ModeResult =
 - 종료: 모든 미션 달성 → **클리어** / `movesLeft === 0` 이고 미달성 → **실패**
 - 클리어 시 남은 이동 × `movesLeftBonus` 가산 후 별 계산 (`stars` 기준)
 - 남은 이동 보너스 연출(Sugar Crush처럼 랜덤 블록을 특수 블록으로 바꿔 터뜨리기)은 v0.1에서는 **점수만 더하고 연출은 생략**
+- 생성: `new StoryMode(stage: StageDef)`. `canInput()` = `!isOver()`, `tick`은 아무것도 안 함
+- 판정은 `onResolve` 뒤에만 한다. 한 턴의 연쇄는 core가 끝까지 계산해서 오므로, 마지막 이동에서 미션을 달성해도 **클리어**
+- 미션 진행 `goalProgress(): { goal: Goal; current: number; done: boolean }[]` (`current`는 목표를 넘어도 그대로 센다, HUD는 W3-10), `movesLeft(): number`
+- 별: 최종 점수(보너스 포함)가 `stars[i]` 이상인 개수. **클리어하면 최소 1개**, 실패는 0개
+- `ModeResult` 스토리 쪽에 `stageId`를 더한다: `{ kind: 'story'; stageId: number; cleared; score; stars }` (결과 화면의 [다음 스테이지]용)
 
 ### TimeAttackMode
 - `timeLeftMs = config.TIMEATTACK.timeLimitMs`(60000), `tick`에서 감소. 0 아래로 내려가지 않는다. `dtMs`가 0 이하이거나 유한수가 아니면 무시
@@ -352,7 +357,11 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [메�
 ## 7. 데이터 / 저장
 
 ### 7.1 스테이지
-- SPEC 6절 스키마. `stageSchema.ts`에서 타입 정의 + 런타임 검증 (필수 필드, `colors` 3~6, `stars` 오름차순 등)
+- SPEC 6절 스키마. `stageSchema.ts`에서 타입 정의 + 런타임 검증 (필수 필드, `colors` 4~6, `stars` 오름차순 등)
+- 파일: `public/stages/story.json` = 스테이지 **배열**, `public/stages/timeattack.json` = 객체 하나 (`moves`·`goals`·`stars` 대신 `timeLimit`(초))
+- 검증 함수 (순수, Phaser·DOM 없음): `parseStory(raw: unknown): StageDef[]`, `parseTimeAttack(raw: unknown): TimeAttackDef`. 실패하면 `StageError`를 던지고 메시지에 위치를 담는다 (예: `story[3].goals[0].count: 1 이상의 정수여야 한다`)
+- 검증 규칙: `id`는 1부터 빈틈없이 순서대로 · `rows`/`cols` 5~10 정수 · `colors` 4~6 · `moves` 1 이상 · `goals` 1개 이상 · `score.target` 1 이상 · `collect.color`는 색 이름이고 **그 스테이지 `colors` 안의 색** · `collect.count` 1 이상 · `stars` 정수 3개, 엄격히 오름차순 · `seed`는 선택(없으면 매번 다른 보드) · 모르는 필드는 무시
+- `src/data`도 순수 TS 규칙(ESLint)을 따른다. `fetch`는 `stageLoader.ts`만 쓴다 (W3-02)
 - 잘못된 스테이지는 BootScene에서 에러를 띄운다 (조용히 넘어가지 않음)
 - 색 이름 매핑: `["red","yellow","green","blue","purple","orange"]` → `Color` 0~5
 
@@ -366,7 +375,10 @@ interface SaveData {
 }
 ```
 
-- `Storage` 인터페이스 하나에 구현 두 개: `CapacitorPreferencesStorage`, `LocalStorageAdapter`
+- 인터페이스 이름은 DOM의 `Storage`와 겹치지 않게 **`SaveStorage`**: `load(): Promise<SaveData>`, `save(data: SaveData): Promise<void>` (Capacitor Preferences가 비동기라서)
+- 구현 두 개: `CapacitorPreferencesStorage`(W4-08), `LocalStorageAdapter`(W3-07). `LocalStorageAdapter`는 `getItem`/`setItem`을 가진 객체를 받아서 테스트에서 가짜를 넣는다
+- 순수 함수: `defaultSave()`(unlocked 1), `parseSave(json: string | null): SaveData`(없음·깨진 JSON·버전 다름 → 기본값, 빠진 필드는 기본값으로 채움), `recordTimeAttack(save, score)`, `recordStory(save, stageId, { cleared, stars, score })`(클리어면 `unlocked = max(unlocked, stageId + 1)`, 별·점수는 큰 값만 남김). 원본은 바꾸지 않고 새 객체를 돌려준다
+- 저장 실패(용량·시크릿 모드)는 게임을 멈추지 않는다. 경고만 찍고 진행
 - `Capacitor.isNativePlatform()`으로 선택
 - 키 하나(`ddooby-pang/save`)에 JSON 통째로 저장. `version`으로 이후 마이그레이션 대비
 
