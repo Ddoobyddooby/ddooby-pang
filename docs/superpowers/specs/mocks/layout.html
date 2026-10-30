@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>화면 배치 시안</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+  :root { --wafer:#e9c48a; --wafer-d:#c99a55; --cream:#fff8ec; --pink:#ff7fa8; --ink:#6b5a7a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'Jua',sans-serif; background:#f4eefa; color:var(--ink); padding:16px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  p.lead { margin:0 0 16px; font-size:15px; opacity:.8; }
+  .row { display:flex; flex-wrap:wrap; gap:20px; justify-content:center; }
+  .opt { width:300px; }
+  .opt h2 { font-size:20px; margin:0 0 6px; }
+  .opt ul { margin:8px 0 0; padding-left:18px; font-size:14px; line-height:1.5; }
+  .phone { position:relative; width:300px; height:650px; border-radius:28px; overflow:hidden;
+    background:linear-gradient(#bfe4ff,#ffd9ea); box-shadow:0 6px 20px #0002; display:flex; flex-direction:column; align-items:center; }
+  .safe-top { height:26px; width:100%; flex:none; }
+  .safe-bot { height:18px; width:100%; flex:none; }
+  .title { color:var(--pink); font-size:30px; text-shadow:0 2px 0 #fff, 0 0 6px #fff; margin-top:6px; }
+  .title.sm { font-size:20px; margin-top:2px; }
+  .board { width:276px; height:276px; background:var(--cream); border:6px solid var(--wafer); border-radius:14px;
+    box-shadow:0 0 0 2px var(--wafer-d) inset; display:grid; grid-template-columns:repeat(8,1fr); padding:4px; gap:2px; flex:none; }
+  .b { border-radius:50%; margin:3px; }
+  .b:nth-child(6n+1){background:#ff7b88} .b:nth-child(6n+2){background:#ffdb5e;border-radius:6px}
+  .b:nth-child(6n+3){background:#6be0a4;border-radius:3px;transform:rotate(45deg) scale(.8)}
+  .b:nth-child(6n+4){background:#78b6ff;border-radius:6px 6px 2px 2px}
+  .b:nth-child(6n+5){background:#bc8af2;border-radius:30%} .b:nth-child(6n){background:#ffab69;border-radius:40%}
+  .panel { background:var(--cream); border:5px solid var(--wafer); border-radius:18px; box-shadow:0 3px 0 var(--wafer-d); }
+  .lbl { font-size:12px; opacity:.7; }
+  .big { font-size:28px; color:#e45a6b; }
+  .bar { height:16px; border-radius:10px; background:#fff; border:3px solid var(--wafer); overflow:hidden; }
+  .bar i { display:block; height:100%; width:62%; background:linear-gradient(90deg,#ff9cc0,#ffb3d0); }
+  .btn { width:44px; height:44px; border-radius:50%; background:#fff; border:4px solid var(--wafer); display:grid; place-items:center; font-size:18px; flex:none; }
+  .hills { position:absolute; left:0; right:0; bottom:0; height:120px; pointer-events:none; }
+  .ghost { border:3px dashed #b9a3d6; border-radius:14px; color:#9b86b8; font-size:12px; display:grid; place-items:center; }
+  .grow { flex:1; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; }
+  .rec { display:inline-block; background:var(--pink); color:#fff; border-radius:8px; padding:1px 8px; font-size:13px; margin-left:6px; }
+</style>
+</head>
+<body>
+<h1>W2-10a 화면 배치 시안</h1>
+<p class="lead">세로가 긴 휴대폰(390×844) 기준. 점선 상자는 3주차 이후에 들어올 자리(미션, 일시정지 등). 화면이 더 길면 회색 글씨로 적은 "늘어나는 곳"이 커진다.</p>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="hills" viewBox="0 0 300 120" preserveAspectRatio="none">
+      <path d="M0 70 Q60 30 120 62 T240 55 T300 60 V120 H0Z" fill="#ffe3ef"/>
+      <path d="M0 92 Q70 62 150 88 T300 84 V120 H0Z" fill="#fff3d9"/>
+      <circle cx="60" cy="70" r="7" fill="#ff7b88"/><rect x="57" y="74" width="6" height="16" fill="#e9c48a"/>
+      <circle cx="232" cy="66" r="9" fill="#bc8af2"/><rect x="229" y="72" width="6" height="18" fill="#e9c48a"/>
+      <path d="M140 96 h26 l-4 16 h-18z" fill="#e9c48a"/><circle cx="153" cy="92" r="10" fill="#ffb3d0"/><circle cx="153" cy="82" r="4" fill="#ff7b88"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="row">
+
+  <!-- A -->
+  <div class="opt">
+    <h2>A. 아래 정보 패널 <span class="rec">추천</span></h2>
+    <div class="phone">
+      <div class="safe-top"></div>
+      <div class="title">Ddooby-Pang</div>
+      <div class="grow">
+        <div class="board">
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+        </div>
+      </div>
+      <div class="panel" style="width:276px;padding:10px 12px;display:flex;gap:10px;align-items:center;z-index:1">
+        <div style="flex:1">
+          <div class="lbl">점수</div><div class="big">12,450</div>
+          <div class="lbl" style="margin-top:4px">남은 시간 0:37</div><div class="bar"><i></i></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="btn">II</div>
+          <div class="ghost" style="width:44px;height:30px">미션</div>
+        </div>
+      </div>
+      <div class="grow" style="flex:0.6;min-height:70px"><span style="font-size:11px;color:#a99;z-index:1">늘어나는 곳 (장식)</span></div>
+      <svg class="hills"><use href="#hills"/></svg>
+      <div class="safe-bot"></div>
+    </div>
+    <ul>
+      <li>보드 바로 아래에 웨이퍼 패널: 점수(크게), 시간 막대, 오른쪽에 일시정지·미션 자리</li>
+      <li>그 아래 디저트 언덕(케이크·막대사탕)으로 바닥을 채움</li>
+      <li>정보가 보드 가까이 있어 플레이 중 시선 이동이 짧음</li>
+    </ul>
+  </div>
+
+  <!-- B -->
+  <div class="opt">
+    <h2>B. 위 정보 + 아래 장식</h2>
+    <div class="phone">
+      <div class="safe-top"></div>
+      <div class="title sm">Ddooby-Pang</div>
+      <div class="panel" style="width:276px;margin-top:6px;padding:8px 10px;display:flex;gap:8px;align-items:center">
+        <div class="btn" style="width:36px;height:36px">II</div>
+        <div style="flex:1;text-align:center"><div class="lbl">점수</div><div class="big" style="font-size:24px">12,450</div></div>
+        <div style="text-align:center"><div class="lbl">시간</div><div class="big" style="font-size:24px;color:#3f88e6">37</div></div>
+      </div>
+      <div class="ghost" style="width:276px;height:26px;margin-top:6px">미션 자리 (3주차)</div>
+      <div class="grow">
+        <div class="board">
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+        </div>
+      </div>
+      <div style="height:150px;width:100%;position:relative;flex:none"><span style="position:absolute;top:8px;width:100%;text-align:center;font-size:11px;color:#a99">늘어나는 곳 (장식)</span></div>
+      <svg class="hills" style="height:150px"><use href="#hills"/></svg>
+      <div class="safe-bot"></div>
+    </div>
+    <ul>
+      <li>캔디크러시처럼 정보는 위, 보드는 가운데</li>
+      <li>아래는 장식만 (언덕을 더 크게)</li>
+      <li>손가락이 정보를 가리지 않지만, 위·아래 시선 이동이 김</li>
+    </ul>
+  </div>
+
+  <!-- C -->
+  <div class="opt">
+    <h2>C. 위 점수 + 아래 큰 시간 막대</h2>
+    <div class="phone">
+      <div class="safe-top"></div>
+      <div class="title sm">Ddooby-Pang</div>
+      <div style="width:276px;display:flex;align-items:center;gap:8px;margin-top:6px">
+        <div class="panel" style="flex:1;padding:4px 10px;text-align:center"><span class="lbl">점수 </span><span class="big" style="font-size:22px">12,450</span></div>
+        <div class="btn" style="width:38px;height:38px">II</div>
+      </div>
+      <div class="grow">
+        <div class="board">
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+          <i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i><i class="b"></i>
+        </div>
+      </div>
+      <div style="width:276px;z-index:1">
+        <div class="lbl" style="text-align:center">남은 시간 0:37</div>
+        <div class="bar" style="height:28px;border-width:5px;border-radius:16px"><i></i></div>
+        <div class="ghost" style="height:34px;margin-top:8px">미션 / 아이템 자리 (3주차~)</div>
+      </div>
+      <div class="grow" style="flex:0.5;min-height:60px"><span style="font-size:11px;color:#a99;z-index:1">늘어나는 곳 (장식)</span></div>
+      <svg class="hills" style="height:100px"><use href="#hills"/></svg>
+      <div class="safe-bot"></div>
+    </div>
+    <ul>
+      <li>점수는 위 한 줄, 시간은 보드 아래 굵은 솜사탕 막대</li>
+      <li>아이가 "얼마나 남았는지"를 숫자 대신 막대로 봄</li>
+      <li>스토리 모드에서는 막대가 "남은 이동"으로 바뀜</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

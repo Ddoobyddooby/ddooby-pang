@@ -265,6 +265,20 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - `npm run dev` → `?demo&seed=7`을 열고 개발자도구 Console에서 `__ddooby.score()`를 몇 번 실행하면 점수가 늘어난다. 같은 seed면 같은 턴에서 같은 점수가 나온다 (10턴 = 1275점)
 - 화면에 점수가 보이는 건 W2-11(HUD)부터
 
+### W2-09 게임 모드 인터페이스
+- `npm test` → `tests/modes/gameMode.test.ts` 통과 (타입 검사라 `npm run typecheck`에서도 확인된다)
+- `src/modes/` 파일에 `Math.random()` 한 줄을 넣고 `npm run lint` → 에러가 난다. 확인 후 지운다
+
+### W2-10 타임어택 모드
+- `npm test` → `tests/modes/timeAttackMode.test.ts` 8개 통과 (60초 시작, 시간 줄기, 0에서 멈춤, 점수 누적, 최고 기록 판정)
+- 제한 시간은 `src/config.ts`의 `TIMEATTACK.timeLimitMs`. 화면 연결은 W2-11부터
+
+### W2-13 탭-탭 입력
+- `npm run dev` → 블록 하나 탭: 살짝 커지고 분홍 테두리가 생긴다 → 같은 블록 다시 탭: 해제
+- 옆 블록 탭: 교환 (매치가 안 되면 되돌아가고 테두리도 사라짐) → 먼 블록 탭: 선택이 그 블록으로 옮겨감
+- 선택한 채로 다른 블록을 스와이프하면 스와이프가 먼저, 테두리는 사라진다. 블록이 터지는 중에 탭하면 무시된다
+- 크기·색은 `src/config.ts`의 `VIEW.select`
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -536,3 +550,18 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **결과는 이벤트로 넘긴다**: core는 누적 점수를 들고 있지 않고, 단계마다 `score` 이벤트(점수·위치)와 턴 합계 `scoreDelta`만 돌려준다. 더하는 건 바깥(지금은 `GameScene`, 나중엔 mode) 몫이다 (`src/core/engine.ts`, `src/scenes/GameScene.ts`, PLAN 4.8)
 - **같은 블록을 두 번 세지 않기**: 맞춘 줄의 블록은 그룹 점수로, 특수 효과로 추가로 지워진 블록만 20점씩. `remove` 이벤트의 `bySpecial` 표시로 구분한다
 - **퍼즈 테스트의 불변식**: 무작위로 많은 판을 돌리며 "매치가 있는 단계마다 score 1개, 합계 = `scoreDelta`, 점수 > 0"을 확인한다. 예시 테스트가 놓치는 경우를 잡는다 (`tests/core/fuzz.test.ts`)
+
+### W2-09 게임 모드 인터페이스
+- **인터페이스로 모드 나누기**: 씬은 `GameMode`만 알고, 타임어택·스토리 규칙은 각 클래스가 가진다. `implements GameMode`를 붙이면 빠진 메서드를 TypeScript가 잡아 준다 (`src/modes/GameMode.ts`)
+- **판별 유니온(discriminated union)**: `ModeResult`의 `kind`로 분기하면 그 안에서 타입이 좁혀진다(`kind === 'story'`면 `stars`가 있다). `expectTypeOf`로 타입 자체를 테스트한다 (`tests/modes/gameMode.test.ts`)
+- **규칙을 도구로 강제**: `src/modes`도 core처럼 Phaser·DOM·`Math.random`을 못 쓰게 ESLint가 막는다 (`eslint.config.js`)
+
+### W2-10 타임어택 모드
+- **시간을 밖에서 받기**: `tick(dtMs)`로 흐른 시간을 넘겨받아서 `Date.now()` 없이도 테스트가 항상 같은 결과를 낸다 (`src/modes/TimeAttackMode.ts`)
+- **이상한 입력 막기**: 0 이하, `NaN`, `Infinity` 같은 값은 무시하고 남은 시간은 0 아래로 안 내려간다. 프레임이 튀어도 타이머가 깨지지 않는다
+- **"끝"과 "입력 막기"는 다르다**: 시간이 0이 되면 입력만 막고, 이미 시작된 연쇄 점수는 그 뒤에 들어와도 더한다 (PLAN 5절)
+
+### W2-13 탭-탭 입력
+- **선택 규칙을 순수 함수로**: `tapSelect(선택, 탭한 칸)` → 선택·해제·교환을 Phaser 없이 테스트한다 (`src/view/input.ts`, `tests/view/input.test.ts`)
+- **입력 상태 기계**: 누름을 기억 → 움직임이 기준을 넘으면 스와이프, 못 넘고 떼면 탭 (`BoardInput`의 down / move / up)
+- **연출끼리 겹치지 않게**: 컨테이너 크기는 말랑·팝 연출이, 몸통 이미지 크기는 선택 확대가 맡는다. 한 값을 두 연출이 동시에 바꾸면 서로 덮어쓴다 (`src/view/BlockSprite.ts`)

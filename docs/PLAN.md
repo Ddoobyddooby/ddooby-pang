@@ -337,8 +337,8 @@ type ModeResult =
 - 출력은 `{ a: Pos, b: Pos }` 하나. core는 입력 방식을 모른다
 
 ### 6.3 화면 크기
-- 기준 해상도 **720x1280** 세로, `Phaser.Scale.FIT` + `CENTER_BOTH`
-- 보드 영역 상단 HUD 200px, 보드 680x680, 하단 여백
+- 기준 해상도 **720x1280** 세로, `Phaser.Scale.EXPAND` (더 긴 화면은 높이만 늘어난다)
+- 위 타이틀 → 보드 680x680 → 아래 정보 패널 → 바닥 장식. 늘어난 높이 배분과 안전 영역은 `docs/superpowers/specs/2026-10-30-screen-layout-design.md` (W2-10a)
 
 ### 6.4 Scene 흐름
 
