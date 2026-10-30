@@ -20,9 +20,9 @@ describe('modes/GameMode 타입 (PLAN 5절)', () => {
     expect(describeResult({ kind: 'timeattack', score: 120, bestScore: 100, newBest: true })).toBe(
       '120 신기록',
     );
-    expect(describeResult({ kind: 'story', stageId: 3, cleared: true, score: 900, stars: 2 })).toBe(
-      '클리어 ★2',
-    );
+    expect(
+      describeResult({ kind: 'story', stageId: 3, cleared: true, score: 900, bonus: 0, stars: 2 }),
+    ).toBe('클리어 ★2');
   });
 
   it('GameMode의 메서드 시그니처', () => {

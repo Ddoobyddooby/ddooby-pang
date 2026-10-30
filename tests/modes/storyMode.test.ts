@@ -138,7 +138,57 @@ describe('modes/StoryMode (PLAN 5절)', () => {
     mode.onResolve(fake(60));
     expect(mode.isOver()).toBe(true);
     mode.onResolve(fake(100));
-    expect(mode.score()).toBe(60);
+    expect(mode.score()).toBe(60 + 2 * 300); // 클리어 보너스(W3-06)만 더해지고 100점은 무시
     expect(mode.movesLeft()).toBe(2);
+  });
+});
+
+// W3-06: 남은 이동 보너스 + 별
+describe('modes/StoryMode: 보너스와 별', () => {
+  const stage = (moves: number): StageDef => ({
+    id: 2,
+    rows: 8,
+    cols: 8,
+    colors: 5,
+    moves,
+    goals: [{ type: 'score', target: 100 }],
+    stars: [100, 1000, 2000],
+  });
+
+  it('클리어: 남은 이동 × 300을 더한 점수로 별을 센다. bonus도 결과에 담긴다', () => {
+    const mode = new StoryMode(stage(5));
+    mode.onResolve(fake(150)); // 남은 이동 4 → +1200
+    expect(mode.bonus()).toBe(1200);
+    expect(mode.score()).toBe(1350);
+    expect(mode.result()).toEqual({
+      kind: 'story',
+      stageId: 2,
+      cleared: true,
+      score: 1350,
+      bonus: 1200,
+      stars: 2,
+    });
+  });
+
+  it('마지막 이동에서 클리어하면 보너스 0, 별은 그래도 최소 1개', () => {
+    const mode = new StoryMode({ ...stage(1), stars: [500, 1000, 2000] });
+    mode.onResolve(fake(120));
+    expect(mode.bonus()).toBe(0);
+    expect(mode.result()).toMatchObject({ cleared: true, score: 120, bonus: 0, stars: 1 });
+  });
+
+  it('실패: 보너스 없음, 별 0개', () => {
+    const mode = new StoryMode(stage(1));
+    mode.onResolve(fake(50));
+    expect(mode.bonus()).toBe(0);
+    expect(mode.result()).toMatchObject({ cleared: false, score: 50, bonus: 0, stars: 0 });
+  });
+
+  it('진행 중에는 보너스 0', () => {
+    const mode = new StoryMode(stage(5));
+    mode.onResolve(fake(10));
+    expect(mode.isOver()).toBe(false);
+    expect(mode.bonus()).toBe(0);
+    expect(mode.score()).toBe(10);
   });
 });

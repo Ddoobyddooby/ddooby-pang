@@ -18,4 +18,13 @@ export interface GameMode {
 
 export type ModeResult =
   | { kind: 'timeattack'; score: number; bestScore: number; newBest: boolean }
-  | { kind: 'story'; stageId: number; cleared: boolean; score: number; stars: 0 | 1 | 2 | 3 };
+  | {
+      kind: 'story';
+      stageId: number;
+      cleared: boolean;
+      /** 보너스 포함 최종 점수 */
+      score: number;
+      /** 남은 이동 보너스 (score에 이미 들어 있다. 결과 화면의 "남은 이동 보너스 +N"용) */
+      bonus: number;
+      stars: 0 | 1 | 2 | 3;
+    };

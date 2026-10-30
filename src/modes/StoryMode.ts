@@ -4,6 +4,7 @@
 import type { ResolveResult } from '../core/types';
 import type { Goal, StageDef } from '../data/stageSchema';
 import type { GameMode, ModeResult } from './GameMode';
+import { movesLeftBonus, starsFor } from './storyScore';
 
 export interface GoalProgress {
   goal: Goal;
@@ -38,8 +39,14 @@ export class StoryMode implements GameMode {
   /** 스토리는 시간 제한이 없다 (dtMs를 받지 않아도 GameMode.tick을 만족한다) */
   tick(): void {}
 
+  /** 누적 점수. 클리어하면 남은 이동 보너스가 더해진다 */
   score(): number {
-    return this.total;
+    return this.total + this.bonus();
+  }
+
+  /** 클리어했을 때만 남은 이동 × movesLeftBonus. 진행 중·실패는 0 */
+  bonus(): number {
+    return this.state === 'cleared' ? movesLeftBonus(this.moves) : 0;
   }
 
   movesLeft(): number {
@@ -63,12 +70,15 @@ export class StoryMode implements GameMode {
   }
 
   result(): ModeResult {
+    const cleared = this.state === 'cleared';
+    const score = this.score();
     return {
       kind: 'story',
       stageId: this.stage.id,
-      cleared: this.state === 'cleared',
-      score: this.total,
-      stars: 0, // W3-06: 남은 이동 보너스 + 별 계산
+      cleared,
+      score,
+      bonus: this.bonus(),
+      stars: starsFor(score, this.stage.stars, cleared),
     };
   }
 }
