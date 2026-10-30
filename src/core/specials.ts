@@ -1,8 +1,8 @@
 // 특수 블록: 결정, 생성 위치, 발동 범위, 연쇄 발동 (PLAN 4.5)
 
 import { SPECIAL } from '../config';
-import { getBlock, posOf, samePos } from './board';
-import type { Board, Color, MatchGroup, Pos, SpecialKind } from './types';
+import { getBlock, indexOf, posOf, samePos } from './board';
+import type { Board, Color, GameEvent, MatchGroup, Pos, SpecialKind } from './types';
 
 /** 그룹이 만드는 특수 블록. 없으면 undefined. 우선순위는 PLAN 4.5 테이블 위에서부터 */
 export function decideSpecial(
@@ -69,4 +69,49 @@ export function blastArea(
     if (inArea(p)) area.push(p);
   }
   return area;
+}
+
+type ActivateEvent = Extract<GameEvent, { type: 'activate' }>;
+
+/** 보드에서 가장 많은 색. 동점이면 번호가 작은 색. 일반 블록이 없으면 null */
+function mostCommonColor(board: Board): Color | null {
+  const counts = new Array<number>(6).fill(0);
+  for (const block of board.cells) if (block && block.color !== null) counts[block.color]!++;
+  const max = Math.max(...counts);
+  return max > 0 ? (counts.indexOf(max) as Color) : null;
+}
+
+/**
+ * start 칸들을 제거할 때 함께 발동하는 특수 블록을 BFS로 퍼뜨린다 (PLAN 4.5 연쇄 발동).
+ * 블록마다 최대 한 번 발동. cleared는 start와 모든 발동 범위의 합집합 (행 우선 정렬)
+ */
+export function chainActivate(
+  board: Board,
+  start: readonly Pos[],
+): { cleared: Pos[]; activations: ActivateEvent[] } {
+  const seen = new Set<number>();
+  const queue: Pos[] = [];
+  const add = (p: Pos) => {
+    const i = indexOf(board, p);
+    if (seen.has(i)) return;
+    seen.add(i);
+    if (getBlock(board, p)?.special) queue.push(p);
+  };
+  start.forEach(add);
+
+  const activations: ActivateEvent[] = [];
+  for (let k = 0; k < queue.length; k++) {
+    const at = queue[k]!;
+    const special = getBlock(board, at)!.special!;
+    // 연쇄로 휘말린 컬러 블록은 스왑 상대가 없어 가장 많은 색을 지운다
+    const target = special === 'color' ? mostCommonColor(board) : null;
+    const cleared = blastArea(special, at, board, target);
+    activations.push({ type: 'activate', special, at, cleared });
+    cleared.forEach(add);
+  }
+
+  return {
+    cleared: [...seen].sort((a, b) => a - b).map((i) => posOf(board, i)),
+    activations,
+  };
 }

@@ -83,7 +83,7 @@
 - [x] **W2-02** 🧪 생성 위치 규칙: 첫 cascade는 스왑 위치, 이후 cascade는 그룹 중앙 (`specialPosition`, 중앙 정의는 PLAN 4.5)
 - [x] **W2-03** 🧪 `blastArea(kind, at, board, targetColor?)` — line / bomb 3x3 / super 5x5+십자 / color
   - 테스트: 보드 모서리·가장자리에서 범위 잘림
-- [ ] **W2-04** 🧪 연쇄 발동 BFS — 범위 안 특수 블록 재발동, 중복 발동 없음
+- [x] **W2-04** 🧪 연쇄 발동 BFS (`chainActivate`) — 범위 안 특수 블록 재발동, 중복 발동 없음
 - [ ] **W2-05** 🧪 engine 통합 — `activate`, `create` 이벤트, 특수 블록이 낙하·셔플에서 유지
 - [ ] **W2-06** 🧪 컬러 블록 스왑 발동 (매치 없이), 상대가 특수 블록 / 컬러 블록인 경우
 - [ ] **W2-07** 👀 특수 블록 표시 (아이콘/줄무늬) + 발동 이펙트 기본형
