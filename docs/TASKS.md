@@ -78,7 +78,7 @@
 ## 2주차 — 특수 블록 + 경쟁 모드
 
 ### 특수 블록
-- [ ] **W2-01** 🧪 `core/specials.ts` — `decideSpecial(group, swapPos)` (PLAN 4.5 테이블)
+- [x] **W2-01** 🧪 `core/specials.ts` — `decideSpecial(group)` (PLAN 4.5 테이블). 생성 위치(`swapPos`)는 W2-02
   - 테스트: 테이블 기반, 4I-H → lineV, 4I-V → lineH, 5L/5T → bomb, 5I → color, 6+ → super
 - [ ] **W2-02** 🧪 생성 위치 규칙: 첫 cascade는 스왑 위치, 이후 cascade는 그룹 중앙
 - [ ] **W2-03** 🧪 `blastArea(kind, at, board, targetColor?)` — line / bomb 3x3 / super 5x5+십자 / color
