@@ -1,13 +1,14 @@
-// 연쇄 연출(파티클, 칭찬 문구, 흔들림, 웃음)을 재생한다. 기다리게 하지 않는다 (play 완료와 무관).
-// 어떤 모드인지 모른다. GameScene이 BoardView의 onMatch에 연결해 준다.
+// 연쇄 연출(파티클, 칭찬 문구, 흔들림, 웃음)과 특수 블록 발동 연출을 재생한다. 기다리게 하지 않는다 (play 완료와 무관).
+// 어떤 모드인지 모른다. GameScene이 BoardView의 onMatch / onActivate에 연결해 준다.
 
 import type Phaser from 'phaser';
 import { FX, THEME } from '../../config';
-import type { Color } from '../../core/types';
+import type { Color, Pos, SpecialKind } from '../../core/types';
 import { cellCenter, type Layout } from '../layout';
 import { FX_TEX, type Face } from '../theme/textures';
 import { fxLevel, particleCount } from './fxLevels';
 import type { RemovedCell } from './matchInfo';
+import { specialFxPlan } from './specialFx';
 
 const WHITE = 0xffffff;
 /** 파티클은 블록(깊이 0) 위, 칭찬 문구 아래 */
@@ -86,6 +87,59 @@ export class FxDirector {
     if (info.happy) this.beHappy();
   }
 
+  /** 특수 블록 발동: 빛줄기, 퍼지는 원, 흔들림, 반짝임 (specialFx.ts의 구성대로) */
+  playActivate(special: SpecialKind, at: Pos, cleared: readonly Pos[]): void {
+    const plan = specialFxPlan(special, cleared);
+    const { x, y } = cellCenter(this.layout, at);
+    for (const beam of plan.beams) this.beam(beam, x, y);
+    if (plan.ring > 0) this.ring(x, y, plan.ring * this.layout.cell);
+    if (plan.shake) {
+      const { duration, intensity } = FX.special.superShake;
+      this.scene.cameras.main.shake(duration, intensity);
+    }
+    for (const p of plan.sparkles) {
+      const c = cellCenter(this.layout, p);
+      this.stars.explode(FX.special.starsPerSparkle, c.x, c.y);
+    }
+  }
+
+  /** 보드를 가로지르는 빛줄기가 가늘어지며 사라진다 */
+  private beam(dir: 'row' | 'col', x: number, y: number): void {
+    const { scene, layout } = this;
+    const s = FX.special;
+    const row = dir === 'row';
+    const rect = row
+      ? scene.add.rectangle(layout.x + layout.width / 2, y, layout.width, layout.cell)
+      : scene.add.rectangle(x, layout.y + layout.height / 2, layout.cell, layout.height);
+    rect.setFillStyle(s.beamColor, s.beamAlpha).setDepth(PARTICLE_DEPTH);
+    rect.setScale(row ? 1 : s.beamWidth.start, row ? s.beamWidth.start : 1);
+    scene.tweens.add({
+      targets: rect,
+      [row ? 'scaleY' : 'scaleX']: s.beamWidth.end,
+      alpha: 0,
+      duration: s.beamMs,
+      ease: 'Quad.easeOut',
+      onComplete: () => rect.destroy(),
+    });
+  }
+
+  /** 가운데서 퍼지며 옅어지는 원 */
+  private ring(x: number, y: number, radius: number): void {
+    const s = FX.special;
+    const circle = this.scene.add
+      .circle(x, y, radius, s.ringColor, s.ringAlpha)
+      .setDepth(PARTICLE_DEPTH)
+      .setScale(0.3);
+    this.scene.tweens.add({
+      targets: circle,
+      scale: 1,
+      alpha: 0,
+      duration: s.ringMs,
+      ease: 'Quad.easeOut',
+      onComplete: () => circle.destroy(),
+    });
+  }
+
   /** 남은 블록이 `^^`로 웃는다. 끝나면 반드시 평소 표정으로 돌린다 */
   private beHappy(): void {
     this.faces.setFaces('happy');
@@ -153,5 +207,15 @@ export class FxDirector {
     const color = ((level - 1) % THEME.blocks.length) as Color; // 단계마다 다른 색 하트
     const cells = [2, 3, 4].map((c) => ({ at: { r: PREVIEW_ROW, c }, color }));
     this.playMatch(level, cells);
+  }
+
+  /** 개발용: 보드 가운데 칸에서 special 발동 연출만 재생한다. 무지개는 보드 전체에 반짝임 */
+  previewSpecial(special: SpecialKind): void {
+    const { rows, cols } = this.layout;
+    const all = Array.from({ length: rows * cols }, (_, i) => ({
+      r: Math.floor(i / cols),
+      c: i % cols,
+    }));
+    this.playActivate(special, { r: PREVIEW_ROW, c: PREVIEW_ROW }, all);
   }
 }

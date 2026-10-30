@@ -4,12 +4,13 @@
 // URL 옵션 (개발용)
 //   ?seed=1234  같은 시작 보드 재현 (화면 위에 seed가 표시된다)
 //   ?demo       힌트 수를 자동으로 둔다
+//   ?specials   (개발 모드) 시작 보드에 특수 블록 5종을 하나씩 놓는다
 
 import Phaser from 'phaser';
 import { BOARD } from '../config';
 import { createInitialState, resolveSwap } from '../core/engine';
 import { findHint } from '../core/moves';
-import type { GameState, Pos } from '../core/types';
+import type { GameState, Pos, SpecialKind } from '../core/types';
 import { BoardView, type BoardViewHooks } from '../view/BoardView';
 import { Hud } from '../view/Hud';
 import { FxDirector } from '../view/fx/FxDirector';
@@ -19,6 +20,24 @@ import { Background } from '../view/theme/Background';
 import { drawBoardFrame } from '../view/theme/BoardFrame';
 
 const COLORS = 5;
+
+/** 개발 모드 키 → 발동 연출 미리보기 */
+const SPECIAL_PREVIEW_KEYS: Record<string, SpecialKind> = {
+  q: 'lineH',
+  w: 'lineV',
+  e: 'bomb',
+  r: 'super',
+  t: 'color',
+};
+
+/** ?specials: 특수 블록을 놓을 칸 */
+const SPECIAL_SAMPLES: [Pos, SpecialKind][] = [
+  [{ r: 1, c: 1 }, 'lineH'],
+  [{ r: 1, c: 6 }, 'lineV'],
+  [{ r: 6, c: 1 }, 'bomb'],
+  [{ r: 6, c: 6 }, 'super'],
+  [{ r: 3, c: 3 }, 'color'],
+];
 
 export class GameScene extends Phaser.Scene {
   private state!: GameState;
@@ -45,6 +64,7 @@ export class GameScene extends Phaser.Scene {
       colors: COLORS,
       seed: this.seed,
     });
+    if (import.meta.env.DEV && params.has('specials')) this.placeSpecialSamples();
     const layout = createLayout(BOARD.rows, BOARD.cols);
     new Background(this);
     drawBoardFrame(this, layout);
@@ -52,6 +72,7 @@ export class GameScene extends Phaser.Scene {
     this.view = new BoardView(this, this.state.board, layout, hooks);
     const fx = new FxDirector(this, layout, this.view);
     hooks.onMatch = (level, removed) => fx.playMatch(level, removed);
+    hooks.onActivate = (special, at, cleared) => fx.playActivate(special, at, cleared);
 
     this.hud = new Hud(this, 'Ddooby-Pang');
     this.updateInfo();
@@ -61,12 +82,29 @@ export class GameScene extends Phaser.Scene {
     if (params.has('demo')) this.time.delayedCall(800, () => void this.demoLoop());
     if (import.meta.env.DEV) {
       this.exposeDebug();
-      // 키 1~5: 그 연쇄 단계의 연출 미리보기
+      // 키 1~5: 그 연쇄 단계의 연출 미리보기, Q W E R T: 특수 블록 발동 연출 미리보기
       this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
         const n = Number(e.key);
         if (n >= 1 && n <= 5) fx.preview(n);
+        const special = SPECIAL_PREVIEW_KEYS[e.key.toLowerCase()];
+        if (special) fx.previewSpecial(special);
       });
     }
+  }
+
+  /**
+   * 개발용: 시작 보드의 몇 칸을 같은 색의 특수 블록으로 바꾼다 (무지개는 색 없음).
+   * 색이 같거나 없어지기만 하므로 시작 매치 0은 유지되고, 무지개 블록이 있어 가능한 수도 있다
+   */
+  private placeSpecialSamples(): void {
+    const { board } = this.state;
+    const cells = board.cells.slice();
+    for (const [{ r, c }, special] of SPECIAL_SAMPLES) {
+      const i = r * board.cols + c;
+      const block = cells[i]!;
+      cells[i] = { id: block.id, color: special === 'color' ? null : block.color, special };
+    }
+    this.state = { ...this.state, board: { ...board, cells } };
   }
 
   private async trySwap(a: Pos, b: Pos): Promise<void> {

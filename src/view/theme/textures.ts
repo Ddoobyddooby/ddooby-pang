@@ -157,25 +157,45 @@ function drawBlock(ctx: Ctx, color: Color | null, face: Face): void {
   ctx.restore();
 }
 
-/** 특수 블록 표시 (임시, W2-07에서 다듬는다). 블록 위에 겹치는 흰 선·도형 */
+/** 특수 블록 배지 위치·크기 (시안 좌표). 모양이 6가지라 줄무늬 대신 오른쪽 위 배지로 표시한다 */
+const BADGE = { x: 27, y: -27, r: 19 };
+
+/** 특수 블록 표시: 블록 위에 겹치는 흰 배지 + 종류 아이콘 (↔ ↕ 폭탄 별) */
 function drawSpecial(ctx: Ctx, kind: Exclude<SpecialKind, 'color'>): void {
-  ctx.strokeStyle = '#ffffff';
-  ctx.globalAlpha = 0.95;
-  ctx.lineWidth = 6;
-  ctx.lineCap = 'round';
+  const ink = css(THEME.face.ink);
+  ctx.translate(BADGE.x, BADGE.y);
   ctx.beginPath();
-  if (kind === 'lineH') {
-    ctx.moveTo(-32, 0);
-    ctx.lineTo(32, 0);
-  } else if (kind === 'lineV') {
-    ctx.moveTo(0, -32);
-    ctx.lineTo(0, 32);
-  } else if (kind === 'bomb') {
-    ctx.arc(0, 0, 20, 0, Math.PI * 2);
-  } else {
-    ctx.rect(-20, -20, 40, 40);
-  }
+  ctx.arc(0, 0, BADGE.r, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = ink;
   ctx.stroke();
+
+  ctx.fillStyle = ink;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (kind === 'lineH' || kind === 'lineV') {
+    if (kind === 'lineV') ctx.rotate(Math.PI / 2);
+    ctx.lineWidth = 4;
+    ctx.stroke(new Path2D('M-11,0 H11 M-5,-6 L-11,0 L-5,6 M5,-6 L11,0 L5,6'));
+  } else if (kind === 'bomb') {
+    ctx.beginPath();
+    ctx.arc(-2, 3, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.stroke(new Path2D('M4,-4 q4,-6 8,-6'));
+    ctx.fillStyle = css(THEME.face.cheek);
+    ctx.beginPath();
+    ctx.arc(12, -10, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    const star = new Path2D('M0,-13 L4,-4 13,-4 6,2 9,12 0,6 -9,12 -6,2 -13,-4 -4,-4Z');
+    ctx.fillStyle = css(THEME.star);
+    ctx.fill(star);
+    ctx.lineWidth = 2.5;
+    ctx.stroke(star);
+  }
 }
 
 /** 하트·별 파티클. 흰색으로 그려 두고 쓸 때 tint한다. 시안 #heart·#star를 키워서 옮겼다 */
