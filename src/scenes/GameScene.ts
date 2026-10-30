@@ -14,7 +14,7 @@ import type { GameState, Pos, SpecialKind } from '../core/types';
 import { BoardView, type BoardViewHooks } from '../view/BoardView';
 import { Hud } from '../view/Hud';
 import { FxDirector } from '../view/fx/FxDirector';
-import { SwipeInput } from '../view/input';
+import { BoardInput } from '../view/input';
 import { createLayout } from '../view/layout';
 import { Background } from '../view/theme/Background';
 import { drawBoardFrame } from '../view/theme/BoardFrame';
@@ -42,7 +42,7 @@ const SPECIAL_SAMPLES: [Pos, SpecialKind][] = [
 export class GameScene extends Phaser.Scene {
   private state!: GameState;
   private view!: BoardView;
-  private swipe!: SwipeInput;
+  private boardInput!: BoardInput;
   private hud!: Hud;
   private busy = false;
   private moves = 0;
@@ -80,7 +80,12 @@ export class GameScene extends Phaser.Scene {
     this.hud = new Hud(this, 'Ddooby-Pang');
     this.updateInfo();
 
-    this.swipe = new SwipeInput(this, layout, (a, b) => void this.trySwap(a, b));
+    this.boardInput = new BoardInput(
+      this,
+      layout,
+      (a, b) => void this.trySwap(a, b),
+      (pos) => this.view.setSelected(pos),
+    );
 
     if (params.has('demo')) this.time.delayedCall(800, () => void this.demoLoop());
     if (import.meta.env.DEV) {
@@ -130,7 +135,7 @@ export class GameScene extends Phaser.Scene {
 
   private setBusy(busy: boolean): void {
     this.busy = busy;
-    this.swipe.enabled = !busy; // 애니메이션 중 입력 차단
+    this.boardInput.enabled = !busy; // 애니메이션 중 입력 차단
   }
 
   private updateInfo(lastCascades = 0): void {

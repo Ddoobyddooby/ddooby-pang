@@ -63,6 +63,20 @@ export const VIEW = {
   boardBackground: 0xfff8ec,
   /** 칸 크기 대비 이만큼 끌면 스와이프로 본다 */
   swipeThreshold: 0.3,
+  /** 탭으로 고른 칸의 표시 (탭-탭 입력) */
+  select: {
+    /** 고른 블록이 커지는 배율 */
+    scale: 1.12,
+    /** 커지고 돌아오는 시간 (ms) */
+    ms: 140,
+    /** 칸 뒤 둥근 테두리: 칸 대비 크기, 모서리 반지름(칸 대비), 선 두께(px) */
+    size: 0.96,
+    radius: 0.28,
+    lineWidth: 5,
+    fill: 0xfff3d6,
+    fillAlpha: 0.9,
+    stroke: 0xff7fa8,
+  },
 } as const;
 
 /** 달콤 디저트 테마 색·글꼴 (스펙 2절) */

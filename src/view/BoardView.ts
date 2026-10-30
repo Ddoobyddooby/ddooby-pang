@@ -23,6 +23,8 @@ export class BoardView {
   private readonly sprites = new Map<number, BlockSprite>();
   private readonly layer: Phaser.GameObjects.Container;
   private tracker: EventTracker;
+  private readonly highlight: Phaser.GameObjects.Graphics;
+  private selectedId: number | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -39,6 +41,10 @@ export class BoardView {
     const maskShape = scene.make.graphics({}, false);
     maskShape.fillStyle(0xffffff).fillRect(x, y, width, height);
     this.layer.setMask(maskShape.createGeometryMask());
+
+    // 선택 표시는 블록 뒤에 깐다 (블록보다 먼저 layer에 넣는다)
+    this.highlight = scene.add.graphics().setVisible(false);
+    this.layer.add(this.highlight);
 
     this.tracker = new EventTracker(board);
     board.cells.forEach((block, i) => {
@@ -58,6 +64,23 @@ export class BoardView {
     for (const sprite of this.sprites.values()) {
       if (!sprite.removing) sprite.setFace(face);
     }
+  }
+
+  /** 탭으로 고른 칸을 표시한다. null이면 해제. 재생 중이 아닐 때만 부른다 */
+  setSelected(pos: Pos | null): void {
+    if (this.selectedId !== null) this.sprites.get(this.selectedId)?.setSelected(false);
+    this.selectedId = pos ? (this.tracker.idAt(pos) ?? null) : null;
+    this.highlight.clear().setVisible(pos !== null);
+    if (!pos) return;
+    this.sprites.get(this.selectedId ?? -1)?.setSelected(true);
+    const { select } = VIEW;
+    const size = this.layout.cell * select.size;
+    const { x, y } = cellCenter(this.layout, pos);
+    this.highlight
+      .fillStyle(select.fill, select.fillAlpha)
+      .fillRoundedRect(x - size / 2, y - size / 2, size, size, this.layout.cell * select.radius)
+      .lineStyle(select.lineWidth, select.stroke)
+      .strokeRoundedRect(x - size / 2, y - size / 2, size, size, this.layout.cell * select.radius);
   }
 
   /** 디버그용: 스프라이트의 실제 화면 위치로 본 "r,c" → id */

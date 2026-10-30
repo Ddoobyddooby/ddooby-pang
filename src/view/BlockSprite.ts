@@ -13,6 +13,8 @@ export class BlockSprite extends Phaser.GameObjects.Container {
 
   private readonly faceImage: Phaser.GameObjects.Image;
   private readonly blockColor: Block['color'];
+  /** 선택 표시는 몸통 이미지만 키운다. 컨테이너 scale을 쓰는 squish·pop과 겹치지 않게 */
+  private readonly baseScale: number;
 
   constructor(scene: Phaser.Scene, x: number, y: number, block: Block, cellSize: number) {
     super(scene, x, y);
@@ -23,6 +25,7 @@ export class BlockSprite extends Phaser.GameObjects.Container {
     this.faceImage = scene.add
       .image(0, 0, blockKey(this.blockColor, 'normal'))
       .setDisplaySize(size, size);
+    this.baseScale = this.faceImage.scaleX;
     this.add(this.faceImage);
     if (block.special && block.special !== 'color') {
       this.add(scene.add.image(0, 0, specialKey(block.special)).setDisplaySize(size, size));
@@ -33,6 +36,23 @@ export class BlockSprite extends Phaser.GameObjects.Container {
   setFace(face: Face): this {
     this.faceImage.setTexture(blockKey(this.blockColor, face));
     return this;
+  }
+
+  /** 선택됐을 때 살짝 커진다 (말랑하게). 위치는 그대로, 기다리지 않는다 */
+  setSelected(on: boolean): void {
+    if (this.removing) return;
+    this.scene.tweens.killTweensOf(this.faceImage);
+    this.scene.tweens.add({
+      targets: this.faceImage,
+      scale: this.baseScale * (on ? VIEW.select.scale : 1),
+      duration: VIEW.select.ms,
+      ease: on ? 'Back.easeOut' : 'Sine.easeOut',
+    });
+  }
+
+  override destroy(fromScene?: boolean): void {
+    this.scene?.tweens.killTweensOf(this.faceImage);
+    super.destroy(fromScene);
   }
 
   /** 착지 눌림. scale만 바꾸므로 위치는 그대로다. 기다리지 않는다 */
