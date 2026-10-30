@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "rows": 8,
+    "cols": 8,
+    "colors": 4,
+    "moves": 25,
+    "goals": [{ "type": "score", "target": 2000 }],
+    "stars": [2000, 6000, 9000]
+  }
+]
