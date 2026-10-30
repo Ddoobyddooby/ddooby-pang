@@ -1,13 +1,13 @@
 // 처리 루프 (PLAN 4.3): 스왑 → 매치 → 제거 → 낙하 → 리필 → (연쇄 반복) → 수 없으면 셔플
-// 아직 없는 것: 컬러 블록 스왑(W2-06), 점수(W2-08).
+// 아직 없는 것: 점수(W2-08).
 
 import { BOARD, SPECIAL } from '../config';
-import { getBlock, indexOf, inBounds, isAdjacent, posOf, swapBlocks } from './board';
+import { getBlock, indexOf, inBounds, isAdjacent, posOf, samePos, swapBlocks } from './board';
 import { applyGravity, refill } from './gravity';
 import { findMatches } from './matcher';
 import { createPlayableBoard, hasAnyMove, shuffle } from './moves';
 import { createRng } from './rng';
-import { chainActivate, decideSpecial, specialPosition } from './specials';
+import { blastArea, chainActivate, decideSpecial, specialPosition } from './specials';
 import type { Board, GameEvent, GameState, Pos, ResolveResult } from './types';
 
 const COLOR_COUNT = 6;
@@ -45,6 +45,15 @@ function assertInvariants(board: Board): void {
   if (!hasAnyMove(board)) throw new Error('resolve 후 가능한 수가 없다');
 }
 
+/** 컬러 블록 스왑 발동: at의 컬러 블록이 partner 블록의 색을 지운다. 둘 다 컬러면 보드 전체 (PLAN 4.3) */
+function colorSwapBurst(board: Board, at: Pos, partner: Pos) {
+  const other = getBlock(board, partner)!;
+  const cleared = blastArea('color', at, board, other.color);
+  const chain = chainActivate(board, cleared, other.special === 'color' ? [at, partner] : [at]);
+  const first: GameEvent = { type: 'activate', special: 'color', at, cleared };
+  return { cleared: chain.cleared, activations: [first, ...chain.activations] };
+}
+
 export function resolveSwap(
   state: GameState,
   a: Pos,
@@ -57,8 +66,10 @@ export function resolveSwap(
   if (!getBlock(start, a) || !getBlock(start, b)) return invalid(state, []);
 
   let board = swapBlocks(start, a, b);
-  let groups = findMatches(board);
-  if (groups.length === 0) {
+  // 컬러 블록 스왑은 매치 없이 바로 발동한다. 둘 다 컬러면 끌어온 쪽(a의 블록, 지금 b 칸)
+  let burst = [b, a].find((p) => getBlock(board, p)?.special === 'color');
+  let groups = burst ? [] : findMatches(board);
+  if (!burst && groups.length === 0) {
     return invalid(state, [[{ type: 'swap', a, b }], [{ type: 'swapBack', a, b }]]);
   }
 
@@ -66,7 +77,7 @@ export function resolveSwap(
   const steps: GameEvent[][] = [[{ type: 'swap', a, b }]];
   const removedByColor = new Array<number>(COLOR_COUNT).fill(0);
 
-  for (let cascade = 0; groups.length > 0; cascade++) {
+  for (let cascade = 0; burst || groups.length > 0; cascade++) {
     if (cascade >= BOARD.maxCascade) {
       throw new Error(`연쇄가 ${BOARD.maxCascade}회를 넘었다 (무한 연쇄 의심)`);
     }
@@ -81,7 +92,9 @@ export function resolveSwap(
       return [{ at: specialPosition(group, swapped), block: { id: nextId++, color, special } }];
     });
     const matched = groups.flatMap((g) => g.cells);
-    const chain = chainActivate(board, matched);
+    const chain = burst
+      ? colorSwapBurst(board, burst, samePos(burst, a) ? b : a)
+      : chainActivate(board, matched);
     const activations = [...chain.activations];
     let cleared = chain.cleared;
 
@@ -132,6 +145,7 @@ export function resolveSwap(
     rng = filled.rng;
     steps.push([fallen.event, filled.event]);
 
+    burst = undefined;
     groups = findMatches(board);
   }
 
