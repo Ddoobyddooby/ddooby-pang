@@ -237,16 +237,39 @@ export const HUD = {
   },
 } as const;
 
-/** 결과 화면 (W2-12). dy = 화면 가운데 기준 세로 위치(px), 시간은 ms */
+/** 결과 화면 (W2-12, 스토리는 W3-11 설계 4절). dy = 화면 가운데 기준 세로 위치(px), 시간은 ms */
 export const RESULT = {
-  panel: { width: 560, height: 680, alpha: 0.92 },
-  title: { text: '끝!', dy: -250, fontSize: 96, strokeThickness: 12 },
-  scoreLabel: { text: '점수', dy: -130, fontSize: 40 },
-  score: { dy: -40, fontSize: 108, strokeThickness: 10 },
-  best: { label: '최고 점수', dy: 70, fontSize: 36 },
+  text: {
+    timeattack: '끝!',
+    clear: '클리어!',
+    fail: '아쉬워요',
+    scoreLabel: '점수',
+    best: '최고 점수',
+    newBest: '최고 기록!',
+    bonus: '남은 이동 보너스',
+    allClear: '모든 스테이지 클리어!',
+  },
+  /** 버튼 글자 (resultView의 버튼 id → 글자) */
+  buttons: { next: '다음 스테이지', retry: '다시하기', map: '지도', menu: '메뉴' },
+  panel: { width: 580, alpha: 0.92, padTop: 80, padBottom: 44 },
+  title: { dy: -330, fontSize: 96, strokeThickness: 12 },
+  /** 스토리 별 3칸: 받은 만큼 하나씩 차오른다 */
+  stars: {
+    dy: -215,
+    r: 42,
+    gap: 104,
+    empty: 0xffffff,
+    delay: 300,
+    interval: 250,
+    popScale: 1.3,
+    popMs: 220,
+  },
+  scoreLabel: { dy: -125, fontSize: 40 },
+  score: { dy: -45, fontSize: 108, strokeThickness: 10 },
+  /** 경쟁: 최고 점수 줄과 새 기록 배지 / 스토리: 보너스 줄과 전체 클리어 줄 */
+  line: { dy: 55, fontSize: 36 },
   badge: {
-    text: '최고 기록!',
-    dy: 140,
+    dy: 120,
     fontSize: 40,
     padX: 28,
     height: 64,
@@ -254,7 +277,8 @@ export const RESULT = {
     bounceScale: 1.12,
     bounceMs: 420,
   },
-  button: { text: '다시하기', dy: 250, width: 300, height: 100, fontSize: 48 },
+  allClear: { dy: 115, fontSize: 40 },
+  button: { dy: 225, step: 116, width: 340, height: 96, fontSize: 44 },
 } as const;
 
 /** 공통 웨이퍼 버튼 (view/ui/Button.ts). 크기·글자는 쓰는 곳에서 정한다 */

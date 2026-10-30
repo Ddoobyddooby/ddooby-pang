@@ -1,12 +1,16 @@
-// 임시 결과 화면 (W2-12, 레이아웃 설계 4절): 점수, 최고 점수, [다시하기].
-// 모드를 모르고 ModeResult만 받는다. 배치는 화면 크기(this.scale) 기준 가운데라 세로가 길어져도 맞는다.
+// 결과 화면 (W2-12, 스토리 W3-11: 스토리 화면 설계 4절). 모드를 모르고 ModeResult만 받는다.
+// 무엇을 보일지(제목, 별, 줄, 버튼)는 resultView가 정하고, 이 씬은 그리기만 한다.
+// 배치는 화면 가운데 기준 dy라 EXPAND로 세로가 길어져도 가운데에 온다.
 
 import Phaser from 'phaser';
-import { DECOR, RESULT, THEME } from '../config';
+import { DECOR, GAME, RESULT, THEME } from '../config';
 import type { ModeResult } from '../modes/GameMode';
 import { Background } from '../view/theme/Background';
-import { addButton } from '../view/ui/Button';
-import { formatScore } from './resultText';
+import { addButton, type PressLock } from '../view/ui/Button';
+import { formatScore, resultView, type ResultButton } from './resultText';
+import { getSave } from './saveRegistry';
+import type { GameData, ResultData } from './sceneData';
+import { getStages } from './stageRegistry';
 
 export class ResultScene extends Phaser.Scene {
   private result!: ModeResult;
@@ -15,54 +19,104 @@ export class ResultScene extends Phaser.Scene {
     super('Result');
   }
 
-  init(data: { result: ModeResult }): void {
+  init(data: ResultData): void {
     this.result = data.result;
   }
 
   create(): void {
-    const cx = this.scale.width / 2;
-    const cy = this.scale.height / 2;
-    const result = this.result;
+    const { width, height } = this.scale;
+    this.cameras.main.setScroll(-(width - GAME.width) / 2, 0); // 넓은 화면에서 가운데 맞춤
+    const cx = GAME.width / 2;
+    const cy = height / 2;
+    const view = resultView(this.result, {
+      stageCount: getStages(this.registry).story.length,
+      unlocked: getSave(this.registry).story.unlocked,
+    });
 
     new Background(this);
-    this.drawPanel(cx, cy);
+    const b = RESULT.button;
+    const lastButtonY = cy + b.dy + (view.buttons.length - 1) * b.step;
+    this.drawPanel(
+      cx,
+      cy + RESULT.title.dy - RESULT.panel.padTop,
+      lastButtonY + b.height / 2 + RESULT.panel.padBottom,
+    );
+
     this.label(
       cx,
       cy + RESULT.title.dy,
-      RESULT.title.text,
+      view.title,
       RESULT.title.fontSize,
       THEME.title.fill,
     ).setStroke(THEME.title.stroke, RESULT.title.strokeThickness);
+    if (view.stars !== null) this.addStars(cx, cy + RESULT.stars.dy, view.stars);
     this.label(
       cx,
       cy + RESULT.scoreLabel.dy,
-      RESULT.scoreLabel.text,
+      RESULT.text.scoreLabel,
       RESULT.scoreLabel.fontSize,
       THEME.info.text,
     );
     this.label(
       cx,
       cy + RESULT.score.dy,
-      formatScore(result.score),
+      formatScore(this.result.score),
       RESULT.score.fontSize,
       THEME.title.fill,
     ).setStroke(THEME.title.stroke, RESULT.score.strokeThickness);
 
-    // 스토리 결과(클리어 여부, 별, [다음])는 W3-11에서 같은 씬에 분기를 추가한다. 지금은 점수만 보인다
-    if (result.kind === 'timeattack') {
-      const best = Math.max(result.bestScore, result.score);
+    const line = view.best ?? view.bonus;
+    if (line) this.label(cx, cy + RESULT.line.dy, line, RESULT.line.fontSize, THEME.info.text);
+    if (view.newBest) this.addBadge(cx, cy + RESULT.badge.dy);
+    if (view.allClear) {
       this.label(
         cx,
-        cy + RESULT.best.dy,
-        `${RESULT.best.label} ${formatScore(best)}`,
-        RESULT.best.fontSize,
-        THEME.info.text,
+        cy + RESULT.allClear.dy,
+        RESULT.text.allClear,
+        RESULT.allClear.fontSize,
+        THEME.title.fill,
       );
-      if (result.newBest) this.addBadge(cx, cy + RESULT.badge.dy);
     }
 
-    const b = RESULT.button;
-    addButton(this, cx, cy + b.dy, { ...b, label: b.text }, () => this.scene.start('Game'));
+    const lock: PressLock = { pressed: false };
+    view.buttons.forEach((id, i) => {
+      addButton(
+        this,
+        cx,
+        cy + b.dy + i * b.step,
+        { ...b, label: RESULT.buttons[id] },
+        () => this.go(id),
+        lock,
+      );
+    });
+  }
+
+  private go(button: ResultButton): void {
+    const result = this.result;
+    switch (button) {
+      case 'retry':
+        this.scene.start(
+          'Game',
+          (result.kind === 'story'
+            ? { mode: 'story', stageId: result.stageId }
+            : { mode: 'timeattack' }) satisfies GameData,
+        );
+        break;
+      case 'next':
+        if (result.kind === 'story') {
+          this.scene.start('Game', {
+            mode: 'story',
+            stageId: result.stageId + 1,
+          } satisfies GameData);
+        }
+        break;
+      case 'map':
+        this.scene.start('StageMap');
+        break;
+      case 'menu':
+        this.scene.start('Menu');
+        break;
+    }
   }
 
   private label(x: number, y: number, text: string, size: number, color: string) {
@@ -71,22 +125,47 @@ export class ResultScene extends Phaser.Scene {
       .setOrigin(0.5);
   }
 
-  /** 반투명 크림 판 + 웨이퍼 테두리 (BoardFrame과 같은 색·두께) */
-  private drawPanel(cx: number, cy: number): void {
-    const { width: w, height: h, alpha } = RESULT.panel;
+  /** 반투명 크림 판 + 웨이퍼 테두리 (BoardFrame과 같은 색·두께). 위·아래 끝은 내용에 맞춘다 */
+  private drawPanel(cx: number, top: number, bottom: number): void {
+    const { width: w, alpha } = RESULT.panel;
     const { radius, border } = DECOR.frame;
     this.add
       .graphics()
       .fillStyle(THEME.wafer.inner, alpha)
-      .fillRoundedRect(cx - w / 2, cy - h / 2, w, h, radius)
+      .fillRoundedRect(cx - w / 2, top, w, bottom - top, radius)
       .lineStyle(border, THEME.wafer.stroke, 1)
-      .strokeRoundedRect(cx - w / 2, cy - h / 2, w, h, radius);
+      .strokeRoundedRect(cx - w / 2, top, w, bottom - top, radius);
+  }
+
+  /** 별 3칸: 빈 칸을 먼저 놓고, 받은 만큼 하나씩 통통 차오른다 */
+  private addStars(cx: number, y: number, count: number): void {
+    const s = RESULT.stars;
+    const star = (x: number, fill: number) =>
+      this.add.star(x, y, 5, s.r * 0.45, s.r, fill).setStrokeStyle(4, THEME.wafer.stroke);
+    for (let k = 0; k < 3; k++) {
+      const x = cx + (k - 1) * s.gap;
+      star(x, s.empty);
+      if (k >= count) continue;
+      const filled = star(x, THEME.star).setScale(0);
+      this.tweens.chain({
+        targets: filled,
+        tweens: [
+          {
+            scale: s.popScale,
+            duration: s.popMs * 0.6,
+            delay: s.delay + k * s.interval,
+            ease: 'Back.easeOut',
+          },
+          { scale: 1, duration: s.popMs * 0.4, ease: 'Quad.easeIn' },
+        ],
+      });
+    }
   }
 
   /** "최고 기록!" 배지: 노란 알약이 통통 튄다 */
   private addBadge(x: number, y: number): void {
     const b = RESULT.badge;
-    const text = this.label(0, 0, b.text, b.fontSize, THEME.title.fill);
+    const text = this.label(0, 0, RESULT.text.newBest, b.fontSize, THEME.title.fill);
     const w = text.width + b.padX * 2;
     const pill = this.add
       .graphics()
