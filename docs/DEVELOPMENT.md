@@ -234,6 +234,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - `npm test` → `tests/core/specials.test.ts`의 `blastArea` 10개 통과. 화면은 아직 그대로 (엔진 연결은 W2-05)
 - 테스트의 `x` 그림이 곧 범위다: 라인 한 줄, 폭탄 3x3, 슈퍼 5x5 + 십자, 모서리·가장자리에서 잘리는 모양, 컬러는 대상 색 전체
 
+### W2-04 연쇄 발동
+- `npm test` → `tests/core/specials.test.ts`의 `chainActivate` 8개 통과. 화면은 아직 그대로 (엔진 연결은 W2-05)
+- "줄 → 줄 → 폭탄" 테스트에서 `activated` 순서와 `x` 그림으로 연쇄가 퍼지는 모양을 볼 수 있다
+- 휘말린 컬러 블록은 보드에서 가장 많은 색을 지운다 (PLAN 4.5). 바꾸고 싶으면 `src/core/specials.ts`의 `mostCommonColor`
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -466,3 +471,10 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **`switch` 완전성 검사**: `SpecialKind`의 5가지를 모두 `case`로 다루면 TypeScript가 빠진 경우가 없다는 걸 안다 (하나 지우면 반환 타입 에러)
 - **그림으로 비교하는 테스트**: 칸 목록을 `x`/`.` 그림 문자열로 바꿔 비교하면 실패 메시지가 보드 모양 그대로 나온다 (`tests/core/specials.test.ts`의 `mask`)
 - 참고: [체비쇼프 거리](https://ko.wikipedia.org/wiki/체비쇼프_거리)
+
+### W2-04 연쇄 발동
+- **BFS (너비 우선 탐색)**: 큐에 발동할 특수 블록을 넣고 앞에서부터 꺼내 처리한다. 처리하다 새로 만난 특수 블록은 큐 뒤에 붙는다. 배열 + 인덱스(`for (k = 0; k < queue.length; k++)`)로 큐를 흉내 내면 `shift()` 비용도 없다 (`src/core/specials.ts`)
+- **방문 표시(`seen`)로 무한 루프 막기**: 두 줄 블록이 서로를 범위에 넣어도, 이미 본 칸은 다시 큐에 넣지 않으니 한 번씩만 발동한다. 그래프 탐색의 기본
+- **`Extract<유니온, 조건>`**: `GameEvent` 중 `type: 'activate'`인 모양만 뽑아 타입으로 쓴다. 이벤트 모양이 바뀌면 여기도 같이 따라간다
+- **결정적 순서**: 시작 칸은 넘겨받은 순서, 범위 칸은 행 우선. 같은 보드 → 같은 `activate` 순서라 리플레이·테스트가 흔들리지 않는다
+- 참고: [너비 우선 탐색 (위키백과)](https://ko.wikipedia.org/wiki/너비_우선_탐색), [TypeScript Extract](https://www.typescriptlang.org/docs/handbook/utility-types.html#extracttype-union)

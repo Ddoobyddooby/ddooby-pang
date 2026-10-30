@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { findMatches } from '../../src/core/matcher';
-import { blastArea, decideSpecial, specialPosition } from '../../src/core/specials';
+import { blastArea, chainActivate, decideSpecial, specialPosition } from '../../src/core/specials';
 import type { Board, Pos } from '../../src/core/types';
 import { parseBoard } from '../helpers/board';
 
@@ -300,5 +300,165 @@ describe('blastArea', () => {
     const area = blastArea('super', p(2, 2), board);
     const keys = area.map(({ r, c }) => r * 5 + c);
     expect(keys).toEqual([...new Set(keys)].sort((a, b) => a - b));
+  });
+});
+
+// PLAN 4.5 연쇄 발동
+describe('chainActivate', () => {
+  const p = (r: number, c: number): Pos => ({ r, c });
+
+  /** activate 이벤트 요약: "종류@r,c" */
+  function chain(text: string, start: Pos[]) {
+    const board = parseBoard(text);
+    const result = chainActivate(board, start);
+    return {
+      activated: result.activations.map((a) => `${a.special}@${a.at.r},${a.at.c}`),
+      cleared: mask(board, result.cleared),
+    };
+  }
+
+  it('특수 블록이 없으면 시작 칸만 (발동 없음)', () => {
+    expect(
+      chain(
+        `
+          R R R
+          Y G B
+        `,
+        [p(0, 2), p(0, 0), p(0, 1)],
+      ),
+    ).toEqual({
+      activated: [],
+      cleared: picture(`
+        x x x
+        . . .
+      `),
+    });
+  });
+
+  it('시작 칸의 특수 블록이 발동해 범위가 더해진다', () => {
+    expect(
+      chain(
+        `
+          R R R| Y
+          Y G B  G
+          G B Y  B
+        `,
+        [p(0, 0), p(0, 1), p(0, 2)],
+      ),
+    ).toEqual({
+      activated: ['lineV@0,2'],
+      cleared: picture(`
+        x x x .
+        . . x .
+        . . x .
+      `),
+    });
+  });
+
+  it('범위 밖의 특수 블록은 발동하지 않는다', () => {
+    expect(
+      chain(
+        `
+          R  R R- Y
+          Y  G B  G
+          G* B Y  B
+          B  Y G  R
+        `,
+        [p(0, 0), p(0, 1), p(0, 2)],
+      ),
+    ).toEqual({
+      activated: ['lineH@0,2'],
+      cleared: picture(`
+        x x x x
+        . . . .
+        . . . .
+        . . . .
+      `),
+    });
+  });
+
+  it('줄 → 줄 → 폭탄으로 이어진다', () => {
+    expect(
+      chain(
+        `
+          R  R R- B|
+          Y  G B  G
+          G  B Y  B
+          B  Y G  R*
+        `,
+        [p(0, 0), p(0, 1), p(0, 2)],
+      ),
+    ).toEqual({
+      activated: ['lineH@0,2', 'lineV@0,3', 'bomb@3,3'],
+      cleared: picture(`
+        x x x x
+        . . . x
+        . . x x
+        . . x x
+      `),
+    });
+  });
+
+  it('같은 블록은 한 번만 발동 (서로를 범위에 넣는 두 줄)', () => {
+    const result = chainActivate(
+      parseBoard(`
+        R- Y G B-
+        Y  G B Y
+      `),
+      [p(0, 0)],
+    );
+    expect(result.activations.map((a) => a.at)).toEqual([p(0, 0), p(0, 3)]);
+  });
+
+  it('activate 이벤트의 cleared는 그 블록의 발동 범위', () => {
+    const board = parseBoard(`
+      R* Y G
+      Y  G B
+      G  B Y
+    `);
+    const [activation] = chainActivate(board, [p(0, 0)]).activations;
+    expect(activation).toEqual({
+      type: 'activate',
+      special: 'bomb',
+      at: p(0, 0),
+      cleared: blastArea('bomb', p(0, 0), board),
+    });
+  });
+
+  it('휘말린 컬러 블록은 보드에서 가장 많은 색을 지운다', () => {
+    expect(
+      chain(
+        `
+          R- C Y
+          Y  G Y
+          B  Y G
+        `,
+        [p(0, 0)],
+      ),
+    ).toEqual({
+      activated: ['lineH@0,0', 'color@0,1'],
+      cleared: picture(`
+        x x x
+        x . x
+        . x .
+      `),
+    });
+  });
+
+  it('가장 많은 색이 동점이면 번호가 작은 색 (R=0)', () => {
+    expect(
+      chain(
+        `
+          R- C Y
+          G  R Y
+        `,
+        [p(0, 0)],
+      ).cleared,
+    ).toBe(
+      picture(`
+        x x x
+        . x .
+      `),
+    );
   });
 });
