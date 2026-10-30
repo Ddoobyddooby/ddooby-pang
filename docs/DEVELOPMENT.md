@@ -260,6 +260,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 연출 길이·색·두께는 `src/config.ts`의 `FX.special`
 - `npm test` → `tests/view/specialFx.test.ts` 5개 통과
 
+### W2-08 점수 계산
+- `npm test` → `tests/core/scoring.test.ts`(점수표 각 줄)와 `engine.test.ts`의 "resolveSwap: 점수"가 통과한다
+- `npm run dev` → `?demo&seed=7`을 열고 개발자도구 Console에서 `__ddooby.score()`를 몇 번 실행하면 점수가 늘어난다. 같은 seed면 같은 턴에서 같은 점수가 나온다 (10턴 = 1275점)
+- 화면에 점수가 보이는 건 W2-11(HUD)부터
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -525,3 +530,9 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **트윈 속성 이름을 계산하기**: `[row ? 'scaleY' : 'scaleX']: end`처럼 계산된 키로 가로·세로 빛줄기를 한 코드로 처리했다
 - **모양이 여럿이면 배지**: 블록 모양이 6가지라 줄무늬는 삼각형·별 밖으로 삐져나온다. 모양과 무관한 자리(오른쪽 위)에 배지를 붙이면 모든 블록에서 똑같이 읽힌다 (`src/view/theme/textures.ts`의 `drawSpecial`)
 - **개발용 장면 만들기**: `?specials`처럼 확인하고 싶은 상태를 바로 만드는 URL 옵션이 있으면, 4개를 맞춰 특수 블록을 만들 때까지 기다리지 않아도 된다. `import.meta.env.DEV` 안에 두어 배포 빌드에는 빠진다
+
+### W2-08 점수 계산
+- **규칙을 작은 순수 함수로**: `groupBase`(그룹 크기 → 점수), `cascadeMultiplier`(연쇄 배율), `stepScore`(한 단계 합계). 숫자는 전부 `config.SCORE`에서 읽어서 밸런스 조정은 config만 고치면 된다 (`src/core/scoring.ts`, `src/config.ts`)
+- **결과는 이벤트로 넘긴다**: core는 누적 점수를 들고 있지 않고, 단계마다 `score` 이벤트(점수·위치)와 턴 합계 `scoreDelta`만 돌려준다. 더하는 건 바깥(지금은 `GameScene`, 나중엔 mode) 몫이다 (`src/core/engine.ts`, `src/scenes/GameScene.ts`, PLAN 4.8)
+- **같은 블록을 두 번 세지 않기**: 맞춘 줄의 블록은 그룹 점수로, 특수 효과로 추가로 지워진 블록만 20점씩. `remove` 이벤트의 `bySpecial` 표시로 구분한다
+- **퍼즈 테스트의 불변식**: 무작위로 많은 판을 돌리며 "매치가 있는 단계마다 score 1개, 합계 = `scoreDelta`, 점수 > 0"을 확인한다. 예시 테스트가 놓치는 경우를 잡는다 (`tests/core/fuzz.test.ts`)

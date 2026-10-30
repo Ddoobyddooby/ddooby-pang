@@ -93,7 +93,8 @@
   - 개발 모드 확인 도구: `?specials`(특수 블록 5종 배치), 키 Q W E R T(발동 연출 미리보기)
 
 ### 점수
-- [ ] **W2-08** 🧪 `core/scoring.ts` + `config.SCORE` — 그룹 점수, 특수 제거 점수, cascade 배율
+- [x] **W2-08** 🧪 `core/scoring.ts` + `config.SCORE` — 그룹 점수, 특수 제거 점수, cascade 배율
+  - 연쇄 단계마다 `score` 이벤트(점수 팝업 위치 포함), 턴 합계 `scoreDelta`. 확인용 `window.__ddooby.score()`
   - 테스트: SPEC 5절 표의 각 행
 
 ### 경쟁 모드
