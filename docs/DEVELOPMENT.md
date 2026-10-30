@@ -312,6 +312,19 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - `npm test` → `tests/modes/storyScore.test.ts` 통과 (별 기준과 같은 점수면 포함, 클리어하면 최소 별 1개, 실패면 0개)
 - 보너스 금액은 `src/config.ts`의 `SCORE.movesLeftBonus` (남은 이동 1회당 300)
 
+### W3-02 스테이지 파일 읽기
+- `npm run dev` → 평소처럼 게임이 시작된다 (스테이지·경쟁 설정을 시작할 때 읽는다)
+- `public/stages/story.json`의 `"target": 2000`을 `0`으로 바꾸고 새로고침 → 게임이 시작되지 않고 빨간 글씨로 "데이터를 불러오지 못했어요 / stages/story.json: story[0].goals[0].target: 1 이상의 정수여야 한다"가 뜬다. 되돌리면 정상
+
+### W3-03 스토리 스테이지 1~10
+- `public/stages/story.json`에 10개가 들어 있다 (표: `docs/superpowers/specs/2026-10-30-story-stages-design.md`). 화면에서 고르는 건 W3-09부터
+- 난이도를 바꾸고 싶으면 이 파일의 숫자만 고치면 된다. 잘못 쓰면 W3-02의 에러 화면이 알려준다
+- `npm test` → `tests/data/stories.test.ts`가 실제 파일을 검사한다
+
+### W3-04 경쟁 모드 설정 파일
+- `public/stages/timeattack.json`의 `timeLimit`을 `30`으로 바꾸고 새로고침 → 패널에 "남은 시간 0:30". 되돌리기
+- 개발용 `?time=15`는 이 파일보다 우선한다
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -630,3 +643,16 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **경계값 테스트**: 별 기준이 3000이면 2999·3000·3001을 다 확인한다. 버그는 경계에서 잘 난다 (`tests/modes/storyScore.test.ts`)
 - **계산을 순수 함수로**: `movesLeftBonus`, `starsFor`를 모드 밖으로 빼서 표처럼 테스트한다 (`src/modes/storyScore.ts`)
 - **결과에 근거 담기**: 결과에 최종 점수뿐 아니라 그중 보너스 금액(`bonus`)도 넣어서 결과 화면이 "남은 이동 보너스 +900"을 보여줄 수 있다
+
+### W3-02 스테이지 파일 읽기
+- **에러를 감싸서 다시 던지기**: 네트워크 실패, 404, 깨진 JSON, 검증 실패를 모두 `stages/story.json: 이유` 형태로 바꾼다. 원래 에러는 `cause`에 남겨서 추적할 수 있다 (`src/data/stageLoader.ts`)
+- **의존성 주입으로 테스트**: `loadStages(fetchFn)`처럼 `fetch`를 인자로 받으면 테스트에서 가짜 fetch로 404·깨진 응답을 마음대로 만든다 (`tests/data/stageLoader.test.ts`)
+- **실패하면 시작하지 않기**: 데이터가 틀린 채로 게임이 돌면 원인을 찾기 어렵다. Boot에서 한 번 읽고, 틀리면 화면에 바로 보여준다 (`src/scenes/BootScene.ts`, `src/scenes/stageRegistry.ts`)
+
+### W3-03 스토리 스테이지 1~10
+- **데이터로 게임 조정하기**: 난이도 숫자가 코드가 아니라 JSON에 있어서 코드를 몰라도 바꿀 수 있다 (`public/stages/story.json`)
+- **계약 테스트**: 실제 파일을 읽어 검증을 통과하는지, 10개인지, 색 수가 뒤로 갈수록 줄지 않는지 확인한다. 누가 파일을 잘못 고치면 `npm test`가 잡는다. Vite의 `?raw` import로 파일 내용을 문자열로 읽는다 (`tests/data/stories.test.ts`)
+- **숫자 정하기 (시뮬레이션)**: 별·목표 숫자는 자동 플레이 300판의 분포로 정했다. 감보다 측정 (설계 문서 3절)
+
+### W3-04 경쟁 모드 설정 파일
+- **기본값과 설정 파일**: 실제 값은 `timeattack.json`, `config.TIMEATTACK`은 파일이 없을 때나 테스트에서 쓰는 기본값으로 남는다. 개발용 URL 옵션 > 설정 파일 > 기본값 순서로 우선한다 (`src/scenes/GameScene.ts`)

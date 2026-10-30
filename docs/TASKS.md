@@ -121,9 +121,9 @@
 ### 데이터
 - [x] **W3-01** 🧪 `data/stageSchema.ts` — 타입 + 런타임 검증 (필수 필드, colors 4~6, stars 오름차순, 색 이름)
   - 최소 색 수는 4로 결정 (2026-10-30, 3색은 연쇄가 수십 번 이어짐. PLAN 4.3 측정값)
-- [ ] **W3-02** `data/stageLoader.ts` — `public/stages/story.json`, `timeattack.json` 로드, 실패 시 에러 표시
-- [ ] **W3-03** 스테이지 1~10 JSON 작성 (점수 미션 → 색 수집 → 복합 순, colors 4→6, moves 25→15)
-- [ ] **W3-04** 경쟁 모드 설정을 `timeattack.json`으로 이동 (`timeLimit: 60`)
+- [x] **W3-02** `data/stageLoader.ts` — `public/stages/story.json`, `timeattack.json` 로드, 실패 시 에러 표시
+- [x] **W3-03** 스테이지 1~10 JSON 작성 (점수 미션 → 색 수집 → 복합 순, colors 4→6, moves 25→15)
+- [x] **W3-04** 경쟁 모드 설정을 `timeattack.json`으로 이동 (`timeLimit: 60`)
 
 ### 모드 / 저장
 - [x] **W3-05** 🧪 `modes/StoryMode.ts` — 유효 스왑만 이동 차감, 미션 2종 집계(특수 제거 포함), 클리어/실패 판정
