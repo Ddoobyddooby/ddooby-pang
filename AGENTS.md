@@ -10,6 +10,7 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 MVP 개발 중).
 - `docs/PLAN.md`: 어떻게. 구조, core 타입·이벤트, 오픈 이슈 잠정 결정
 - `docs/TASKS.md`: 작업 체크리스트 (ID `W<주차>-<번호>`)
 - `docs/DEVELOPMENT.md`: VSCode에서 실행·확인하는 방법 (사용자용)
+- `docs/WORKFLOW.md`: Claude 세션 운영. 메인(설계) 세션 + 코딩 탭으로 나눠 일할 때는 이 문서를 따른다
 
 ## 작업 방식
 
