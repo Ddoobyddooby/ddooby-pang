@@ -304,7 +304,7 @@ type ModeResult =
   | { kind: 'story'; cleared: boolean; score: number; stars: 0 | 1 | 2 | 3 };  // W3
 ```
 
-- `src/modes`도 core처럼 순수 TS다. `phaser`, DOM, `Math.random`, `src/view`, `src/scenes`를 쓰지 않는다 (ESLint로 막는다). 의존은 `core`와 `config`만
+- `src/modes`도 core처럼 순수 TS다. `phaser`, DOM, `Math.random`, `src/view`, `src/scenes`를 쓰지 않는다 (ESLint로 막는다). 의존은 `core`와 `config`만. 예외로 스테이지 **타입**(`StageDef`, `Goal`)은 `import type`으로 `src/data/stageSchema`에서 가져온다 (값 import는 ESLint 에러, W3-05)
 - 씬은 매 프레임 `mode.tick(delta)`를 부르고, 스왑 전에 `canInput()`을 보고, 재생(`view.play`)이 끝난 뒤 `isOver()`면 결과 화면으로 간다
 
 ### StoryMode

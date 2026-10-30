@@ -295,6 +295,15 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - PC 넓은 창에서도 보드가 가운데이고 탭·스와이프가 맞는 칸에 들어간다
 - 창 크기를 도중에 바꾸면 배치가 다시 맞춰지지 않는다 (새로고침하면 맞음)
 
+### W3-01 스테이지 데이터 검증
+- `npm test` → `tests/data/stageSchema.test.ts` 통과 (정상 스테이지, 필드별 잘못된 값, 에러 메시지에 위치)
+- 스테이지 JSON을 잘못 쓰면(예: `colors: 3`) `story[0].colors: …`처럼 어느 스테이지 어느 칸이 틀렸는지 알려준다. 화면에 띄우는 건 W3-02부터
+
+### W3-07 저장 (최고 점수)
+- `npm run dev` → `?time=5`로 한 판 → 결과 화면의 최고 점수 확인 → 새로고침 후 다시 한 판 → 이전 최고 점수가 남아 있고, 더 높을 때만 "최고 기록!"
+- 개발자도구 Application 탭 > Local Storage > `ddooby-pang/save`에 저장 내용이 보인다. 이 키를 지우면 기록이 초기화된다
+- 시크릿 모드에서는 저장이 안 될 수 있다. 그래도 게임은 멈추지 않는다
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -593,3 +602,13 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **선택 규칙을 순수 함수로**: `tapSelect(선택, 탭한 칸)` → 선택·해제·교환을 Phaser 없이 테스트한다 (`src/view/input.ts`, `tests/view/input.test.ts`)
 - **입력 상태 기계**: 누름을 기억 → 움직임이 기준을 넘으면 스와이프, 못 넘고 떼면 탭 (`BoardInput`의 down / move / up)
 - **연출끼리 겹치지 않게**: 컨테이너 크기는 말랑·팝 연출이, 몸통 이미지 크기는 선택 확대가 맡는다. 한 값을 두 연출이 동시에 바꾸면 서로 덮어쓴다 (`src/view/BlockSprite.ts`)
+
+### W3-01 스테이지 데이터 검증
+- **외부 데이터는 믿지 않는다**: JSON은 사람이 손으로 쓰니 틀릴 수 있다. `unknown`으로 받아 칸마다 확인한 뒤에야 `StageDef` 타입으로 넘긴다 (`src/data/stageSchema.ts`의 `parseStory`)
+- **위치가 담긴 에러**: "잘못됐다"가 아니라 `story[3].goals[0].count: 1 이상의 정수여야 한다`처럼 고칠 곳을 알려준다 (`StageError`)
+- **이름 ↔ 숫자 매핑**: JSON에는 읽기 쉬운 `"red"`, 게임 안에서는 숫자 `0`. 경계(검증)에서 한 번만 바꾼다 (`COLOR_NAMES`, `colorFromName`)
+
+### W3-07 저장 (최고 점수)
+- **순수 규칙과 부수효과 나누기**: "더 큰 점수만 남긴다" 같은 규칙(`recordTimeAttack`, `recordStory`)은 순수 함수, 실제 저장은 어댑터(`LocalStorageAdapter`)가 맡는다. 테스트에서는 가짜 저장소를 넣는다 (`src/storage/progress.ts`)
+- **깨진 저장 데이터 다루기**: 없음·깨진 JSON·버전 다름은 기본값으로, 일부 칸만 틀리면 그 칸만 기본값으로 채운다. `version`은 나중에 형식이 바뀔 때 옮기기 위한 표시 (`parseSave`)
+- **전역은 한 곳에서만**: `window.localStorage`는 `BootScene`에서만 만지고, 씬끼리는 Phaser registry로 저장 데이터를 나눠 쓴다 (`src/scenes/BootScene.ts`, `src/scenes/saveRegistry.ts`)
