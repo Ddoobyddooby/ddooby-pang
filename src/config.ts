@@ -26,6 +26,13 @@ export const SCORE = {
   movesLeftBonus: 300,
 } as const;
 
+/** 타임어택 모드 (PLAN 5절). W3-04에서 timeLimitMs를 timeattack.json으로 옮긴다 */
+export const TIMEATTACK = {
+  timeLimitMs: 60000,
+  /** 남은 시간이 이 아래면 HUD 시간 강조 (W2-11) */
+  warnMs: 10000,
+} as const;
+
 export const SPECIAL = {
   /** 'perpendicular': 가로 4매치 → 세로줄 제거 (캔디크러시). 'parallel': 같은 방향 */
   lineDirection: 'perpendicular' as 'perpendicular' | 'parallel',
@@ -86,7 +93,10 @@ export const THEME = {
 export const FX = {
   maxLevel: 5,
   /** 키 = 연쇄 단계 */
-  praise: { 2: '이안팡!', 3: '이서팡!', 4: '보라팡!!', 5: '사랑해!!!' } as Record<2 | 3 | 4 | 5, string>,
+  praise: { 2: '이안팡!', 3: '이서팡!', 4: '보라팡!!', 5: '사랑해!!!' } as Record<
+    2 | 3 | 4 | 5,
+    string
+  >,
   praiseScale: { 2: 1, 3: 1.2, 4: 1.4, 5: 1.6 },
   /** index = 단계 - 1 */
   particlesPerBlock: [1, 2, 3, 3, 4],
