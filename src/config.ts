@@ -266,3 +266,9 @@ export const RESULT = {
     pressMs: 90,
   },
 } as const;
+
+/** 저장 (PLAN 7.2) */
+export const SAVE = {
+  /** localStorage 키 하나에 JSON 통째로 저장 */
+  key: 'ddooby-pang/save',
+} as const;

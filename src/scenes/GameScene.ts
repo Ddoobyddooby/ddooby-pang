@@ -19,6 +19,8 @@ import { FxDirector } from '../view/fx/FxDirector';
 import { BoardInput } from '../view/input';
 import { createLayout, screenLayout } from '../view/layout';
 import { addHills } from '../view/theme/Hills';
+import { recordTimeAttack } from '../storage/progress';
+import { commitSave, getSave } from './saveRegistry';
 import { TimeAttackMode } from '../modes/TimeAttackMode';
 import { Background } from '../view/theme/Background';
 import { drawBoardFrame } from '../view/theme/BoardFrame';
@@ -68,7 +70,10 @@ export class GameScene extends Phaser.Scene {
     this.finished = false;
     const time = Number(params.get('time'));
     this.timeLimitMs = import.meta.env.DEV && time > 0 ? time * 1000 : TIMEATTACK.timeLimitMs;
-    this.mode = new TimeAttackMode({ timeLimitMs: this.timeLimitMs });
+    this.mode = new TimeAttackMode({
+      bestScore: getSave(this.registry).timeattack.bestScore,
+      timeLimitMs: this.timeLimitMs,
+    });
 
     this.state = createInitialState({
       rows: BOARD.rows,
@@ -142,6 +147,7 @@ export class GameScene extends Phaser.Scene {
   private finish(): void {
     if (this.finished) return;
     this.finished = true;
+    commitSave(this.registry, recordTimeAttack(getSave(this.registry), this.mode.score()));
     this.scene.start('Result', { result: this.mode.result() });
   }
 

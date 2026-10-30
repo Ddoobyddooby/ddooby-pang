@@ -123,5 +123,29 @@ export default tseslint.config(
       ],
     },
   },
+  // storage도 순수 규칙에 가깝게: Phaser·화면·전역 저장소에 의존하지 않는다. localStorage는 BootScene이 넘겨준다
+  {
+    files: ['src/storage/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [{ name: 'phaser', message: 'storage는 Phaser를 import하지 않는다.' }],
+          patterns: [
+            {
+              group: ['**/view', '**/view/**', '**/scenes', '**/scenes/**'],
+              message: 'storage는 view / scenes에 의존하지 않는다.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-globals': [
+        'error',
+        { name: 'window', message: 'storage는 전역을 직접 만지지 않는다. BootScene이 넘겨준다.' },
+        { name: 'document', message: 'storage에서 DOM을 쓰지 않는다.' },
+        { name: 'localStorage', message: 'localStorage는 BootScene이 어댑터에 넘겨준다.' },
+      ],
+    },
+  },
   prettier,
 );

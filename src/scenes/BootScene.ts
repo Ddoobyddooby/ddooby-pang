@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { THEME } from '../config';
+import { LocalStorageAdapter } from '../storage/progress';
 import { previewResult } from './resultText';
+import { putSave } from './saveRegistry';
 
 /** 글꼴이 늦거나 실패해도 게임은 이 시간 안에 시작한다 (오프라인, 느린 휴대폰) */
 const FONT_TIMEOUT_MS = 2000;
@@ -12,12 +14,26 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    void this.loadFont().then(() => {
+    void Promise.all([this.loadFont(), this.loadSave()]).then(() => {
       // DEV 미리보기: ?result=N(&best=M)이면 게임 대신 결과 화면을 바로 띄운다
       const preview = import.meta.env.DEV ? previewResult(window.location.search) : null;
       if (preview) this.scene.start('Result', { result: preview });
       else this.scene.start('Game');
     });
+  }
+
+  /** 저장 데이터를 한 번 불러와 registry에 둔다. localStorage는 여기서만 만진다 */
+  private async loadSave(): Promise<void> {
+    let store: Storage | undefined;
+    try {
+      store = window.localStorage; // 시크릿 모드 등에서는 접근만으로 throw할 수 있다
+    } catch {
+      store = undefined;
+    }
+    const storage = new LocalStorageAdapter(
+      store ?? { getItem: () => null, setItem: () => undefined },
+    );
+    putSave(this.registry, storage, await storage.load());
   }
 
   private async loadFont(): Promise<void> {
