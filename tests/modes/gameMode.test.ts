@@ -14,12 +14,13 @@ describe('modes/GameMode 타입 (PLAN 5절)', () => {
         return `${r.score}${r.newBest ? ' 신기록' : ''}`;
       }
       expectTypeOf(r.stars).toEqualTypeOf<0 | 1 | 2 | 3>();
+      expectTypeOf(r.stageId).toBeNumber();
       return r.cleared ? `클리어 ★${r.stars}` : '실패';
     };
     expect(describeResult({ kind: 'timeattack', score: 120, bestScore: 100, newBest: true })).toBe(
       '120 신기록',
     );
-    expect(describeResult({ kind: 'story', cleared: true, score: 900, stars: 2 })).toBe(
+    expect(describeResult({ kind: 'story', stageId: 3, cleared: true, score: 900, stars: 2 })).toBe(
       '클리어 ★2',
     );
   });

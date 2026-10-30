@@ -46,12 +46,13 @@ export default tseslint.config(
       ],
     },
   },
-  // modes도 core처럼 순수 TS: core와 config에만 의존한다 (PLAN 5절)
+  // modes도 core처럼 순수 TS: core와 config에만 의존한다 (PLAN 5절).
+  // 스테이지 타입(StageDef, Goal)만 data에서 `import type`으로 가져올 수 있다
   {
     files: ['src/modes/**/*.ts'],
     languageOptions: { globals: {} },
     rules: {
-      'no-restricted-imports': [
+      '@typescript-eslint/no-restricted-imports': [
         'error',
         {
           paths: [{ name: 'phaser', message: 'modes는 Phaser를 import하지 않는다.' }],
@@ -61,8 +62,13 @@ export default tseslint.config(
               message: 'modes는 view / scenes에 의존하지 않는다.',
             },
             {
-              group: ['**/data/**', '**/storage/**'],
+              group: ['**/storage/**'],
               message: 'modes는 core와 config에만 의존한다.',
+            },
+            {
+              group: ['**/data/**'],
+              allowTypeImports: true,
+              message: 'modes는 data에서 타입만 가져온다 (import type).',
             },
           ],
         },

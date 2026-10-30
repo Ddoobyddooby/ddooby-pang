@@ -18,4 +18,4 @@ export interface GameMode {
 
 export type ModeResult =
   | { kind: 'timeattack'; score: number; bestScore: number; newBest: boolean }
-  | { kind: 'story'; cleared: boolean; score: number; stars: 0 | 1 | 2 | 3 }; // W3
+  | { kind: 'story'; stageId: number; cleared: boolean; score: number; stars: 0 | 1 | 2 | 3 };
