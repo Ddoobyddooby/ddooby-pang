@@ -46,5 +46,37 @@ export default tseslint.config(
       ],
     },
   },
+  // modes도 core처럼 순수 TS: core와 config에만 의존한다 (PLAN 5절)
+  {
+    files: ['src/modes/**/*.ts'],
+    languageOptions: { globals: {} },
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [{ name: 'phaser', message: 'modes는 Phaser를 import하지 않는다.' }],
+          patterns: [
+            {
+              group: ['**/view', '**/view/**', '**/scenes', '**/scenes/**'],
+              message: 'modes는 view / scenes에 의존하지 않는다.',
+            },
+            {
+              group: ['**/data/**', '**/storage/**'],
+              message: 'modes는 core와 config에만 의존한다.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-properties': [
+        'error',
+        { object: 'Math', property: 'random', message: '랜덤은 core/rng.ts의 seed RNG만 쓴다.' },
+      ],
+      'no-restricted-globals': [
+        'error',
+        { name: 'window', message: 'modes에서 DOM을 쓰지 않는다.' },
+        { name: 'document', message: 'modes에서 DOM을 쓰지 않는다.' },
+      ],
+    },
+  },
   prettier,
 );
