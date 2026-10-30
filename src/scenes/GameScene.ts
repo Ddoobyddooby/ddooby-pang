@@ -5,11 +5,11 @@
 // URL 옵션 (개발용)
 //   ?seed=1234  같은 시작 보드 재현 (패널 구석에 seed가 표시된다)
 //   ?demo       힌트 수를 자동으로 둔다 (시간이 끝나면 결과 화면으로)
-//   ?time=15    (개발 모드) 제한 시간을 15초로 줄인다
+//   ?time=15    (개발 모드) 제한 시간을 15초로 줄인다 (없으면 stages/timeattack.json의 timeLimit)
 //   ?specials   (개발 모드) 시작 보드에 특수 블록 5종을 하나씩 놓는다
 
 import Phaser from 'phaser';
-import { BOARD, GAME, TIMEATTACK } from '../config';
+import { GAME } from '../config';
 import { createInitialState, resolveSwap } from '../core/engine';
 import { findHint } from '../core/moves';
 import type { GameState, Pos, SpecialKind } from '../core/types';
@@ -21,11 +21,10 @@ import { createLayout, screenLayout } from '../view/layout';
 import { addHills } from '../view/theme/Hills';
 import { recordTimeAttack } from '../storage/progress';
 import { commitSave, getSave } from './saveRegistry';
+import { getStages } from './stageRegistry';
 import { TimeAttackMode } from '../modes/TimeAttackMode';
 import { Background } from '../view/theme/Background';
 import { drawBoardFrame } from '../view/theme/BoardFrame';
-
-const COLORS = 5;
 
 /** 개발 모드 키 → 발동 연출 미리보기 */
 const SPECIAL_PREVIEW_KEYS: Record<string, SpecialKind> = {
@@ -54,7 +53,7 @@ export class GameScene extends Phaser.Scene {
   private busy = false;
   private moves = 0;
   private seed = 0;
-  private timeLimitMs: number = TIMEATTACK.timeLimitMs;
+  private timeLimitMs = 0;
   /** 결과 화면으로 넘어갔는지 (한 번만) */
   private finished = false;
 
@@ -64,28 +63,30 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     const params = new URLSearchParams(window.location.search);
-    this.seed = Number(params.get('seed')) || Date.now() % 1_000_000;
+    const setting = getStages(this.registry).timeattack; // public/stages/timeattack.json
+    this.seed = Number(params.get('seed')) || setting.seed || Date.now() % 1_000_000;
     this.moves = 0;
     this.busy = false;
     this.finished = false;
     const time = Number(params.get('time'));
-    this.timeLimitMs = import.meta.env.DEV && time > 0 ? time * 1000 : TIMEATTACK.timeLimitMs;
+    // DEV의 ?time=N(초)이 JSON 값보다 먼저다
+    this.timeLimitMs = import.meta.env.DEV && time > 0 ? time * 1000 : setting.timeLimit * 1000;
     this.mode = new TimeAttackMode({
       bestScore: getSave(this.registry).timeattack.bestScore,
       timeLimitMs: this.timeLimitMs,
     });
 
     this.state = createInitialState({
-      rows: BOARD.rows,
-      cols: BOARD.cols,
-      colors: COLORS,
+      rows: setting.rows,
+      cols: setting.cols,
+      colors: setting.colors,
       seed: this.seed,
     });
     if (import.meta.env.DEV && params.has('specials')) this.placeSpecialSamples();
     const { width, height } = this.scale;
     this.cameras.main.setScroll(-(width - GAME.width) / 2, 0); // 넓은 화면에서 가운데 맞춤
     const screen = screenLayout(height);
-    const layout = createLayout(BOARD.rows, BOARD.cols, screen.board);
+    const layout = createLayout(setting.rows, setting.cols, screen.board);
     new Background(this);
     addHills(this, width, height);
     drawBoardFrame(this, layout);
