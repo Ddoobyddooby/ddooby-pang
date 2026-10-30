@@ -226,6 +226,10 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 테스트 표에서 보드 그림 → 결과를 보면 규칙이 보인다: 3I 없음, 4I 가로 → `lineV`, 4I 세로 → `lineH`, 5L·5T·5+ → `bomb`, 5I → `color`, 6개 이상 → `super`
 - 라인 방향 바꿔보기: `src/config.ts`의 `SPECIAL.lineDirection`을 `'parallel'`로 바꾸면 4I 가로 → `lineH`가 된다 (테스트는 기본값 기준이라 4I 두 줄이 실패한다. 되돌리기)
 
+### W2-02 특수 블록 생성 위치
+- `npm test` → `tests/core/specials.test.ts`의 `specialPosition` 10개 통과. 화면은 아직 그대로 (엔진 연결은 W2-05)
+- 테스트 표에서 모양별 "중앙" 칸을 볼 수 있다: 4I는 가운데 두 칸 중 왼쪽(위), +·T는 교차점 쪽, L은 동점이라 위쪽 칸
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -443,3 +447,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **기본값 매개변수로 설정 주입**: `decideSpecial(group, lineDirection = SPECIAL.lineDirection)`. 평소엔 config를 쓰고, 테스트에서는 다른 값을 넘겨 config를 건드리지 않고 두 방식을 다 검사한다
 - **표 기반 테스트**: `it.each([[이름, 보드, 기대값], …])`로 규칙 표를 그대로 테스트로 옮겼다. `%s`로 테스트 이름에 행 이름이 찍힌다 (`tests/core/specials.test.ts`)
 - 참고: [MDN 기본값 매개변수](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Functions/Default_parameters)
+
+### W2-02 특수 블록 생성 위치
+- **문서 먼저**: SPEC의 "그룹 중앙"이 어느 칸인지 정해져 있지 않아서, 코드보다 PLAN 4.5에 정의(무게중심에 가장 가까운 그룹 칸, 동점이면 왼쪽 위)를 먼저 적었다
+- **무게중심(centroid)**: 칸 좌표의 평균. L 모양처럼 평균점이 그룹 밖일 수 있어서 "가장 가까운 그룹 칸"을 고른다 (`src/core/specials.ts`)
+- **부동소수점 동점 함정**: `0.36 + 0.16`과 `0.16 + 0.36`이 컴퓨터에서 똑같다는 보장이 없다. 평균으로 나누는 대신 양쪽에 칸 수 n을 곱해 정수끼리 비교했다
+- **`reduce`로 최솟값 찾기**: `cells.reduce((best, p) => (dist(p) < dist(best) ? p : best))`. `<`(같으면 유지)라서 동점이면 앞 칸이 남는다 → 결정적
+- **`find` + `some`**: 스왑한 두 칸 중 그룹에 들어 있는 칸 찾기
+- 참고: [MDN Array.reduce](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce), [0.1 + 0.2 ≠ 0.3](https://0.30000000000000004.com/)
