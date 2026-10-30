@@ -116,6 +116,22 @@ export const FX = {
     riseMs: 400,
     rise: 30,
   },
+  /** 특수 블록 발동 연출 (W2-07). 크기는 칸 대비 배율, 시간은 ms */
+  special: {
+    /** 빛줄기 두께 (칸 대비), 시작 → 끝 */
+    beamWidth: { start: 0.9, end: 0.1 },
+    beamMs: 320,
+    beamColor: 0xffffff,
+    beamAlpha: 0.85,
+    /** 원이 퍼지는 시간과 색. 반지름은 specialFx.ts의 종류별 값 */
+    ringMs: 340,
+    ringColor: 0xfff3b0,
+    ringAlpha: 0.7,
+    superShake: { duration: 200, intensity: 0.008 },
+    /** 무지개 발동 때 반짝임을 띄우는 칸 수 상한, 칸마다 별 개수 */
+    maxSparkles: 24,
+    starsPerSparkle: 2,
+  },
 } as const;
 
 /** 배경 장식 (구름·별)과 웨이퍼 보드판 모양 */

@@ -3,7 +3,7 @@
 
 import Phaser from 'phaser';
 import { ANIM, VIEW } from '../config';
-import type { Block, Board, GameEvent, Pos } from '../core/types';
+import type { Block, Board, GameEvent, Pos, SpecialKind } from '../core/types';
 import { BlockSprite } from './BlockSprite';
 import { EventTracker } from './eventTracker';
 import { cellAt, cellCenter, type Layout } from './layout';
@@ -15,6 +15,8 @@ import { tween } from './tween';
 export interface BoardViewHooks {
   /** match 이벤트를 재생하기 시작할 때 동기로 부른다. 연출은 기다리지 않는다 */
   onMatch?(level: number, removed: readonly RemovedCell[]): void;
+  /** activate 이벤트(특수 블록 발동)를 재생하기 시작할 때 동기로 부른다 */
+  onActivate?(special: SpecialKind, at: Pos, cleared: readonly Pos[]): void;
 }
 
 export class BoardView {
@@ -116,6 +118,9 @@ export class BoardView {
         return Promise.resolve();
 
       case 'activate':
+        this.hooks.onActivate?.(event.special, event.at, event.cleared);
+        return Promise.resolve();
+
       case 'score':
         return Promise.resolve();
     }
