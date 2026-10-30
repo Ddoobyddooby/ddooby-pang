@@ -259,6 +259,13 @@ multiplier = 1 + cascade × 0.5
 delta = floor((Σ groupBase + specialBase) × multiplier)
 ```
 
+- **그룹 크기** = `group.cells.length` (L / T / + 모양도 칸 수로 센다. 5칸 L = 5매치 200점)
+- **특수 효과로 제거된 블록** = 그 cascade의 `remove` 이벤트에서 `bySpecial: true`인 블록 수. 그룹 칸은 그 칸의 블록이 특수 블록이어도 `groupBase`로만 센다 (두 번 세지 않음)
+- **컬러 블록 스왑 발동**(cascade 0, groups 빈 배열): `groupBase` 0, 지워진 블록 전부 `bySpecial`로 20점씩, 배율 1x
+- **`score` 이벤트**: cascade마다 1개, 그 cascade의 `match` / `remove`와 같은 step의 맨 끝. `at` = 첫 그룹의 중앙(4.5의 중앙 정의, `specialPosition(group, [])`), 그룹이 없으면(컬러 발동) 컬러 블록이 발동한 칸. 점수 팝업(W4-01) 위치로 쓴다
+- **`ResolveResult.scoreDelta`** = 그 턴 `score` 이벤트 delta의 합. 무효 스왑은 0. 누적 점수는 core가 들고 있지 않고 mode가 `onResolve`에서 더한다 (5절)
+- 남은 이동 보너스(`movesLeftBonus`)는 StoryMode(W3) 몫이라 `scoring.ts`에 넣지 않는다
+
 `config.ts`:
 
 ```ts
