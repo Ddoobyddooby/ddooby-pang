@@ -55,9 +55,23 @@ export const ANIM = {
   squintHold: 80,
 } as const;
 
-/** 화면 배치와 블록 모양 (PLAN 6.3: 상단 HUD 200px, 보드 680x680) */
+/** 화면 배치와 블록 모양 (설계: 2026-10-30-screen-layout-design.md) */
 export const VIEW = {
-  board: { x: 20, y: 200, size: 680 },
+  /** 기준 높이 1280 기준의 구역 배치 (px). 더 긴 화면의 늘어난 높이는 screenLayout이 나눈다 */
+  screen: {
+    baseHeight: 1280,
+    titleY: 90,
+    boardX: 20,
+    boardY: 170,
+    boardSize: 680,
+    /** 정보 패널: 보드 판(DECOR.frame.pad 포함)과 같은 폭 */
+    panelY: 870,
+    panelH: 170,
+    /** 바닥 장식 높이 (화면 맨 아래에 붙는다) */
+    decorH: 220,
+    /** 늘어난 높이 중 타이틀~보드 사이에 주는 비율 (나머지는 패널~장식 사이) */
+    topShare: 0.3,
+  },
   /** 칸 대비 블록 크기 */
   blockScale: 0.95,
   boardBackground: 0xfff8ec,
@@ -98,7 +112,23 @@ export const THEME = {
   ],
   face: { ink: 0x3b2b3a, cheek: 0xff7fa8 },
   title: { fill: '#ff6b9a', stroke: '#ffffff' },
-  info: { bg: 0xffffff, bgAlpha: 0.85, text: '#8a7aa8' },
+  /** 정보 패널 글자·막대 색 */
+  info: {
+    text: '#8a7aa8',
+    score: '#e45a6b',
+    warn: '#ff4d5e',
+    bar: { bg: 0xffffff, fill: 0xff9cc0, warn: 0xff5a6a },
+  },
+  /** 바닥 장식 (언덕 두 겹, 막대사탕, 컵케이크) */
+  hills: {
+    back: 0xffe3ef,
+    front: 0xfff3d9,
+    stick: 0xe9c48a,
+    candy: [0xff7b88, 0xbc8af2],
+    cupWrap: 0xe9c48a,
+    cupFrosting: 0xffb3d0,
+    cherry: 0xff7b88,
+  },
   /** 칭찬 문구 색 (단계 2~5) */
   praiseColors: { 2: '#ff6b9a', 3: '#ff9a3c', 4: '#4d96ff', 5: '#b37cf0' },
 } as const;
@@ -160,22 +190,29 @@ export const FX = {
 
 /** 배경 장식 (구름·별)과 웨이퍼 보드판 모양 */
 export const DECOR = {
-  /** x, y = 화면 좌표, scale = 크기 배율, drift = 좌우 이동 거리(px), ms = 왕복 시간 */
+  /** x = 화면 좌표, y = 위에서 (fromBottom이 있으면 아래에서) 떨어진 거리, scale = 크기 배율, drift = 좌우 이동 거리(px), ms = 왕복 시간 */
   clouds: [
     { x: 130, y: 90, scale: 1.0, drift: 60, ms: 24000 },
     { x: 560, y: 150, scale: 0.8, drift: 50, ms: 32000 },
-    { x: 300, y: 1050, scale: 1.2, drift: 70, ms: 38000 },
-    { x: 620, y: 1180, scale: 0.9, drift: 55, ms: 28000 },
-  ],
+    { x: 300, fromBottom: 280, scale: 1.2, drift: 70, ms: 38000 },
+    { x: 620, fromBottom: 340, scale: 0.9, drift: 55, ms: 28000 },
+  ] as readonly {
+    x: number;
+    y?: number;
+    fromBottom?: number;
+    scale: number;
+    drift: number;
+    ms: number;
+  }[],
   cloudAlpha: 0.9,
   stars: [
     { x: 80, y: 250 },
     { x: 650, y: 60 },
-    { x: 400, y: 1130 },
-    { x: 60, y: 1000 },
-    { x: 670, y: 980 },
+    { x: 400, fromBottom: 230 },
+    { x: 60, fromBottom: 300 },
+    { x: 670, fromBottom: 310 },
     { x: 220, y: 40 },
-  ],
+  ] as readonly { x: number; y?: number; fromBottom?: number }[],
   starRadius: 10,
   twinkleMs: 1400,
   twinkleAlpha: { min: 0.3, max: 1 },
@@ -183,10 +220,21 @@ export const DECOR = {
   frame: { pad: 10, radius: 18, border: 4, grainLines: 4, grainAlpha: 0.6 },
 } as const;
 
-/** HUD 배치와 글자 크기 */
+/** HUD 배치와 글자 크기 (px). 정보 패널 안쪽 위치는 패널 왼쪽 위 기준 */
 export const HUD = {
-  title: { y: 80, fontSize: 56, strokeThickness: 10 },
-  info: { y: 150, fontSize: 26, height: 44, padX: 40 },
+  title: { fontSize: 56, strokeThickness: 10 },
+  panel: {
+    padX: 36,
+    /** 오른쪽 열(일시정지·미션) 자리. 지금은 비워 둔다 */
+    rightReserve: 170,
+    label: { y: 12, fontSize: 24 },
+    score: { y: 28, fontSize: 56 },
+    time: { y: 112, fontSize: 24 },
+    bar: { y: 132, height: 18, border: 3 },
+    /** 마지막 10초에 1초마다 통통 튀는 시간 글자 */
+    pulse: { scale: 1.25, ms: 140 },
+    seed: { fontSize: 18, inset: 12 },
+  },
 } as const;
 
 /** 결과 화면 (W2-12). dy = 화면 가운데 기준 세로 위치(px), 시간은 ms */

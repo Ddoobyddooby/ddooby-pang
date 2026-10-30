@@ -11,7 +11,8 @@ new Phaser.Game({
   height: GAME.height,
   transparent: true, // 하늘은 index.html의 html 그라데이션 하나만 쓴다
   scale: {
-    mode: Phaser.Scale.FIT,
+    // 폭 720 기준으로 화면 비율에 맞춰 높이를 늘린다 (배치는 screenLayout)
+    mode: Phaser.Scale.EXPAND,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   scene: [BootScene, GameScene, ResultScene],

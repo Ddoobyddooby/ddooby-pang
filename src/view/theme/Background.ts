@@ -7,13 +7,27 @@ import { DECOR, THEME } from '../../config';
 const DEPTH = -100;
 
 export class Background {
-  constructor(private readonly scene: Phaser.Scene) {
+  private readonly height: number;
+
+  /** fromBottom이 있는 장식은 화면 아래에서부터 잰다. height 기본값은 씬의 화면 높이 */
+  constructor(
+    private readonly scene: Phaser.Scene,
+    height: number = scene.scale.height,
+  ) {
+    this.height = height;
     DECOR.clouds.forEach((c) => this.addCloud(c));
-    DECOR.stars.forEach((s, i) => this.addStar(s.x, s.y, i));
+    DECOR.stars.forEach((s, i) => this.addStar(s.x, this.top(s), i));
+  }
+
+  private top(p: { y?: number; fromBottom?: number }): number {
+    return p.fromBottom !== undefined ? this.height - p.fromBottom : (p.y ?? 0);
   }
 
   private addCloud(c: (typeof DECOR.clouds)[number]): void {
-    const cloud = this.scene.add.container(c.x, c.y).setDepth(DEPTH + 1).setAlpha(DECOR.cloudAlpha);
+    const cloud = this.scene.add
+      .container(c.x, this.top(c))
+      .setDepth(DEPTH + 1)
+      .setAlpha(DECOR.cloudAlpha);
     const puffs: [number, number, number, number][] = [
       [-50, 8, 90, 50],
       [0, -8, 110, 64],

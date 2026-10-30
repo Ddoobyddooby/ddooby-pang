@@ -91,8 +91,8 @@ export class BoardInput {
 
   private handleDown(pointer: Phaser.Input.Pointer): void {
     if (!this.active) return;
-    const pos = cellAt(this.layout, pointer.x, pointer.y);
-    this.start = pos ? { pos, x: pointer.x, y: pointer.y } : null;
+    const pos = cellAt(this.layout, pointer.worldX, pointer.worldY);
+    this.start = pos ? { pos, x: pointer.worldX, y: pointer.worldY } : null;
   }
 
   private handleMove(pointer: Phaser.Input.Pointer): void {
@@ -100,8 +100,8 @@ export class BoardInput {
     const target = swipeTarget(
       this.layout,
       this.start.pos,
-      pointer.x - this.start.x,
-      pointer.y - this.start.y,
+      pointer.worldX - this.start.x,
+      pointer.worldY - this.start.y,
     );
     if (!target) return;
     const a = this.start.pos;

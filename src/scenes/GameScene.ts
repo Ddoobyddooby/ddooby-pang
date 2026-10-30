@@ -1,13 +1,15 @@
-// 임시 GameScene (W1-18): 보드 표시 + 스와이프 입력 + resolve + 애니메이션 재생.
-// 모드(이동 제한, 타이머), 점수, HUD는 2~3주차에 붙인다.
+// GameScene: 보드 표시 + 입력 + resolve + 애니메이션 재생 + 타임어택 모드(타이머·점수) + HUD.
+// 매 프레임 mode.tick, 스왑 전에 mode.canInput, 재생이 끝난 뒤 mode.isOver면 결과 화면('Result')으로 간다.
+// 화면 배치는 screenLayout(this.scale.height). 폭이 720보다 넓은 화면은 카메라로 가운데에 맞춘다.
 //
 // URL 옵션 (개발용)
-//   ?seed=1234  같은 시작 보드 재현 (화면 위에 seed가 표시된다)
-//   ?demo       힌트 수를 자동으로 둔다
+//   ?seed=1234  같은 시작 보드 재현 (패널 구석에 seed가 표시된다)
+//   ?demo       힌트 수를 자동으로 둔다 (시간이 끝나면 결과 화면으로)
+//   ?time=15    (개발 모드) 제한 시간을 15초로 줄인다
 //   ?specials   (개발 모드) 시작 보드에 특수 블록 5종을 하나씩 놓는다
 
 import Phaser from 'phaser';
-import { BOARD } from '../config';
+import { BOARD, GAME, TIMEATTACK } from '../config';
 import { createInitialState, resolveSwap } from '../core/engine';
 import { findHint } from '../core/moves';
 import type { GameState, Pos, SpecialKind } from '../core/types';
@@ -15,7 +17,9 @@ import { BoardView, type BoardViewHooks } from '../view/BoardView';
 import { Hud } from '../view/Hud';
 import { FxDirector } from '../view/fx/FxDirector';
 import { BoardInput } from '../view/input';
-import { createLayout } from '../view/layout';
+import { createLayout, screenLayout } from '../view/layout';
+import { addHills } from '../view/theme/Hills';
+import { TimeAttackMode } from '../modes/TimeAttackMode';
 import { Background } from '../view/theme/Background';
 import { drawBoardFrame } from '../view/theme/BoardFrame';
 
@@ -44,11 +48,13 @@ export class GameScene extends Phaser.Scene {
   private view!: BoardView;
   private boardInput!: BoardInput;
   private hud!: Hud;
+  private mode!: TimeAttackMode;
   private busy = false;
   private moves = 0;
-  /** 누적 점수. HUD 표시는 W2-11, 지금은 DEV 확인용으로 __ddooby에만 노출 */
-  private score = 0;
   private seed = 0;
+  private timeLimitMs: number = TIMEATTACK.timeLimitMs;
+  /** 결과 화면으로 넘어갔는지 (한 번만) */
+  private finished = false;
 
   constructor() {
     super('Game');
@@ -58,8 +64,11 @@ export class GameScene extends Phaser.Scene {
     const params = new URLSearchParams(window.location.search);
     this.seed = Number(params.get('seed')) || Date.now() % 1_000_000;
     this.moves = 0;
-    this.score = 0;
     this.busy = false;
+    this.finished = false;
+    const time = Number(params.get('time'));
+    this.timeLimitMs = import.meta.env.DEV && time > 0 ? time * 1000 : TIMEATTACK.timeLimitMs;
+    this.mode = new TimeAttackMode({ timeLimitMs: this.timeLimitMs });
 
     this.state = createInitialState({
       rows: BOARD.rows,
@@ -68,8 +77,12 @@ export class GameScene extends Phaser.Scene {
       seed: this.seed,
     });
     if (import.meta.env.DEV && params.has('specials')) this.placeSpecialSamples();
-    const layout = createLayout(BOARD.rows, BOARD.cols);
+    const { width, height } = this.scale;
+    this.cameras.main.setScroll(-(width - GAME.width) / 2, 0); // 넓은 화면에서 가운데 맞춤
+    const screen = screenLayout(height);
+    const layout = createLayout(BOARD.rows, BOARD.cols, screen.board);
     new Background(this);
+    addHills(this, width, height);
     drawBoardFrame(this, layout);
     const hooks: BoardViewHooks = {}; // FxDirector가 BoardView를 필요로 해서 알림 연결은 나중에 채운다
     this.view = new BoardView(this, this.state.board, layout, hooks);
@@ -77,8 +90,9 @@ export class GameScene extends Phaser.Scene {
     hooks.onMatch = (level, removed) => fx.playMatch(level, removed);
     hooks.onActivate = (special, at, cleared) => fx.playActivate(special, at, cleared);
 
-    this.hud = new Hud(this, 'Ddooby-Pang');
-    this.updateInfo();
+    this.hud = new Hud(this, 'Ddooby-Pang', screen);
+    if (import.meta.env.DEV) this.hud.setSeed(this.seed, screen);
+    this.updateHud();
 
     this.boardInput = new BoardInput(
       this,
@@ -115,8 +129,24 @@ export class GameScene extends Phaser.Scene {
     this.state = { ...this.state, board: { ...board, cells } };
   }
 
+  override update(_time: number, delta: number): void {
+    if (this.finished) return;
+    this.mode.tick(delta);
+    this.updateHud();
+    // 시간이 0이 되면 입력을 막는다 (재생 중이면 setBusy가 이미 막고 있고, 끝난 뒤 trySwap이 결과로 보낸다)
+    if (!this.mode.canInput()) this.boardInput.enabled = false;
+    if (this.mode.isOver() && !this.busy) this.finish();
+  }
+
+  /** 재생이 끝난 상태에서 시간이 다 됐으면 결과 화면으로 */
+  private finish(): void {
+    if (this.finished) return;
+    this.finished = true;
+    this.scene.start('Result', { result: this.mode.result() });
+  }
+
   private async trySwap(a: Pos, b: Pos): Promise<void> {
-    if (this.busy) return;
+    if (this.busy || this.finished || !this.mode.canInput()) return;
     this.setBusy(true);
 
     const result = resolveSwap(this.state, a, b);
@@ -124,23 +154,23 @@ export class GameScene extends Phaser.Scene {
     this.state = result.state;
     if (result.valid) {
       this.moves++;
-      this.score += result.scoreDelta;
-      const cascades = result.steps.flat().filter((e) => e.type === 'match').length;
-      this.updateInfo(cascades);
+      this.mode.onResolve(result);
+      this.updateHud();
     }
     if (import.meta.env.DEV) this.checkViewMatchesBoard();
 
     this.setBusy(false);
+    if (this.mode.isOver()) this.finish();
   }
 
   private setBusy(busy: boolean): void {
     this.busy = busy;
-    this.boardInput.enabled = !busy; // 애니메이션 중 입력 차단
+    this.boardInput.enabled = !busy && this.mode.canInput(); // 애니메이션 중·시간 종료 후 입력 차단
   }
 
-  private updateInfo(lastCascades = 0): void {
-    const combo = lastCascades > 1 ? ` · 연쇄 x${lastCascades}` : '';
-    this.hud.setInfo(`seed ${this.seed} · 이동 ${this.moves}${combo}`);
+  private updateHud(): void {
+    this.hud.setScore(this.mode.score());
+    this.hud.setTime(this.mode.timeLeftMs(), this.timeLimitMs);
   }
 
   private async demoLoop(): Promise<void> {
@@ -175,7 +205,7 @@ export class GameScene extends Phaser.Scene {
       state: () => this.state,
       busy: () => this.busy,
       moves: () => this.moves,
-      score: () => this.score,
+      score: () => this.mode.score(),
       seed: this.seed,
     };
   }

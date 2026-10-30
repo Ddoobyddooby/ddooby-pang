@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cellAt, cellCenter, createLayout } from '../../src/view/layout';
+import { cellAt, cellCenter, createLayout, screenLayout } from '../../src/view/layout';
 
 const AREA = { x: 20, y: 200, size: 680 };
 
@@ -36,5 +36,32 @@ describe('view/layout', () => {
     expect(cellAt(l, 105, 200)).toEqual({ r: 0, c: 1 });
     expect(cellAt(l, 19, 300)).toBeNull();
     expect(cellAt(l, 300, 880)).toBeNull(); // 보드 아래
+  });
+});
+
+describe('screenLayout', () => {
+  it('기준 1280: 타이틀 90, 보드 170(680), 패널 870(높이 170), 장식은 아래 220px', () => {
+    expect(screenLayout(1280)).toEqual({
+      titleY: 90,
+      board: { x: 20, y: 170, size: 680 },
+      panel: { x: 10, y: 870, w: 700, h: 170 },
+      decorY: 1060,
+    });
+  });
+
+  it('1558(390x844): 늘어난 278의 30%는 보드 위, 70%는 패널~장식 사이', () => {
+    const base = screenLayout(1280);
+    const l = screenLayout(1558);
+    const extra = 1558 - 1280;
+    expect(l.titleY).toBe(base.titleY);
+    expect(l.board.y).toBeCloseTo(170 + 0.3 * extra);
+    expect(l.panel.y).toBeCloseTo(l.board.y + 700); // 보드 바로 아래 (기준과 같은 간격)
+    expect(l.decorY).toBe(1558 - 220); // 화면 아래에 붙는다
+    const gap = l.decorY - (l.panel.y + l.panel.h);
+    expect(gap).toBeCloseTo(base.decorY - (base.panel.y + base.panel.h) + 0.7 * extra);
+  });
+
+  it('1280보다 짧으면 1280과 같다', () => {
+    expect(screenLayout(1000)).toEqual(screenLayout(1280));
   });
 });

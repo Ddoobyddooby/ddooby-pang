@@ -1,6 +1,6 @@
 // 보드 좌표(행·열) ↔ 화면 좌표(px) 변환. Phaser 없는 순수 함수라 테스트할 수 있다.
 
-import { VIEW } from '../config';
+import { DECOR, VIEW } from '../config';
 import type { Pos } from '../core/types';
 
 export interface Layout {
@@ -15,11 +15,37 @@ export interface Layout {
   readonly height: number;
 }
 
-/** 보드 영역(VIEW.board) 안에 rows x cols 칸을 정사각형으로 가운데 정렬해 배치한다 */
+export interface ScreenLayout {
+  titleY: number;
+  board: { x: number; y: number; size: number };
+  /** 정보 패널 (보드 판과 같은 폭) */
+  panel: { x: number; y: number; w: number; h: number };
+  /** 바닥 장식 위쪽 y (장식은 화면 맨 아래까지) */
+  decorY: number;
+}
+
+/**
+ * 화면 높이에 맞춘 구역 배치. 기준 높이(1280)보다 긴 만큼(extra)의 30%는 타이틀~보드 사이,
+ * 70%는 패널~장식 사이에 준다. 기준보다 짧으면 1280과 같다 (FIT로 줄어든다)
+ */
+export function screenLayout(height: number): ScreenLayout {
+  const s = VIEW.screen;
+  const extra = Math.max(0, height - s.baseHeight);
+  const top = extra * s.topShare;
+  const pad = DECOR.frame.pad;
+  return {
+    titleY: s.titleY,
+    board: { x: s.boardX, y: s.boardY + top, size: s.boardSize },
+    panel: { x: s.boardX - pad, y: s.panelY + top, w: s.boardSize + pad * 2, h: s.panelH },
+    decorY: Math.max(height, s.baseHeight) - s.decorH,
+  };
+}
+
+/** 보드 영역 안에 rows x cols 칸을 정사각형으로 가운데 정렬해 배치한다 */
 export function createLayout(
   rows: number,
   cols: number,
-  area: { x: number; y: number; size: number } = VIEW.board,
+  area: { x: number; y: number; size: number },
 ): Layout {
   const cell = Math.floor(area.size / Math.max(rows, cols));
   const width = cell * cols;
