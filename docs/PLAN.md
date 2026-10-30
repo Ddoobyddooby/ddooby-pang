@@ -157,7 +157,7 @@ resolveSwap(state, a, b):
   loop:
     1. 각 group → decideSpecial(group, swapPos | null)
          첫 cascade에서는 스왑 위치(a 또는 b 중 그룹에 속한 쪽), 이후는 그룹 중앙
-    2. toRemove = 그룹 블록들 (특수 블록 생성 위치 제외)
+    2. toRemove = 그룹 블록들 (생성 위치의 원래 블록도 제거하고, 그 자리에 새 특수 블록을 놓는다)
     3. toRemove 안에 기존 특수 블록이 있으면 발동 → 범위를 toRemove에 추가
        (BFS: 새로 범위에 들어온 특수 블록도 발동, 이미 발동한 건 다시 발동하지 않음)
     4. 점수 계산 (cascade 배율 적용)
@@ -169,7 +169,7 @@ resolveSwap(state, a, b):
   return result
 ```
 
-**한 번의 resolve 안에서 무한 루프 방지**: cascade 상한(예: 50)을 두고 넘으면 assert. 정상적인 보드에서는 도달하지 않지만 테스트에서 버그를 잡는다.
+**한 번의 resolve 안에서 무한 루프 방지**: cascade 상한(`BOARD.maxCascade` = 200)을 두고 넘으면 assert. 정상적인 보드에서는 도달하지 않지만 테스트에서 버그를 잡는다. 3색 보드는 특수 블록(슈퍼 → 대량 리필 → 또 매치) 때문에 정상적으로도 연쇄가 길다 (W2-05 측정: 8x8, 1362턴 중 최대 56, 상위 1% 36. 4색은 최대 16).
 
 ### 4.4 매치 판정 (`matcher.findMatches`)
 
@@ -202,6 +202,10 @@ SPEC 4.5를 그대로 옮긴다. 우선순위는 위에서부터.
 
 - 첫 cascade(스왑으로 생긴 매치): 스왑한 두 칸 a, b 중 그룹에 속한 칸. 새 매치는 반드시 a나 b를 지나므로 항상 찾는다
 - 이후 cascade: 그룹 **중앙** = 그룹 칸들의 평균 위치(무게중심)에 가장 가까운 그룹 칸. 거리가 같으면 `group.cells` 순서(왼쪽 위)가 먼저. 항상 그룹 안의 칸이고 결정적이다
+- 생성 칸이 같은 턴의 발동 범위에 걸리면: `config.SPECIAL.newSpecialInBlast`
+  - `'keep'`(기본, 캔디크러시 방식): 새 특수 블록은 발동이 끝난 뒤 놓이므로 남는다
+  - `'explode'`: 새 특수 블록이 놓이자마자 발동한다 (`create` 없이 그 칸의 `activate`만). 그 범위의 다른 특수 블록도 연쇄. 시범 플레이(W4-11)에서 비교용
+- 같은 step의 이벤트 순서: `match` → `activate`… → `remove` → `create`…
 
 **발동 범위 (`specials.blastArea`)**
 

@@ -8,8 +8,8 @@ export const GAME = {
 export const BOARD = {
   rows: 8,
   cols: 8,
-  /** 한 번의 resolve에서 허용하는 최대 연쇄 수. 넘으면 버그로 보고 assert */
-  maxCascade: 50,
+  /** 한 번의 resolve에서 허용하는 최대 연쇄 수. 넘으면 버그로 보고 assert (3색은 정상으로도 56까지, PLAN 4.3) */
+  maxCascade: 200,
   /** 초기 생성·셔플 재시도 상한 */
   maxGenerateAttempts: 100,
 } as const;
@@ -29,6 +29,8 @@ export const SCORE = {
 export const SPECIAL = {
   /** 'perpendicular': 가로 4매치 → 세로줄 제거 (캔디크러시). 'parallel': 같은 방향 */
   lineDirection: 'perpendicular' as 'perpendicular' | 'parallel',
+  /** 새 특수 블록 칸이 같은 턴의 발동 범위에 걸리면. 'keep': 남김 (캔디크러시). 'explode': 바로 발동 */
+  newSpecialInBlast: 'keep' as 'keep' | 'explode',
 } as const;
 
 /** 애니메이션 시간 (ms) */
