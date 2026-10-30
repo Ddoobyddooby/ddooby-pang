@@ -351,8 +351,10 @@ type ModeResult =
 BootScene (에셋 로드, 스테이지 JSON 로드, 저장 데이터 로드)
   → MenuScene ─┬─ StageMapScene → GameScene(story, stageId) → ResultScene
                └─ GameScene(timeattack) → ResultScene
-ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [메뉴] MenuScene
+ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지도] StageMapScene (경쟁은 [메뉴] MenuScene)
 ```
+
+씬 키·데이터·버튼 표와 화면 세부는 `docs/superpowers/specs/2026-10-30-story-screens-design.md` (W3-08 ~ W3-12)
 
 ## 7. 데이터 / 저장
 
