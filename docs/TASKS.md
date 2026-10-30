@@ -126,8 +126,8 @@
 - [ ] **W3-04** 경쟁 모드 설정을 `timeattack.json`으로 이동 (`timeLimit: 60`)
 
 ### 모드 / 저장
-- [ ] **W3-05** 🧪 `modes/StoryMode.ts` — 유효 스왑만 이동 차감, 미션 2종 집계(특수 제거 포함), 클리어/실패 판정
-- [ ] **W3-06** 🧪 남은 이동 보너스 + 별 계산
+- [x] **W3-05** 🧪 `modes/StoryMode.ts` — 유효 스왑만 이동 차감, 미션 2종 집계(특수 제거 포함), 클리어/실패 판정
+- [x] **W3-06** 🧪 남은 이동 보너스 + 별 계산
 - [x] **W3-07** 🧪 `storage/progress.ts` — `Storage` 인터페이스 + `LocalStorageAdapter`, `SaveData v1`
   - 테스트: 저장 → 로드 왕복, 손상된 JSON이면 기본값
 

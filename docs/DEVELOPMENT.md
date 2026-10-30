@@ -304,6 +304,14 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 개발자도구 Application 탭 > Local Storage > `ddooby-pang/save`에 저장 내용이 보인다. 이 키를 지우면 기록이 초기화된다
 - 시크릿 모드에서는 저장이 안 될 수 있다. 그래도 게임은 멈추지 않는다
 
+### W3-05 스토리 모드 규칙
+- `npm test` → `tests/modes/storyMode.test.ts` 통과 (실패한 교환은 이동을 안 깎음, 마지막 이동에서 달성해도 클리어, 이동 0이면 실패, 특수 블록으로 지운 것도 수집에 포함)
+- 화면 연결은 W3-08~W3-12부터
+
+### W3-06 남은 이동 보너스 + 별
+- `npm test` → `tests/modes/storyScore.test.ts` 통과 (별 기준과 같은 점수면 포함, 클리어하면 최소 별 1개, 실패면 0개)
+- 보너스 금액은 `src/config.ts`의 `SCORE.movesLeftBonus` (남은 이동 1회당 300)
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -612,3 +620,13 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **순수 규칙과 부수효과 나누기**: "더 큰 점수만 남긴다" 같은 규칙(`recordTimeAttack`, `recordStory`)은 순수 함수, 실제 저장은 어댑터(`LocalStorageAdapter`)가 맡는다. 테스트에서는 가짜 저장소를 넣는다 (`src/storage/progress.ts`)
 - **깨진 저장 데이터 다루기**: 없음·깨진 JSON·버전 다름은 기본값으로, 일부 칸만 틀리면 그 칸만 기본값으로 채운다. `version`은 나중에 형식이 바뀔 때 옮기기 위한 표시 (`parseSave`)
 - **전역은 한 곳에서만**: `window.localStorage`는 `BootScene`에서만 만지고, 씬끼리는 Phaser registry로 저장 데이터를 나눠 쓴다 (`src/scenes/BootScene.ts`, `src/scenes/saveRegistry.ts`)
+
+### W3-05 스토리 모드 규칙
+- **상태 하나로 판정**: `'playing' | 'cleared' | 'failed'` 한 값에서 끝났는지·입력 가능한지·결과를 모두 끌어낸다. 값이 여러 개면 서로 어긋날 수 있다 (`src/modes/StoryMode.ts`)
+- **타입만 가져오기**: modes는 data의 값은 못 쓰고 `import type { StageDef }`로 타입만 가져온다. 실행 코드 의존이 생기지 않는다. ESLint의 `allowTypeImports`로 지킨다 (`eslint.config.js`)
+- **실제 엔진 결과로 테스트**: 가짜 결과만 쓰지 않고 `resolveSwap` 결과를 넣어서 모드와 엔진이 정말 맞물리는지 본다 (`tests/modes/storyMode.test.ts`)
+
+### W3-06 남은 이동 보너스 + 별
+- **경계값 테스트**: 별 기준이 3000이면 2999·3000·3001을 다 확인한다. 버그는 경계에서 잘 난다 (`tests/modes/storyScore.test.ts`)
+- **계산을 순수 함수로**: `movesLeftBonus`, `starsFor`를 모드 밖으로 빼서 표처럼 테스트한다 (`src/modes/storyScore.ts`)
+- **결과에 근거 담기**: 결과에 최종 점수뿐 아니라 그중 보너스 금액(`bonus`)도 넣어서 결과 화면이 "남은 이동 보너스 +900"을 보여줄 수 있다
