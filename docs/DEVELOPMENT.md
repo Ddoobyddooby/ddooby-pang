@@ -230,6 +230,10 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - `npm test` → `tests/core/specials.test.ts`의 `specialPosition` 10개 통과. 화면은 아직 그대로 (엔진 연결은 W2-05)
 - 테스트 표에서 모양별 "중앙" 칸을 볼 수 있다: 4I는 가운데 두 칸 중 왼쪽(위), +·T는 교차점 쪽, L은 동점이라 위쪽 칸
 
+### W2-03 특수 블록 발동 범위
+- `npm test` → `tests/core/specials.test.ts`의 `blastArea` 10개 통과. 화면은 아직 그대로 (엔진 연결은 W2-05)
+- 테스트의 `x` 그림이 곧 범위다: 라인 한 줄, 폭탄 3x3, 슈퍼 5x5 + 십자, 모서리·가장자리에서 잘리는 모양, 컬러는 대상 색 전체
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -455,3 +459,10 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **`reduce`로 최솟값 찾기**: `cells.reduce((best, p) => (dist(p) < dist(best) ? p : best))`. `<`(같으면 유지)라서 동점이면 앞 칸이 남는다 → 결정적
 - **`find` + `some`**: 스왑한 두 칸 중 그룹에 들어 있는 칸 찾기
 - 참고: [MDN Array.reduce](https://developer.mozilla.org/ko/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce), [0.1 + 0.2 ≠ 0.3](https://0.30000000000000004.com/)
+
+### W2-03 특수 블록 발동 범위
+- **범위 = 조건(predicate)**: 칸마다 "범위 안인가?"를 묻는 함수 하나로 모양을 표현한다. 폭탄은 `|Δr| ≤ 1 && |Δc| ≤ 1`(체비쇼프 거리 1), 슈퍼는 그 5x5에 `Δr = 0 || Δc = 0`을 더한 것 (`src/core/specials.ts`)
+- **전체를 훑으면 잘림·정렬·중복이 공짜**: 보드 칸을 행 우선으로 한 번 돌며 조건에 맞는 칸만 모으니, 보드 밖 좌표가 생기지 않고 결과도 항상 정렬돼 있다. 8x8 = 64칸이라 성능 걱정이 없다
+- **`switch` 완전성 검사**: `SpecialKind`의 5가지를 모두 `case`로 다루면 TypeScript가 빠진 경우가 없다는 걸 안다 (하나 지우면 반환 타입 에러)
+- **그림으로 비교하는 테스트**: 칸 목록을 `x`/`.` 그림 문자열로 바꿔 비교하면 실패 메시지가 보드 모양 그대로 나온다 (`tests/core/specials.test.ts`의 `mask`)
+- 참고: [체비쇼프 거리](https://ko.wikipedia.org/wiki/체비쇼프_거리)
