@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import { THEME } from '../config';
 import { loadStages, type StageData } from '../data/stageLoader';
 import { LocalStorageAdapter } from '../storage/progress';
-import { bootRoute } from './bootRoute';
-import { putSave } from './saveRegistry';
+import { bootRoute, devUnlock } from './bootRoute';
+import { commitSave, getSave, putSave } from './saveRegistry';
 import { putStages } from './stageRegistry';
 
 /** 글꼴이 늦거나 실패해도 게임은 이 시간 안에 시작한다 (오프라인, 느린 휴대폰) */
@@ -26,6 +26,12 @@ export class BootScene extends Phaser.Scene {
         return;
       }
       putStages(this.registry, result);
+      // DEV ?unlock=N: 열린 스테이지를 N으로 바꿔 저장한다 (지도 확인용, 되돌리려면 ?unlock=1)
+      const unlock = devUnlock(window.location.search, import.meta.env.DEV);
+      if (unlock !== null) {
+        const save = getSave(this.registry);
+        commitSave(this.registry, { ...save, story: { ...save.story, unlocked: unlock } });
+      }
       // 기본은 메뉴. 개발 주소(?demo, ?stage=N, ?result=N 등)는 해당 화면으로 바로 (bootRoute.ts)
       const route = bootRoute(window.location.search, import.meta.env.DEV);
       if (route.scene === 'Menu') this.scene.start('Menu');

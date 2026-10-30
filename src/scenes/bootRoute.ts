@@ -29,3 +29,10 @@ export function bootRoute(search: string, dev: boolean): BootRoute {
   }
   return { scene: 'Menu' };
 }
+
+/** DEV `?unlock=N`: 저장 데이터의 열린 스테이지를 N으로 바꾼다 (지도 확인용). 아니면 null */
+export function devUnlock(search: string, dev: boolean): number | null {
+  if (!dev) return null;
+  const n = Number(new URLSearchParams(search).get('unlock'));
+  return Number.isInteger(n) && n >= 1 ? n : null;
+}

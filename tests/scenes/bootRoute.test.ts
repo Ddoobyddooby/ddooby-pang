@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bootRoute } from '../../src/scenes/bootRoute';
+import { bootRoute, devUnlock } from '../../src/scenes/bootRoute';
 
 describe('scenes/bootRoute (스토리 화면 설계 1절)', () => {
   it('기본은 메뉴', () => {
@@ -33,5 +33,20 @@ describe('scenes/bootRoute (스토리 화면 설계 1절)', () => {
       data: { result: { kind: 'timeattack', score: 12450, bestScore: 9000, newBest: true } },
     });
     expect(bootRoute('?result=12450', false)).toEqual({ scene: 'Menu' });
+  });
+});
+
+describe('scenes/bootRoute: devUnlock', () => {
+  it('DEV ?unlock=N → N (1 이상 정수), 아니면 null', () => {
+    expect(devUnlock('?unlock=5', true)).toBe(5);
+    expect(devUnlock('?unlock=11', true)).toBe(11);
+    expect(devUnlock('?unlock=0', true)).toBeNull();
+    expect(devUnlock('?unlock=x', true)).toBeNull();
+    expect(devUnlock('', true)).toBeNull();
+    expect(devUnlock('?unlock=5', false)).toBeNull();
+  });
+
+  it('?unlock만 있으면 메뉴로 간다', () => {
+    expect(bootRoute('?unlock=5', true)).toEqual({ scene: 'Menu' });
   });
 });

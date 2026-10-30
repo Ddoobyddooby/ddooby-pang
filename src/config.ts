@@ -293,3 +293,38 @@ export const SAVE = {
   /** localStorage 키 하나에 JSON 통째로 저장 */
   key: 'ddooby-pang/save',
 } as const;
+
+/** 스테이지 지도 (스토리 화면 설계 3절, A안). 좌표는 폭 720 기준, 시간은 ms */
+export const MAP = {
+  title: { text: '스토리', y: 110, fontSize: 64, strokeThickness: 10 },
+  /** 왼쪽 위 [←] 동그란 버튼 */
+  back: { x: 70, y: 110, r: 38, arrow: 0x8a5a24 },
+  /** 노드가 놓이는 세로 범위: 위 끝 y, 아래 끝은 화면 높이 - bottomPad (바닥 언덕 위) */
+  top: 250,
+  bottomPad: 240,
+  /** 1번부터 노드 x (시안의 구불구불한 길). 10개를 넘으면 처음부터 반복 */
+  xs: [200, 470, 570, 300, 180, 450, 570, 300, 180, 470],
+  node: {
+    r: 38,
+    border: 6,
+    fontSize: 40,
+    done: 0xff8fb3,
+    current: 0xff5d93,
+    locked: 0xcfc6dc,
+    lockInk: 0x8f84a0,
+    /** 지금 할 곳: 크게 + 숨 쉬듯 커졌다 작아짐 */
+    currentScale: 1.2,
+    breatheScale: 1.3,
+    breatheMs: 900,
+  },
+  /** 완료 노드 아래 별 3칸 */
+  stars: { dy: 58, r: 11, gap: 24, empty: 0xffffff },
+  /** 흰 점선 사탕 길 */
+  path: { dot: 7, spacing: 30, color: 0xffffff, alpha: 0.9 },
+  /** 잠긴 노드를 누르면 좌우로 흔들림 */
+  shake: { dx: 10, ms: 60, repeat: 2 },
+  /** 방금 열린 스테이지: 한 번 크게 튀어나옴 */
+  pop: { from: 0.3, peak: 1.7, ms: 520 },
+  /** 한 화면에 들어가는 최대 수. 넘으면 개발 모드 경고 (스크롤은 v0.2) */
+  maxNodes: 10,
+} as const;
