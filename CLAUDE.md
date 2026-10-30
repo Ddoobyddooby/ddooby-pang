@@ -39,7 +39,7 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 MVP 개발 중).
 - `npm run lint`: ESLint (`src/core/**`의 phaser·view·scenes import, `Math.random`, DOM 사용을 에러로 막는다)
 - `npm run format`: Prettier (`*.md`는 제외)
 - `npm run fonts:subset`: Jua 글꼴 서브셋 재생성 (`assets/fonts-src/` → `public/fonts/Jua-subset.woff2`)
-- 개발 URL 옵션: `?seed=N`(보드 재현), `?demo`(자동 플레이). DEV에서는 매 턴 view ↔ board 대조, `window.__ddooby`로 상태 확인
+- 개발 URL 옵션: `?seed=N`(보드 재현), `?demo`(자동 플레이), DEV 전용 `?time=N`(제한 시간 초), `?specials`(특수 블록 배치), `?result=N&best=M`(결과 화면 미리보기). DEV에서는 매 턴 view ↔ board 대조, `window.__ddooby`로 상태 확인
 - 브라우저 확인: 사용자가 `npm run dev`를 띄워두었을 수 있다. 5173 포트가 사용 중이면 끄지 말고 그 서버를 쓴다
 
 버전 고정 이유: Phaser는 SPEC대로 3.x(최신은 4.x). TypeScript는 typescript-eslint가 `<6.1`만 지원해서 `~6.0`.
