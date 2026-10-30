@@ -22,7 +22,7 @@ import { FxDirector } from '../view/fx/FxDirector';
 import { BoardInput } from '../view/input';
 import { createLayout, screenLayout } from '../view/layout';
 import { addHills } from '../view/theme/Hills';
-import { recordTimeAttack } from '../storage/progress';
+import { applyModeResult } from '../storage/progress';
 import { commitSave, getSave } from './saveRegistry';
 import type { GameData } from './sceneData';
 import { getStages } from './stageRegistry';
@@ -180,14 +180,15 @@ export class GameScene extends Phaser.Scene {
     if (this.mode.isOver() && !this.busy) this.finish();
   }
 
-  /** 재생이 끝난 상태에서 시간이 다 됐으면 결과 화면으로 */
+  /** 재생이 끝난 상태에서 끝났으면(시간·이동·미션) 결과를 저장하고 결과 화면으로 */
   private finish(): void {
     if (this.finished) return;
     this.finished = true;
-    if (this.mode.kind === 'timeattack') {
-      commitSave(this.registry, recordTimeAttack(getSave(this.registry), this.mode.score()));
-    }
-    this.scene.start('Result', { result: this.mode.result() });
+    const result = this.mode.result();
+    // 결과 화면이 열린 스테이지를 보고 버튼을 정하므로 registry 갱신(commitSave)이 Result 시작보다 먼저다
+    const stageCount = getStages(this.registry).story.length;
+    commitSave(this.registry, applyModeResult(getSave(this.registry), result, stageCount));
+    this.scene.start('Result', { result });
   }
 
   private async trySwap(a: Pos, b: Pos): Promise<void> {

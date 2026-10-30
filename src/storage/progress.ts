@@ -2,6 +2,7 @@
 // localStorage는 BootScene이 getItem/setItem을 가진 객체로 넘겨준다.
 
 import { SAVE } from '../config';
+import type { ModeResult } from '../modes/GameMode';
 
 export type Stars = 0 | 1 | 2 | 3;
 
@@ -96,6 +97,19 @@ export function recordStory(
         [stageId]: Math.max(save.story.bestScore[stageId] ?? 0, score),
       },
     },
+  };
+}
+
+/**
+ * 한 판의 결과를 저장 데이터에 반영한다 (순수). 타임어택은 최고 점수, 스토리는 별·점수·다음 스테이지 해금.
+ * 열린 스테이지는 전체 스테이지 수(stageCount)를 넘지 않는다 (10번 클리어해도 11번은 없다)
+ */
+export function applyModeResult(save: SaveData, result: ModeResult, stageCount: number): SaveData {
+  if (result.kind === 'timeattack') return recordTimeAttack(save, result.score);
+  const next = recordStory(save, result.stageId, result);
+  return {
+    ...next,
+    story: { ...next.story, unlocked: Math.min(next.story.unlocked, stageCount) },
   };
 }
 

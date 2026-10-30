@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { ModeResult } from '../../src/modes/GameMode';
 import {
   LocalStorageAdapter,
+  applyModeResult,
   defaultSave,
   parseSave,
   recordStory,
@@ -130,5 +132,49 @@ describe('LocalStorageAdapter', () => {
     await expect(adapter.load()).resolves.toEqual(defaultSave());
     expect(warn).toHaveBeenCalledTimes(2);
     warn.mockRestore();
+  });
+});
+
+describe('applyModeResult', () => {
+  const story = (
+    stageId: number,
+    cleared: boolean,
+    stars: 0 | 1 | 2 | 3,
+    score: number,
+  ): ModeResult => ({ kind: 'story', stageId, cleared, stars, score, bonus: 0 });
+
+  it('타임어택 결과 → 최고 점수만 큰 값으로', () => {
+    const r = (score: number): ModeResult => ({
+      kind: 'timeattack',
+      score,
+      bestScore: 0,
+      newBest: true,
+    });
+    const a = applyModeResult(defaultSave(), r(900), 10);
+    expect(a.timeattack.bestScore).toBe(900);
+    expect(applyModeResult(a, r(400), 10).timeattack.bestScore).toBe(900);
+  });
+
+  it('스토리 클리어 → 별·점수 기록 + 다음 스테이지 해금', () => {
+    const s = applyModeResult(defaultSave(), story(1, true, 2, 6500), 10);
+    expect(s.story.unlocked).toBe(2);
+    expect(s.story.bestStars[1]).toBe(2);
+    expect(s.story.bestScore[1]).toBe(6500);
+  });
+
+  it('스토리 실패 → 해금 그대로', () => {
+    expect(applyModeResult(defaultSave(), story(1, false, 0, 300), 10).story.unlocked).toBe(1);
+  });
+
+  it('마지막 스테이지를 클리어해도 열린 스테이지는 전체 수를 넘지 않는다', () => {
+    const s = applyModeResult(defaultSave(), story(10, true, 3, 5000), 10);
+    expect(s.story.unlocked).toBe(10);
+  });
+
+  it('원본은 바뀌지 않는다', () => {
+    const base = defaultSave();
+    const snapshot = JSON.stringify(base);
+    applyModeResult(base, story(1, true, 3, 1), 10);
+    expect(JSON.stringify(base)).toBe(snapshot);
   });
 });
