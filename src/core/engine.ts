@@ -1,5 +1,4 @@
-// 처리 루프 (PLAN 4.3): 스왑 → 매치 → 제거 → 낙하 → 리필 → (연쇄 반복) → 수 없으면 셔플
-// 아직 없는 것: 점수(W2-08).
+// 처리 루프 (PLAN 4.3): 스왑 → 매치 → 제거 → 점수 → 낙하 → 리필 → (연쇄 반복) → 수 없으면 셔플
 
 import { BOARD, SPECIAL } from '../config';
 import { getBlock, indexOf, inBounds, isAdjacent, posOf, samePos, swapBlocks } from './board';
@@ -7,6 +6,7 @@ import { applyGravity, refill } from './gravity';
 import { findMatches } from './matcher';
 import { createPlayableBoard, hasAnyMove, shuffle } from './moves';
 import { createRng } from './rng';
+import { stepScore } from './scoring';
 import { blastArea, chainActivate, decideSpecial, specialPosition } from './specials';
 import type { Board, GameEvent, GameState, Pos, ResolveResult } from './types';
 
@@ -76,6 +76,7 @@ export function resolveSwap(
   let rng = state.rngState;
   const steps: GameEvent[][] = [[{ type: 'swap', a, b }]];
   const removedByColor = new Array<number>(COLOR_COUNT).fill(0);
+  let scoreDelta = 0;
 
   for (let cascade = 0; burst || groups.length > 0; cascade++) {
     if (cascade >= BOARD.maxCascade) {
@@ -131,11 +132,20 @@ export function resolveSwap(
     }
     for (const n of created) cells[idx(n.at)] = n.block;
     board = { ...board, cells, nextId };
+
+    // 점수 (PLAN 4.8): 그룹 칸은 groupBase로만, 나머지는 특수 효과 제거로 센다
+    const bySpecialCount = removed.filter((r) => r.bySpecial).length;
+    const delta = stepScore(groups, bySpecialCount, cascade);
+    scoreDelta += delta;
+    // 팝업 위치: 첫 그룹의 중앙, 그룹이 없으면(컬러 스왑 발동) 발동 칸
+    const scoreAt = groups[0] ? specialPosition(groups[0], []) : burst!;
+
     steps.push([
       { type: 'match', groups, cascade },
       ...activations,
       { type: 'remove', blocks: removed },
       ...created.map((n): GameEvent => ({ type: 'create', block: n.block, at: n.at })),
+      { type: 'score', delta, cascade, at: scoreAt },
     ]);
 
     // 낙하 + 리필은 동시에 재생한다
@@ -160,7 +170,7 @@ export function resolveSwap(
   return {
     state: { ...state, board, rngState: rng },
     steps,
-    scoreDelta: 0, // W2-08 scoring.ts에서 계산
+    scoreDelta,
     removedByColor,
     valid: true,
   };

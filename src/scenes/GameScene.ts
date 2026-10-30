@@ -46,6 +46,8 @@ export class GameScene extends Phaser.Scene {
   private hud!: Hud;
   private busy = false;
   private moves = 0;
+  /** 누적 점수. HUD 표시는 W2-11, 지금은 DEV 확인용으로 __ddooby에만 노출 */
+  private score = 0;
   private seed = 0;
 
   constructor() {
@@ -56,6 +58,7 @@ export class GameScene extends Phaser.Scene {
     const params = new URLSearchParams(window.location.search);
     this.seed = Number(params.get('seed')) || Date.now() % 1_000_000;
     this.moves = 0;
+    this.score = 0;
     this.busy = false;
 
     this.state = createInitialState({
@@ -116,6 +119,7 @@ export class GameScene extends Phaser.Scene {
     this.state = result.state;
     if (result.valid) {
       this.moves++;
+      this.score += result.scoreDelta;
       const cascades = result.steps.flat().filter((e) => e.type === 'match').length;
       this.updateInfo(cascades);
     }
@@ -166,6 +170,7 @@ export class GameScene extends Phaser.Scene {
       state: () => this.state,
       busy: () => this.busy,
       moves: () => this.moves,
+      score: () => this.score,
       seed: this.seed,
     };
   }

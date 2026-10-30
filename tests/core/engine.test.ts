@@ -66,7 +66,7 @@ describe('resolveSwap', () => {
 
     const s = types(result.steps);
     expect(s[0]).toEqual(['swap']);
-    expect(s[1]).toEqual(['match', 'remove']);
+    expect(s[1]).toEqual(['match', 'remove', 'score']);
     expect(s[2]).toEqual(['fall', 'refill']);
 
     const [first, second] = matchEvents(result.steps);
@@ -104,7 +104,6 @@ describe('resolveSwap', () => {
     expect(result.removedByColor.reduce((x, y) => x + y, 0)).toBe(total);
     expect(result.removedByColor[0]).toBeGreaterThanOrEqual(3); // R
     expect(result.removedByColor[4]).toBeGreaterThanOrEqual(3); // P
-    expect(result.scoreDelta).toBe(0); // 점수는 W2-08
   });
 
   it('결과 보드: 빈칸 0, 매치 0, 가능한 수 ≥ 1, 제거된 id는 없다', () => {
@@ -199,7 +198,7 @@ describe('resolveSwap: 특수 블록', () => {
   it('4I 가로 → 스왑 칸에 세로줄(lineV) 생성, 이벤트 순서 match → remove → create', () => {
     const result = resolveSwap(stateOf(FOUR, 5), p(0, 2), p(1, 2));
     const step = firstStep(result);
-    expect(step.types).toEqual(['match', 'remove', 'create']);
+    expect(step.types).toEqual(['match', 'remove', 'create', 'score']);
     expect(step.create).toEqual([{ at: p(0, 2), special: 'lineV', color: 0 }]);
     expect(step.removed.map((b) => b.at)).toEqual([p(0, 0), p(0, 1), p(0, 2), p(0, 3)]);
     expect(step.removed.every((b) => !b.bySpecial)).toBe(true);
@@ -216,7 +215,7 @@ describe('resolveSwap: 특수 블록', () => {
   it('매치에 섞인 줄 블록이 발동: 범위의 블록은 bySpecial로 제거', () => {
     const result = resolveSwap(stateOf(FOUR_WITH_LINE, 5), p(0, 2), p(1, 2));
     const step = firstStep(result);
-    expect(step.types).toEqual(['match', 'activate', 'remove', 'create']);
+    expect(step.types).toEqual(['match', 'activate', 'remove', 'create', 'score']);
     expect(step.activate).toEqual(['lineH@0,3']);
     const extra = step.removed.filter((b) => b.bySpecial).map((b) => b.at);
     expect(extra).toEqual([p(0, 4)]);
@@ -230,7 +229,7 @@ describe('resolveSwap: 특수 블록', () => {
 
   it("'explode': 새 특수 블록이 바로 발동하고 create는 없다", () => {
     const step = firstStep(resolveSwap(stateOf(FOUR_WITH_LINE, 5), p(0, 2), p(1, 2), 'explode'));
-    expect(step.types).toEqual(['match', 'activate', 'activate', 'remove']);
+    expect(step.types).toEqual(['match', 'activate', 'activate', 'remove', 'score']);
     expect(step.activate).toEqual(['lineH@0,3', 'lineV@0,2']);
     expect(step.create).toEqual([]);
     // 새 세로줄이 2열을 지운다
@@ -315,7 +314,7 @@ describe('resolveSwap: 컬러 블록 스왑', () => {
     expect(result.valid).toBe(true);
     expect(result.steps[0]).toEqual([{ type: 'swap', a: p(0, 0), b: p(0, 1) }]);
     const step = firstStep(result);
-    expect(step.types).toEqual(['match', 'activate', 'remove']);
+    expect(step.types).toEqual(['match', 'activate', 'remove', 'score']);
     expect(result.steps[1]![0]).toEqual({ type: 'match', groups: [], cascade: 0 });
     expect(step.activate).toEqual(['color@0,1']); // 컬러 블록은 (0,1)로 옮겨졌다
     // Y: 스왑 후 (0,0), (2,0) + 컬러 블록 자신 (0,1)
@@ -380,5 +379,67 @@ describe('resolveSwap: 컬러 블록 스왑', () => {
     expect(step.activate).toEqual(['color@0,1']);
     expect(step.removed).toHaveLength(9);
     expect(result.valid).toBe(true);
+  });
+});
+
+// W2-08: 점수 (PLAN 4.8)
+describe('resolveSwap: 점수', () => {
+  const p = (r: number, c: number) => ({ r, c });
+  const scoreEvents = (steps: readonly (readonly GameEvent[])[]) =>
+    steps.flat().filter((e): e is Extract<GameEvent, { type: 'score' }> => e.type === 'score');
+
+  // (0,2) Y ↔ (1,2) R → 0행 R R R. seed 1에서는 리필 후 연쇄가 없다
+  const THREE = `
+    R R Y B
+    G B R G
+    Y G B Y
+    B Y G R
+  `;
+
+  it('단순 3매치(연쇄 없음) → 30점, 그 step 맨 끝에 score 1개, at은 그룹 중앙', () => {
+    const result = resolveSwap(stateOf(THREE, 6, 1), p(0, 2), p(1, 2));
+    expect(matchEvents(result.steps)).toHaveLength(1);
+    expect(result.scoreDelta).toBe(30);
+    const step = result.steps[1]!;
+    expect(step.filter((e) => e.type === 'score')).toHaveLength(1);
+    expect(step.at(-1)).toEqual({ type: 'score', delta: 30, cascade: 0, at: p(0, 1) });
+  });
+
+  it('무효 스왑 → 0점, score 이벤트 없음', () => {
+    const result = resolveSwap(stateOf(CASCADE), p(0, 0), p(0, 1));
+    expect(result.scoreDelta).toBe(0);
+    expect(scoreEvents(result.steps)).toEqual([]);
+  });
+
+  it('연쇄: cascade마다 score 1개, 배율이 붙고 scoreDelta는 그 합', () => {
+    const result = resolveSwap(stateOf(CASCADE), p(3, 0), p(3, 1));
+    const scores = scoreEvents(result.steps);
+    expect(scores.map((e) => e.cascade)).toEqual(matchEvents(result.steps).map((e) => e.cascade));
+    expect(scores[0]!.delta).toBe(30); // RRR
+    expect(scores[1]!.delta).toBeGreaterThanOrEqual(45); // PPP × 1.5
+    expect(result.scoreDelta).toBe(scores.reduce((sum, e) => sum + e.delta, 0));
+  });
+
+  it('컬러 스왑 발동 → cascade 0에서 지운 블록 수 × 20, at은 발동 칸', () => {
+    const result = resolveSwap(
+      stateOf(
+        `
+          C Y R
+          G R B
+          Y B G
+        `,
+        5,
+      ),
+      p(0, 0),
+      p(0, 1),
+    );
+    const step = result.steps[1]!;
+    const removed = step.flatMap((e) => (e.type === 'remove' ? e.blocks : []));
+    expect(step.at(-1)).toEqual({
+      type: 'score',
+      delta: removed.length * 20,
+      cascade: 0,
+      at: p(0, 1),
+    });
   });
 });

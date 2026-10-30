@@ -146,6 +146,21 @@ function fuzz({ rows, cols, colors, games, swapsPerGame, newSpecialInBlast }: Fu
       for (const e of result.steps.flat()) tracker.apply(e);
       expect(tracker.snapshot(), where).toEqual(boardIds(board));
 
+      // 점수: match가 있는 step마다 score 정확히 1개, 같은 cascade, delta > 0, 합 = scoreDelta
+      let scoreSum = 0;
+      for (const step of result.steps) {
+        const match = step.find((e) => e.type === 'match');
+        const scores = step.filter((e) => e.type === 'score');
+        expect(scores, where).toHaveLength(match ? 1 : 0);
+        const score = scores[0];
+        if (match?.type === 'match' && score?.type === 'score') {
+          expect(score.cascade, where).toBe(match.cascade);
+          expect(score.delta, where).toBeGreaterThan(0);
+          scoreSum += score.delta;
+        }
+      }
+      expect(result.scoreDelta, where).toBe(scoreSum);
+
       const ids = board.cells.map((x) => x!.id);
       expect(new Set(ids).size, where).toBe(ids.length);
 
