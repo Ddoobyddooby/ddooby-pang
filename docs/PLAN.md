@@ -293,11 +293,19 @@ interface GameMode {
   readonly kind: 'story' | 'timeattack';
   onResolve(result: ResolveResult): void;   // 점수·미션·이동 갱신
   tick(dtMs: number): void;                 // 타임어택 타이머
+  score(): number;                          // 누적 점수 (HUD용)
   canInput(): boolean;
   isOver(): boolean;
   result(): ModeResult;
 }
+
+type ModeResult =
+  | { kind: 'timeattack'; score: number; bestScore: number; newBest: boolean }
+  | { kind: 'story'; cleared: boolean; score: number; stars: 0 | 1 | 2 | 3 };  // W3
 ```
+
+- `src/modes`도 core처럼 순수 TS다. `phaser`, DOM, `Math.random`, `src/view`, `src/scenes`를 쓰지 않는다 (ESLint로 막는다). 의존은 `core`와 `config`만
+- 씬은 매 프레임 `mode.tick(delta)`를 부르고, 스왑 전에 `canInput()`을 보고, 재생(`view.play`)이 끝난 뒤 `isOver()`면 결과 화면으로 간다
 
 ### StoryMode
 - `movesLeft`: **유효한** 스왑에서만 1 감소
@@ -307,9 +315,13 @@ interface GameMode {
 - 남은 이동 보너스 연출(Sugar Crush처럼 랜덤 블록을 특수 블록으로 바꿔 터뜨리기)은 v0.1에서는 **점수만 더하고 연출은 생략**
 
 ### TimeAttackMode
-- `timeLeftMs = 60000`, `tick`에서 감소
-- **연쇄 애니메이션 중 시간 0이 되면**: 진행 중인 연쇄는 끝까지 처리·점수 반영하고 그 뒤에 종료 (입력만 막음)
-- 종료 시 `bestScore`와 비교해 저장
+- `timeLeftMs = config.TIMEATTACK.timeLimitMs`(60000), `tick`에서 감소. 0 아래로 내려가지 않는다. `dtMs`가 0 이하이거나 유한수가 아니면 무시
+- 시간은 **애니메이션 중에도 흐른다** (타임어택이라 연쇄 구경도 시간에 포함)
+- **연쇄 애니메이션 중 시간 0이 되면**: 진행 중인 연쇄는 끝까지 처리·점수 반영하고 그 뒤에 종료 (입력만 막음). core는 스왑 순간 결과를 다 계산하므로 점수는 이미 들어와 있고, 씬이 재생이 끝날 때까지 결과 화면을 미룬다
+- `canInput()` = 남은 시간 > 0, `isOver()` = 남은 시간 0
+- 생성자에서 이전 `bestScore`를 받는다(기본 0). `result().newBest` = 점수 > bestScore. **저장은 W3-07(storage)**, 그 전까지 최고 점수는 새로고침하면 사라진다
+- 마지막 `config.TIMEATTACK.warnMs`(10000) 동안 HUD 시간 강조 (W2-11). `TimeAttackMode.timeLeftMs()`로 읽는다
+- W3-04에서 `timeLimit`을 `timeattack.json`으로 옮긴다
 
 ## 6. view / scenes 설계
 
