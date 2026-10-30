@@ -254,17 +254,38 @@ export const RESULT = {
     bounceScale: 1.12,
     bounceMs: 420,
   },
+  button: { text: '다시하기', dy: 250, width: 300, height: 100, fontSize: 48 },
+} as const;
+
+/** 공통 웨이퍼 버튼 (view/ui/Button.ts). 크기·글자는 쓰는 곳에서 정한다 */
+export const UI = {
   button: {
-    text: '다시하기',
-    dy: 250,
-    width: 300,
-    height: 100,
-    fontSize: 48,
     textColor: '#8a5a24',
-    /** 누르면 이만큼 줄었다가 돌아온 뒤 게임을 다시 시작한다 */
+    subColor: '#8a7aa8',
+    /** 큰 글자와 작은 글자 사이 (px) */
+    subGap: 6,
+    /** 누르면 이만큼 줄었다가 돌아온 뒤 다음 화면으로 간다 */
     pressScale: 0.88,
     pressMs: 90,
   },
+} as const;
+
+/** 메뉴 (스토리 화면 설계 2절). dy = 화면 가운데 기준 세로 위치(px) */
+export const MENU = {
+  title: { text: 'Ddooby-Pang', dy: -330, fontSize: 88, strokeThickness: 12 },
+  /** 타이틀 아래 말랑 친구들: Color 0~4, 번갈아 통통 튄다 */
+  friends: {
+    dy: -195,
+    size: 84,
+    gap: 104,
+    colors: [0, 1, 2, 3, 4],
+    jump: 18,
+    ms: 360,
+    stagger: 180,
+  },
+  story: { text: '스토리', dy: 0 },
+  timeattack: { text: '경쟁 60초', dy: 190 },
+  button: { width: 440, height: 150, fontSize: 56, subFontSize: 28 },
 } as const;
 
 /** 저장 (PLAN 7.2) */

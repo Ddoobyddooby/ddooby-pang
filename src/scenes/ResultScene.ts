@@ -5,11 +5,11 @@ import Phaser from 'phaser';
 import { DECOR, RESULT, THEME } from '../config';
 import type { ModeResult } from '../modes/GameMode';
 import { Background } from '../view/theme/Background';
+import { addButton } from '../view/ui/Button';
 import { formatScore } from './resultText';
 
 export class ResultScene extends Phaser.Scene {
   private result!: ModeResult;
-  private leaving = false;
 
   constructor() {
     super('Result');
@@ -17,7 +17,6 @@ export class ResultScene extends Phaser.Scene {
 
   init(data: { result: ModeResult }): void {
     this.result = data.result;
-    this.leaving = false;
   }
 
   create(): void {
@@ -62,7 +61,8 @@ export class ResultScene extends Phaser.Scene {
       if (result.newBest) this.addBadge(cx, cy + RESULT.badge.dy);
     }
 
-    this.addRetryButton(cx, cy + RESULT.button.dy);
+    const b = RESULT.button;
+    addButton(this, cx, cy + b.dy, { ...b, label: b.text }, () => this.scene.start('Game'));
   }
 
   private label(x: number, y: number, text: string, size: number, color: string) {
@@ -102,36 +102,6 @@ export class ResultScene extends Phaser.Scene {
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
-    });
-  }
-
-  /** 웨이퍼 둥근 버튼. 누르면 말랑하게 눌렸다가 돌아온 뒤 게임을 다시 시작한다 */
-  private addRetryButton(x: number, y: number): void {
-    const b = RESULT.button;
-    const r = b.height / 2;
-    const bg = this.add
-      .graphics()
-      .fillStyle(THEME.wafer.fill, 1)
-      .fillRoundedRect(-b.width / 2, -r, b.width, b.height, r)
-      .lineStyle(DECOR.frame.border, THEME.wafer.stroke, 1)
-      .strokeRoundedRect(-b.width / 2, -r, b.width, b.height, r);
-    const text = this.label(0, 0, b.text, b.fontSize, b.textColor);
-    const button = this.add
-      .container(x, y, [bg, text])
-      .setSize(b.width, b.height)
-      .setInteractive({ useHandCursor: true });
-
-    button.on('pointerup', () => {
-      if (this.leaving) return; // 두 번 눌려도 한 번만 시작
-      this.leaving = true;
-      this.tweens.add({
-        targets: button,
-        scale: b.pressScale,
-        duration: b.pressMs,
-        yoyo: true,
-        ease: 'Quad.easeOut',
-        onComplete: () => this.scene.start('Game'),
-      });
     });
   }
 }

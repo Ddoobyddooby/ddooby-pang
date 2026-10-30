@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { THEME } from '../config';
 import { loadStages, type StageData } from '../data/stageLoader';
 import { LocalStorageAdapter } from '../storage/progress';
-import { previewResult } from './resultText';
+import { bootRoute } from './bootRoute';
 import { putSave } from './saveRegistry';
 import { putStages } from './stageRegistry';
 
@@ -26,10 +26,10 @@ export class BootScene extends Phaser.Scene {
         return;
       }
       putStages(this.registry, result);
-      // DEV 미리보기: ?result=N(&best=M)이면 게임 대신 결과 화면을 바로 띄운다
-      const preview = import.meta.env.DEV ? previewResult(window.location.search) : null;
-      if (preview) this.scene.start('Result', { result: preview });
-      else this.scene.start('Game');
+      // 기본은 메뉴. 개발 주소(?demo, ?stage=N, ?result=N 등)는 해당 화면으로 바로 (bootRoute.ts)
+      const route = bootRoute(window.location.search, import.meta.env.DEV);
+      if (route.scene === 'Menu') this.scene.start('Menu');
+      else this.scene.start(route.scene, route.data);
     });
   }
 
