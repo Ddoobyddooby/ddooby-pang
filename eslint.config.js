@@ -78,5 +78,50 @@ export default tseslint.config(
       ],
     },
   },
+  // data도 순수 TS: core와 config에만 의존한다 (PLAN 7.1)
+  {
+    files: ['src/data/**/*.ts'],
+    languageOptions: { globals: {} },
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [{ name: 'phaser', message: 'data는 Phaser를 import하지 않는다.' }],
+          patterns: [
+            {
+              group: ['**/view', '**/view/**', '**/scenes', '**/scenes/**'],
+              message: 'data는 view / scenes에 의존하지 않는다.',
+            },
+            {
+              group: ['**/modes/**', '**/storage/**'],
+              message: 'data는 core와 config에만 의존한다.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-properties': [
+        'error',
+        { object: 'Math', property: 'random', message: '랜덤은 core/rng.ts의 seed RNG만 쓴다.' },
+      ],
+      'no-restricted-globals': [
+        'error',
+        { name: 'window', message: 'data에서 DOM을 쓰지 않는다.' },
+        { name: 'document', message: 'data에서 DOM을 쓰지 않는다.' },
+        { name: 'fetch', message: 'fetch는 data/stageLoader.ts만 쓴다 (W3-02).' },
+      ],
+    },
+  },
+  // stageLoader.ts만 fetch를 허용한다 (DOM 제한은 그대로)
+  {
+    files: ['src/data/stageLoader.ts'],
+    languageOptions: { globals: { fetch: 'readonly' } },
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        { name: 'window', message: 'data에서 DOM을 쓰지 않는다.' },
+        { name: 'document', message: 'data에서 DOM을 쓰지 않는다.' },
+      ],
+    },
+  },
   prettier,
 );
