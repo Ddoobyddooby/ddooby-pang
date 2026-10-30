@@ -346,6 +346,17 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - `?unlock=11&result=9000&stage=10&stars=3&bonus=300`: `모든 스테이지 클리어!`
 - `?result=12450&best=9000`: 경쟁 결과, [다시하기] [메뉴]
 
+### W3-10 스토리 HUD
+- 메뉴 [스토리] → 1번: 패널 왼쪽 `점수 0 / 2,000`, 오른쪽 동그란 배지에 남은 이동 `25`. 블록을 맞추면 점수가 오르고 이동이 준다 (실패한 교환은 안 줄어든다)
+- `?stage=6`: 색 그림 + `0 / 15` 두 줄과 `점수 N` 줄. `?stage=7`: 점수 미션 + 수집 미션
+- 남은 이동이 5 이하가 되면 배지 숫자가 빨갛게, 이동할 때마다 통통. 미션을 채우면 그 줄에 초록 체크가 한 번 통통
+- [경쟁 60초]의 패널은 예전 그대로 (점수, 남은 시간 막대)
+
+### W3-12 해금 + 저장
+- 1번 클리어 → 결과 화면 [다음 스테이지]가 보인다 → [지도]로 가면 2번이 튀어나오며 열린다 → 새로고침해도 그대로
+- 빠른 확인: `?stage=1&demo` (스토리에서도 자동 플레이). 개발자도구 Local Storage `ddooby-pang/save`에 `unlocked`, `bestStars`, `bestScore`가 쌓인다
+- 같은 스테이지를 다시 해서 별이 적게 나와도 최고 별은 줄지 않는다
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -692,3 +703,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 ### W3-11 결과 화면 (스토리)
 - **화면 내용 결정 함수**: 결과를 받아 제목·별·보너스 줄·버튼 조합을 돌려주는 `resultView`를 표처럼 테스트한다. 씬은 받은 대로 그리기만 한다 (`src/scenes/resultText.ts`)
 - **Phaser 함정 하나**: `tweens.chain`의 맨 바깥 `delay`는 무시된다. 첫 단계 트윈 안에 넣어야 한다 (`src/scenes/ResultScene.ts`)
+
+### W3-10 스토리 HUD
+- **모드별 화면을 클래스로 나누기**: 패널 테두리는 `Hud`, 안쪽은 `TimePanel`(경쟁)과 `StoryPanel`(스토리). 씬은 모드에 맞는 패널 하나만 만든다 (`src/view/Hud.ts`, `src/view/TimePanel.ts`, `src/view/StoryPanel.ts`)
+- **문구는 순수 함수로**: 미션 진행 → `빨강 12 / 25` 같은 줄 계산을 `goalLine`, `storyLines`로 빼서 테스트 (`src/view/storyLines.ts`)
+- **씬 시작 데이터로 분기**: `init(data)`에서 `mode`를 보고 `TimeAttackMode` 또는 `StoryMode`를 만든다. 나머지 게임 진행은 `GameMode` 인터페이스 하나로 같다 (`src/scenes/GameScene.ts`)
+
+### W3-12 해금 + 저장
+- **결과 → 저장 규칙도 순수 함수로**: `applyModeResult(save, result, stageCount)`가 모드에 따라 최고 점수·해금·별을 갱신한 새 저장 데이터를 돌려준다. 10번을 깨도 11번이 열리지 않게 상한도 여기서 (`src/storage/progress.ts`)
+- **순서가 중요한 곳**: 저장 데이터(registry)를 먼저 갱신한 뒤 결과 화면으로 간다. 결과 화면이 그 값을 보고 [다음 스테이지]를 보일지 정하기 때문이다. 실제 저장소 쓰기는 기다리지 않는다 (`GameScene.finish`)
