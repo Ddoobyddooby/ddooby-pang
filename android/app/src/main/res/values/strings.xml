@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Ddooby-Pang</string>
+    <string name="title_activity_main">Ddooby-Pang</string>
+    <string name="package_name">com.ddooby.pang</string>
+    <string name="custom_url_scheme">com.ddooby.pang</string>
+</resources>

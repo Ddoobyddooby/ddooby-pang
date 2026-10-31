@@ -13,12 +13,16 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "android:sync": "npm run build && cap sync android"
   },
   "dependencies": {
+    "@capacitor/android": "~8.5.3",
+    "@capacitor/core": "~8.5.3",
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "~8.5.3",
     "@eslint/js": "^10.0.1",
     "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
