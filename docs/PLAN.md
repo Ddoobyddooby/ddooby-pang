@@ -384,6 +384,14 @@ interface SaveData {
 - `Capacitor.isNativePlatform()`으로 선택
 - 키 하나(`ddooby-pang/save`)에 JSON 통째로 저장. `version`으로 이후 마이그레이션 대비
 
+### 7.3 Android 패키징 (W3-13, W4-07)
+
+- Capacitor 8 (`@capacitor/core`·`cli`·`android` `~8.5.3`). Node 22 이상, JDK 21(Android Studio 내장 JBR), compileSdk는 Capacitor 기본값을 따른다
+- 앱 ID `com.ddooby.pang`, 앱 이름 `Ddooby-Pang`. **설치 후에는 바꾸지 않는다** (바꾸면 다른 앱이 되고 저장 기록이 끊긴다)
+- `capacitor.config.ts`: `webDir: 'dist'`. 웹 빌드(`npm run build`) → `npx cap sync android` → Gradle로 APK
+- `android/` 폴더는 커밋한다 (Capacitor 권장). 빌드 산출물(`android/app/build/`, `android/.gradle/`, `local.properties`)은 `.gitignore`
+- W3-13은 디버그 APK를 에뮬레이터에서 한 번 띄워 보는 시험. 세로 고정·아이콘·스플래시는 W4-07, Preferences 저장은 W4-08
+
 ## 8. 테스트 전략
 
 | 대상 | 방식 |
