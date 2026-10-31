@@ -368,6 +368,14 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 터미널로만 APK 만들기: `cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew assembleDebug` → `android/app/build/outputs/apk/debug/app-debug.apk` (약 5MB). 시스템 java가 17이면 꼭 Android Studio 내장 Java 21을 지정한다
 - Logcat에 `Error injecting safe area CSS`가 몇 번 보이는 건 Capacitor가 넣는 스크립트의 경고라 무시해도 된다 (W4-07에서 Android 15 이상으로 다시 확인)
 
+### W4-01 점수 팝업 + 특수 발동 흔들림
+1. `npm run dev` → `http://localhost:5173/?seed=3&demo`
+2. 블록이 터진 자리에 `+점수`가 톡 튀어 올랐다가 위로 떠오르며 사라진다. 연쇄 단계가 오를수록 칭찬 문구와 같은 색(분홍 → 주황 → 파랑 → 보라)으로 바뀌고 조금씩 커진다
+3. 숫자 키 1~5: 가운데에 그 단계의 연출 + 점수 팝업 미리보기. 빨리 연타하면 팝업이 겹치지 않게 위로 쌓인다
+4. `?specials`: 특수 블록을 터뜨리거나 E(폭탄)·R(무지개)·T(슈퍼)를 눌러 흔들림 세기를 비교한다. Q·W(줄 지우기)는 빛줄기만 나오고 흔들리지 않는다
+5. 맨 왼쪽·오른쪽 열에서 맞춰도 팝업이 보드 밖으로 잘리지 않는다
+- 연쇄 3단계 이상이면 연쇄 흔들림이 먼저 걸려 특수 흔들림은 겹치지 않는다 (의도한 동작)
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -729,3 +737,10 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **sync = 복사 + 설정 갱신**: `cap sync`가 `dist/`를 `android/app/src/main/assets/public`에 복사하고 플러그인 Gradle 설정을 갱신한다. 복사본은 산출물이라 커밋하지 않는다 (`package.json`의 `android:sync`, `android/.gitignore`)
 - **Gradle·JDK·SDK**: Gradle(+ Android Gradle Plugin)이 빌드 도구, JDK는 그걸 돌리는 Java(여기선 21), SDK는 Android API와 빌드 도구. `compileSdk`(컴파일 기준 API 36) / `targetSdk`(동작을 맞추는 API 36) / `minSdk`(설치 가능한 최저 API 24) (`android/variables.gradle`, `android/gradle/wrapper/gradle-wrapper.properties`)
 - **앱 ID와 서명은 바꾸면 다른 앱**: 디버그 APK는 `~/.android/debug.keystore`로 자동 서명된다. 스토어 배포용은 따로 만든 release 키로 서명해야 하고, 앱 ID(`com.ddooby.pang`)나 서명 키가 바뀌면 기존 앱 위에 업데이트로 설치되지 않는다 (PLAN 7.3)
+
+### W4-01 점수 팝업 + 특수 발동 흔들림
+- **트윈은 대상을 지우지 않는다**: 떠오르며 사라진 글자도 화면에 남아 쌓인다. 마지막 단계의 `onComplete`에서 `destroy()`한다 (`src/view/fx/FxDirector.ts` `playScore`)
+- **clamp(가두기)**: 글자 폭의 절반을 알아야 해서, 만든 뒤 `text.width × 커지는 배율`로 [보드 왼쪽 + 반폭, 오른쪽 − 반폭] 안에 x를 가둔다. 계산은 순수 함수로 빼서 테스트 (`src/view/fx/scorePopup.ts`)
+- **이벤트에 위치 담기**: core의 `score` 이벤트가 `at`(팝업 위치)을 함께 주므로 view는 계산 없이 그 칸에 띄우기만 한다 (`src/core/engine.ts`, `BoardViewHooks.onScore`)
+- **흔들림 겹침 규칙**: `camera.shake(시간, 세기, force=false)`는 이미 흔들리는 중이면 새 요청을 무시한다. 그래서 호출 순서(연쇄 match → 특수 activate)가 곧 우선순위다. 종류별 세기는 `FX.special.shake` (`src/view/fx/specialFx.ts`)
+- **칸별 카운터**: 같은 칸에 팝업이 떠 있는 수를 `Map`으로 세어 그만큼 위로 띄우고, 사라질 때 줄인다 (`FxDirector`)
