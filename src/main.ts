@@ -3,6 +3,7 @@ import { GAME } from './config';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { MenuScene } from './scenes/MenuScene';
+import { PauseScene } from './scenes/PauseScene';
 import { ResultScene } from './scenes/ResultScene';
 import { StageMapScene } from './scenes/StageMapScene';
 
@@ -17,5 +18,6 @@ new Phaser.Game({
     mode: Phaser.Scale.EXPAND,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, MenuScene, StageMapScene, GameScene, ResultScene],
+  // Pause는 Game 위에 그려지도록 Game보다 뒤에 둔다
+  scene: [BootScene, MenuScene, StageMapScene, GameScene, ResultScene, PauseScene],
 });

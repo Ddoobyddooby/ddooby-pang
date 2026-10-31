@@ -10,7 +10,7 @@
 //   ?specials   (개발 모드) 시작 보드에 특수 블록 5종을 하나씩 놓는다
 
 import Phaser from 'phaser';
-import { GAME, HINT } from '../config';
+import { GAME, HINT, MAP, VIEW } from '../config';
 import { createInitialState, resolveSwap } from '../core/engine';
 import { findHint } from '../core/moves';
 import type { GameState, Pos, SpecialKind } from '../core/types';
@@ -24,9 +24,11 @@ import { HintTimer } from '../view/hintTimer';
 import { BoardInput } from '../view/input';
 import { createLayout, screenLayout } from '../view/layout';
 import { addHills } from '../view/theme/Hills';
+import { addRoundButton, drawPauseIcon } from '../view/ui/RoundButton';
 import { applyModeResult } from '../storage/progress';
 import { commitSave, getSave } from './saveRegistry';
-import type { GameData } from './sceneData';
+import { canPause } from './pauseRules';
+import type { GameData, PauseData } from './sceneData';
 import { getStages } from './stageRegistry';
 import type { GameMode } from '../modes/GameMode';
 import { StoryMode } from '../modes/StoryMode';
@@ -169,6 +171,28 @@ export class GameScene extends Phaser.Scene {
     // 터치·드래그 시작만으로도 힌트를 끄고 다시 잰다 (보드 밖 터치 포함)
     this.input.on('pointerdown', () => this.clearHint());
 
+    // 오른쪽 위 ❚❚ (메뉴·지도의 스피커 버튼과 같은 모양·자리, 높이는 타이틀 줄)
+    addRoundButton(this, GAME.width - MAP.back.x, VIEW.screen.titleY, drawPauseIcon, () => {
+      this.sfx.play('button');
+      this.pauseGame();
+    });
+    // 일시정지에서 돌아오면 힌트를 처음부터 재고, 멈추기 전 누르고 있던 상태를 버린다
+    const onResume = () => {
+      this.clearHint();
+      this.boardInput.cancelPress();
+    };
+    // 화면이 가려지면(다른 탭, 앱 백그라운드) 게임 중일 때 일시정지 창을 띄운다
+    const onVisibility = () => {
+      if (document.hidden) this.pauseGame();
+    };
+    this.events.on('resume', onResume);
+    document.addEventListener('visibilitychange', onVisibility);
+    // scene.events와 document 리스너는 씬이 끝나도 남으므로 직접 뗀다 (다시하기·나가기 반복 시 중복 방지)
+    this.events.once('shutdown', () => {
+      this.events.off('resume', onResume);
+      document.removeEventListener('visibilitychange', onVisibility);
+    });
+
     this.demo = params.has('demo');
     if (this.demo) this.time.delayedCall(800, () => void this.demoLoop());
     if (import.meta.env.DEV) {
@@ -219,6 +243,14 @@ export class GameScene extends Phaser.Scene {
     } else if (!show && this.hinting) {
       this.clearHint();
     }
+  }
+
+  /** Pause 씬을 위에 띄우고 이 씬(트윈·타이머·update)을 멈춘다. 연쇄 재생 중에도 그 자리에서 멈춘다 */
+  private pauseGame(): void {
+    if (!canPause({ finished: this.finished, paused: this.scene.isPaused() })) return;
+    this.clearHint();
+    this.scene.launch('Pause', { from: this.startData } satisfies PauseData);
+    this.scene.pause();
   }
 
   /** 힌트를 끄고 타이머를 처음부터 */
@@ -308,6 +340,8 @@ export class GameScene extends Phaser.Scene {
       busy: () => this.busy,
       moves: () => this.moves,
       score: () => this.mode.score(),
+      paused: () => this.scene.isPaused(),
+      timeLeft: () => (this.mode instanceof TimeAttackMode ? this.mode.timeLeftMs() : null),
       /** 지금 깜빡이는 힌트 두 칸 (없으면 null) */
       hint: () => (this.hinting ? findHint(this.state.board) : null),
       seed: this.seed,

@@ -7,11 +7,17 @@ import { Sfx } from '../view/Sfx';
 import { addMuteButton } from '../view/ui/MuteButton';
 import { commitSave, getSave } from './saveRegistry';
 
-export function addSceneMuteButton(scene: Phaser.Scene): void {
+/** y를 주지 않으면 메뉴·지도 자리(MAP.back.y) */
+export function addSceneMuteButton(scene: Phaser.Scene, y?: number): void {
   const sfx = new Sfx(scene);
-  addMuteButton(scene, getSave(scene.registry).settings.muted, (muted) => {
-    commitSave(scene.registry, setMuted(getSave(scene.registry), muted));
-    sfx.setMuted(muted);
-    sfx.play('button'); // 소리를 켰을 때만 들린다
-  });
+  addMuteButton(
+    scene,
+    getSave(scene.registry).settings.muted,
+    (muted) => {
+      commitSave(scene.registry, setMuted(getSave(scene.registry), muted));
+      sfx.setMuted(muted);
+      sfx.play('button'); // 소리를 켰을 때만 들린다
+    },
+    y,
+  );
 }

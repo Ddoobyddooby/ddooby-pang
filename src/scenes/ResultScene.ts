@@ -3,11 +3,12 @@
 // 배치는 화면 가운데 기준 dy라 EXPAND로 세로가 길어져도 가운데에 온다.
 
 import Phaser from 'phaser';
-import { DECOR, GAME, RESULT, THEME } from '../config';
+import { GAME, RESULT, THEME } from '../config';
 import type { ModeResult } from '../modes/GameMode';
 import { Sfx } from '../view/Sfx';
 import { Background } from '../view/theme/Background';
 import { addButton, type PressLock } from '../view/ui/Button';
+import { drawCreamPanel } from '../view/ui/Panel';
 import { formatScore, resultView, type ResultButton } from './resultText';
 import { getSave } from './saveRegistry';
 import type { GameData, ResultData } from './sceneData';
@@ -42,10 +43,12 @@ export class ResultScene extends Phaser.Scene {
     new Background(this);
     const b = RESULT.button;
     const lastButtonY = cy + b.dy + (view.buttons.length - 1) * b.step;
-    this.drawPanel(
+    drawCreamPanel(
+      this,
       cx,
       cy + RESULT.title.dy - RESULT.panel.padTop,
       lastButtonY + b.height / 2 + RESULT.panel.padBottom,
+      RESULT.panel,
     );
 
     this.label(
@@ -129,18 +132,6 @@ export class ResultScene extends Phaser.Scene {
     return this.add
       .text(x, y, text, { fontFamily: THEME.font, fontSize: `${size}px`, color })
       .setOrigin(0.5);
-  }
-
-  /** 반투명 크림 판 + 웨이퍼 테두리 (BoardFrame과 같은 색·두께). 위·아래 끝은 내용에 맞춘다 */
-  private drawPanel(cx: number, top: number, bottom: number): void {
-    const { width: w, alpha } = RESULT.panel;
-    const { radius, border } = DECOR.frame;
-    this.add
-      .graphics()
-      .fillStyle(THEME.wafer.inner, alpha)
-      .fillRoundedRect(cx - w / 2, top, w, bottom - top, radius)
-      .lineStyle(border, THEME.wafer.stroke, 1)
-      .strokeRoundedRect(cx - w / 2, top, w, bottom - top, radius);
   }
 
   /** 별 3칸: 빈 칸을 먼저 놓고, 받은 만큼 하나씩 통통 차오른다 */

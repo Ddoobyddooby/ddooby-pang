@@ -334,6 +334,17 @@ export const RESULT = {
   button: { dy: 225, step: 116, width: 340, height: 96, fontSize: 44 },
 } as const;
 
+/** 일시정지 창 (PLAN 6.6). dy = 화면 가운데 기준 세로 위치(px). 판·버튼 모양은 결과 화면과 같다 */
+export const PAUSE = {
+  /** 게임 위를 덮는 반투명 막 (아래 입력도 삼킨다) */
+  dim: { color: 0x4a3a5c, alpha: 0.45 },
+  panel: { width: 580, alpha: 0.96, padTop: 80, padBottom: 44 },
+  title: { text: '잠깐 쉬어요', dy: -230, fontSize: 80, strokeThickness: 12 },
+  /** 버튼 글자 (pauseButtons의 id → 글자) */
+  buttons: { resume: '계속', retry: '다시하기', map: '지도', menu: '메뉴' },
+  button: { dy: -80, step: 116, width: 340, height: 96, fontSize: 44 },
+} as const;
+
 /** 공통 웨이퍼 버튼 (view/ui/Button.ts). 크기·글자는 쓰는 곳에서 정한다 */
 export const UI = {
   button: {

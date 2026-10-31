@@ -77,6 +77,12 @@ export class BoardInput {
     }
   }
 
+  /** 누르고 있던(드래그 시작) 상태와 선택을 버린다. 일시정지에서 돌아올 때 */
+  cancelPress(): void {
+    this.start = null;
+    this.select(null);
+  }
+
   destroy(): void {
     this.scene.input.off('pointerdown', this.handleDown, this);
     this.scene.input.off('pointermove', this.handleMove, this);
