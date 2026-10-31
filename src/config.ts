@@ -168,6 +168,21 @@ export const FX = {
     riseMs: 400,
     rise: 30,
   },
+  /** 점수 팝업 (W4-01). 칭찬 문구보다 작게. 크기 px, 시간 ms */
+  scorePopup: {
+    fontSize: 46,
+    strokeThickness: 8,
+    /** 글자 크기 배율. index = 단계 - 1 (마지막 값이 상한) */
+    scaleByLevel: [1, 1.08, 1.16, 1.24, 1.32],
+    popScale: 1.3,
+    popMs: 120,
+    /** 다 커진 뒤 읽을 시간 */
+    holdMs: 250,
+    riseMs: 650,
+    rise: 56,
+    /** 같은 칸에 팝업이 떠 있으면 하나당 이만큼 위에 띄운다 */
+    stackDy: 30,
+  },
   /** 특수 블록 발동 연출 (W2-07). 크기는 칸 대비 배율, 시간은 ms */
   special: {
     /** 빛줄기 두께 (칸 대비), 시작 → 끝 */
@@ -179,7 +194,12 @@ export const FX = {
     ringMs: 340,
     ringColor: 0xfff3b0,
     ringAlpha: 0.7,
-    superShake: { duration: 200, intensity: 0.008 },
+    /** 종류별 화면 흔들림. 줄(lineH / lineV)은 빛줄기로 충분해서 흔들지 않는다 */
+    shake: {
+      bomb: { duration: 120, intensity: 0.004 },
+      color: { duration: 160, intensity: 0.006 },
+      super: { duration: 200, intensity: 0.008 },
+    },
     /** 무지개 발동 때 반짝임을 띄우는 칸 수 상한, 칸마다 별 개수 */
     maxSparkles: 24,
     starsPerSparkle: 2,

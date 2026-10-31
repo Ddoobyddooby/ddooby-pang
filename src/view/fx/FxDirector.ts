@@ -1,18 +1,21 @@
-// 연쇄 연출(파티클, 칭찬 문구, 흔들림, 웃음)과 특수 블록 발동 연출을 재생한다. 기다리게 하지 않는다 (play 완료와 무관).
-// 어떤 모드인지 모른다. GameScene이 BoardView의 onMatch / onActivate에 연결해 준다.
+// 연쇄 연출(파티클, 칭찬 문구, 흔들림, 웃음), 점수 팝업, 특수 블록 발동 연출을 재생한다. 기다리게 하지 않는다 (play 완료와 무관).
+// 어떤 모드인지 모른다. GameScene이 BoardView의 onMatch / onActivate / onScore에 연결해 준다.
 
 import type Phaser from 'phaser';
 import { FX, THEME } from '../../config';
+import { cascadeMultiplier, groupBase } from '../../core/scoring';
 import type { Color, Pos, SpecialKind } from '../../core/types';
 import { cellCenter, type Layout } from '../layout';
 import { FX_TEX, type Face } from '../theme/textures';
 import { fxLevel, particleCount } from './fxLevels';
 import type { RemovedCell } from './matchInfo';
+import { clampCenterX, scorePopupStyle } from './scorePopup';
 import { specialFxPlan } from './specialFx';
 
 const WHITE = 0xffffff;
 /** 파티클은 블록(깊이 0) 위, 칭찬 문구 아래 */
 const PARTICLE_DEPTH = 10;
+const SCORE_DEPTH = 15;
 const PRAISE_DEPTH = 20;
 /** preview가 터뜨리는 행 */
 const PREVIEW_ROW = 3;
@@ -22,6 +25,8 @@ export class FxDirector {
   /** 웃음 타이머는 하나만 둔다. 새 연쇄가 오면 다시 잰다 */
   private happyTimer?: Phaser.Time.TimerEvent;
   private praiseText?: Phaser.GameObjects.Text;
+  /** 칸("r,c")마다 떠 있는 점수 팝업 수. 겹치면 그만큼 위에 띄운다 */
+  private readonly popupsAt = new Map<string, number>();
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -93,14 +98,52 @@ export class FxDirector {
     const { x, y } = cellCenter(this.layout, at);
     for (const beam of plan.beams) this.beam(beam, x, y);
     if (plan.ring > 0) this.ring(x, y, plan.ring * this.layout.cell);
-    if (plan.shake) {
-      const { duration, intensity } = FX.special.superShake;
-      this.scene.cameras.main.shake(duration, intensity);
-    }
+    // 이미 흔들리는 중(연쇄 흔들림이나 먼저 발동한 특수)이면 Phaser가 무시한다 (force 없음)
+    if (plan.shake) this.scene.cameras.main.shake(plan.shake.duration, plan.shake.intensity);
     for (const p of plan.sparkles) {
       const c = cellCenter(this.layout, p);
       this.stars.explode(FX.special.starsPerSparkle, c.x, c.y);
     }
+  }
+
+  /** 점수 팝업: 작게 시작해 톡 커졌다가, 위로 떠오르며 흐려지고 사라진다. 가로는 보드 안쪽에 맞춘다 */
+  playScore(delta: number, level: number, at: Pos): void {
+    const { scene, layout } = this;
+    const s = FX.scorePopup;
+    const style = scorePopupStyle(delta, level);
+    const key = `${at.r},${at.c}`;
+    const stacked = this.popupsAt.get(key) ?? 0;
+    this.popupsAt.set(key, stacked + 1);
+
+    const { x, y } = cellCenter(layout, at);
+    const text = scene.add
+      .text(x, y - stacked * s.stackDy, style.text, {
+        fontFamily: THEME.font,
+        fontSize: `${s.fontSize * style.scale}px`,
+        color: style.color,
+        stroke: '#ffffff',
+        strokeThickness: s.strokeThickness,
+      })
+      .setOrigin(0.5)
+      .setDepth(SCORE_DEPTH)
+      .setScale(0.4);
+    // 가장 크게 튈 때(popScale) 기준으로 잘리지 않게
+    text.x = clampCenterX(x, (text.width * s.popScale) / 2, layout.x, layout.x + layout.width);
+
+    scene.tweens.chain({
+      targets: text,
+      tweens: [
+        { scale: s.popScale, duration: s.popMs, ease: 'Back.easeOut' },
+        { scale: 1, duration: s.popMs },
+        { y: text.y - s.rise, alpha: 0, delay: s.holdMs, duration: s.riseMs, ease: 'Quad.easeIn' },
+      ],
+      onComplete: () => {
+        text.destroy();
+        const left = (this.popupsAt.get(key) ?? 1) - 1;
+        if (left > 0) this.popupsAt.set(key, left);
+        else this.popupsAt.delete(key);
+      },
+    });
   }
 
   /** 보드를 가로지르는 빛줄기가 가늘어지며 사라진다 */
@@ -207,6 +250,8 @@ export class FxDirector {
     const color = ((level - 1) % THEME.blocks.length) as Color; // 단계마다 다른 색 하트
     const cells = [2, 3, 4].map((c) => ({ at: { r: PREVIEW_ROW, c }, color }));
     this.playMatch(level, cells);
+    // 가짜 점수: 3매치 × 그 단계의 연쇄 배율
+    this.playScore(Math.floor(groupBase(3) * cascadeMultiplier(level - 1)), level, cells[1]!.at);
   }
 
   /** 개발용: 보드 가운데 칸에서 special 발동 연출만 재생한다. 무지개는 보드 전체에 반짝임 */

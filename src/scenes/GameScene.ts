@@ -126,6 +126,7 @@ export class GameScene extends Phaser.Scene {
     const fx = new FxDirector(this, layout, this.view);
     hooks.onMatch = (level, removed) => fx.playMatch(level, removed);
     hooks.onActivate = (special, at, cleared) => fx.playActivate(special, at, cleared);
+    hooks.onScore = (delta, level, at) => fx.playScore(delta, level, at);
 
     this.hud = new Hud(this, 'Ddooby-Pang', screen);
     if (import.meta.env.DEV) this.hud.setSeed(this.seed);

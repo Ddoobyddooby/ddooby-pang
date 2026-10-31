@@ -7,13 +7,14 @@ export interface SpecialFxPlan {
   beams: ('row' | 'col')[];
   /** 퍼지는 원의 반지름 (칸 단위). 0이면 없음 */
   ring: number;
-  shake: boolean;
+  /** 화면 흔들림. null이면 흔들지 않는다 (줄) */
+  shake: { duration: number; intensity: number } | null;
   /** 별이 터지는 칸 (무지개만) */
   sparkles: Pos[];
 }
 
 export function specialFxPlan(special: SpecialKind, cleared: readonly Pos[]): SpecialFxPlan {
-  const plan: SpecialFxPlan = { beams: [], ring: 0, shake: false, sparkles: [] };
+  const plan: SpecialFxPlan = { beams: [], ring: 0, shake: null, sparkles: [] };
   switch (special) {
     case 'lineH':
       plan.beams = ['row'];
@@ -23,14 +24,16 @@ export function specialFxPlan(special: SpecialKind, cleared: readonly Pos[]): Sp
       break;
     case 'bomb':
       plan.ring = 1.5; // 3x3을 덮는다
+      plan.shake = FX.special.shake.bomb;
       break;
     case 'super':
       plan.beams = ['row', 'col'];
       plan.ring = 2.5; // 5x5를 덮는다
-      plan.shake = true;
+      plan.shake = FX.special.shake.super;
       break;
     case 'color':
       plan.ring = 1; // 시작 칸 섬광
+      plan.shake = FX.special.shake.color;
       plan.sparkles = cleared.slice(0, FX.special.maxSparkles);
       break;
   }

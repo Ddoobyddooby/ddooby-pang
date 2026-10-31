@@ -17,6 +17,8 @@ export interface BoardViewHooks {
   onMatch?(level: number, removed: readonly RemovedCell[]): void;
   /** activate 이벤트(특수 블록 발동)를 재생하기 시작할 때 동기로 부른다 */
   onActivate?(special: SpecialKind, at: Pos, cleared: readonly Pos[]): void;
+  /** score 이벤트(delta > 0)를 재생하기 시작할 때 동기로 부른다. 팝업은 기다리지 않는다 */
+  onScore?(delta: number, level: number, at: Pos): void;
 }
 
 export class BoardView {
@@ -145,6 +147,8 @@ export class BoardView {
         return Promise.resolve();
 
       case 'score':
+        if (event.delta > 0)
+          this.hooks.onScore?.(event.delta, cascadeToLevel(event.cascade), event.at);
         return Promise.resolve();
     }
   }
