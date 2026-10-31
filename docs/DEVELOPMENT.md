@@ -376,6 +376,18 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 5. 맨 왼쪽·오른쪽 열에서 맞춰도 팝업이 보드 밖으로 잘리지 않는다
 - 연쇄 3단계 이상이면 연쇄 흔들림이 먼저 걸려 특수 흔들림은 겹치지 않는다 (의도한 동작)
 
+### W4-02 효과음 + 음소거
+1. `npm run dev` → 메뉴에서 아무 곳이나 한 번 탭 (브라우저는 첫 탭 전까지 소리를 막는다)
+2. 어디서 무슨 소리가 나는지
+   - 메뉴·결과 버튼, 지도 노드·[←]: "딸깍" (button)
+   - 블록을 바꿔 매치될 때: "뽁" (swap) / 매치가 안 돼 되돌아갈 때: 낮은 "툭" (bad)
+   - 블록이 터질 때: 유리 "띵". 연쇄될수록 도→레→미→파→솔로 높아진다 (match)
+   - 특수 블록 발동: 올라가는 "슈웅" (special)
+   - 결과 화면: 클리어·경쟁 끝은 짧은 팡파르(clear), 스토리 실패는 내려가는 소리(fail), 별이 찰 때마다 "띵"(star)
+3. 메뉴·지도 오른쪽 위 스피커 → X로 바뀌고 소리가 꺼진다. 새로고침해도 유지. 다시 누르면 켜지며 "딸깍"
+- 거슬리는 소리는 `src/config.ts`의 `SOUND.effects` 볼륨을 낮추거나, `public/audio/CREDITS.md`의 원본 팩(다운로드 폴더의 Kenney zip)에서 다른 파일로 바꾼다
+- `?result=...`처럼 주소로 결과 화면에 바로 들어가면 탭 전이라 clear 소리가 안 들린다 (정상)
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -744,3 +756,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **이벤트에 위치 담기**: core의 `score` 이벤트가 `at`(팝업 위치)을 함께 주므로 view는 계산 없이 그 칸에 띄우기만 한다 (`src/core/engine.ts`, `BoardViewHooks.onScore`)
 - **흔들림 겹침 규칙**: `camera.shake(시간, 세기, force=false)`는 이미 흔들리는 중이면 새 요청을 무시한다. 그래서 호출 순서(연쇄 match → 특수 activate)가 곧 우선순위다. 종류별 세기는 `FX.special.shake` (`src/view/fx/specialFx.ts`)
 - **칸별 카운터**: 같은 칸에 팝업이 떠 있는 수를 `Map`으로 세어 그만큼 위로 띄우고, 사라질 때 줄인다 (`FxDirector`)
+
+### W4-02 효과음 + 음소거
+- **오디오 로드·캐시**: `this.load.audio(key, url)`로 읽으면 디코드되어 `cache.audio`에 남는다. 씬이 바뀌어도 게임 전체에서 쓴다. 실패한 파일은 캐시에 없으니 `cache.audio.exists(key)`로 확인하고 넘어간다 (`src/scenes/BootScene.ts`, `src/view/Sfx.ts`)
+- **오디오 잠금 해제**: 브라우저는 사용자가 한 번 누르기 전까지 소리를 막는다(AudioContext가 suspended). Phaser가 첫 터치에서 풀어 준다
+- **음 높이 = 재생 속도**: `rate` 1.5면 1.5배 빠르고 완전5도 높다. 반음 하나는 2^(1/12) ≈ 1.0595배. 연쇄 단계별 값은 `SOUND.matchRateByLevel` (`sfxRate`)
+- **저장 데이터에 필드 추가하기**: 새 필드를 `defaultSave`에 넣고, `parseSave`가 "있고 타입이 맞을 때만" 읽게 하면 옛 저장값도 기본값으로 채워져 `version`을 올리지 않아도 된다 (`src/storage/progress.ts` `settings.muted`, `setMuted`)
+- **예약 반영되는 값**: WebAudio 볼륨은 다음 처리 주기에 바뀌어서 `sound.mute`를 바로 다시 읽으면 옛값이 나온다. 판단에 쓰는 음소거 상태는 따로 들고 있는다 (`Sfx.ts`)
+- **CC0 에셋**: 출처 표시 의무는 없지만 어디서 왔는지 `public/audio/CREDITS.md`에 남겨 두면 나중에 바꾸기 쉽다
