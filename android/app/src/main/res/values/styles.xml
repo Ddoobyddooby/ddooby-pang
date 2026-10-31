@@ -16,7 +16,9 @@
     </style>
 
 
+    <!-- 시작 화면: Android 12+ 기본(앱 아이콘 + 배경색). 배경은 하늘 그라데이션 위쪽 색 (THEME.sky.top) -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

@@ -3,6 +3,7 @@ import { SOUND, THEME } from '../config';
 import { loadStages, type StageData } from '../data/stageLoader';
 import { LocalStorageAdapter } from '../storage/progress';
 import { Sfx, sfxKey, type SfxName } from '../view/Sfx';
+import { registerBackButton } from './backButton';
 import { bootRoute, devUnlock } from './bootRoute';
 import { commitSave, getSave, putSave } from './saveRegistry';
 import { putStages } from './stageRegistry';
@@ -27,6 +28,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
+    registerBackButton(this.game); // 앱(Android)에서만, 한 번만
     const stages = loadStages().then(
       (data): StageData | Error => data,
       (error: unknown) => (error instanceof Error ? error : new Error(String(error))),

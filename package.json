@@ -14,14 +14,17 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "android:sync": "npm run build && cap sync android"
+    "android:sync": "npm run build && cap sync android",
+    "icons": "capacitor-assets generate --android --assetPath assets/app-icon"
   },
   "dependencies": {
     "@capacitor/android": "~8.5.3",
+    "@capacitor/app": "~8.1.2",
     "@capacitor/core": "~8.5.3",
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "~4.0.0",
     "@capacitor/cli": "~8.5.3",
     "@eslint/js": "^10.0.1",
     "eslint": "^10.13.0",

@@ -157,6 +157,11 @@ function drawBlock(ctx: Ctx, color: Color | null, face: Face): void {
   ctx.restore();
 }
 
+/** 블록 하나를 size×size 캔버스 가운데에 그린다 (Phaser 없이). 앱 아이콘(dev/appIcon.ts)이 같은 그림을 쓰도록 */
+export function drawBlockOnCanvas(ctx: Ctx, size: number, color: Color | null, face: Face): void {
+  withMockSpace(ctx, size, () => drawBlock(ctx, color, face));
+}
+
 /** 특수 블록 배지 위치·크기 (시안 좌표). 모양이 6가지라 줄무늬 대신 오른쪽 위 배지로 표시한다 */
 const BADGE = { x: 27, y: -27, r: 19 };
 

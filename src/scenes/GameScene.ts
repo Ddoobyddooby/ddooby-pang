@@ -174,7 +174,7 @@ export class GameScene extends Phaser.Scene {
     // 오른쪽 위 ❚❚ (메뉴·지도의 스피커 버튼과 같은 모양·자리, 높이는 타이틀 줄)
     addRoundButton(this, GAME.width - MAP.back.x, VIEW.screen.titleY, drawPauseIcon, () => {
       this.sfx.play('button');
-      this.pauseGame();
+      this.requestPause();
     });
     // 일시정지에서 돌아오면 힌트를 처음부터 재고, 멈추기 전 누르고 있던 상태를 버린다
     const onResume = () => {
@@ -183,7 +183,7 @@ export class GameScene extends Phaser.Scene {
     };
     // 화면이 가려지면(다른 탭, 앱 백그라운드) 게임 중일 때 일시정지 창을 띄운다
     const onVisibility = () => {
-      if (document.hidden) this.pauseGame();
+      if (document.hidden) this.requestPause();
     };
     this.events.on('resume', onResume);
     document.addEventListener('visibilitychange', onVisibility);
@@ -245,8 +245,9 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** Pause 씬을 위에 띄우고 이 씬(트윈·타이머·update)을 멈춘다. 연쇄 재생 중에도 그 자리에서 멈춘다 */
-  private pauseGame(): void {
+  /** Pause 씬을 위에 띄우고 이 씬(트윈·타이머·update)을 멈춘다. 연쇄 재생 중에도 그 자리에서 멈춘다.
+   * ❚❚ 버튼, 화면 가림, Android 뒤로 가기(backButton.ts)가 부른다. 게임이 끝났으면 무시 */
+  requestPause(): void {
     if (!canPause({ finished: this.finished, paused: this.scene.isPaused() })) return;
     this.clearHint();
     this.scene.launch('Pause', { from: this.startData } satisfies PauseData);

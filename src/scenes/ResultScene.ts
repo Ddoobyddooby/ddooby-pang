@@ -16,6 +16,11 @@ import { getStages } from './stageRegistry';
 
 export class ResultScene extends Phaser.Scene {
   private result!: ModeResult;
+
+  /** Android 뒤로 가기가 스토리면 지도, 경쟁이면 메뉴로 보낸다 (backButton.ts) */
+  get resultKind(): ModeResult['kind'] {
+    return this.result.kind;
+  }
   private sfx!: Sfx;
 
   constructor() {

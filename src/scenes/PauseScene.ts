@@ -66,11 +66,16 @@ export class PauseScene extends Phaser.Scene {
     addSceneMuteButton(this, VIEW.screen.titleY);
   }
 
+  /** [계속]과 Android 뒤로 가기(backButton.ts) */
+  resumeGame(): void {
+    this.scene.resume('Game');
+    this.scene.stop();
+  }
+
   private go(button: PauseButton): void {
     switch (button) {
       case 'resume':
-        this.scene.resume('Game');
-        this.scene.stop();
+        this.resumeGame();
         break;
       case 'retry':
         this.scene.start('Game', this.from); // 멈춘 Game을 처음부터 다시, 이 씬은 끝난다

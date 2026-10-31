@@ -25,6 +25,10 @@ export default tseslint.config(
           paths: [{ name: 'phaser', message: 'core는 Phaser를 import하지 않는다.' }],
           patterns: [
             {
+              group: ['@capacitor/*'],
+              message: '네이티브 기능(Capacitor)은 scenes(와 W4-08의 storage)에서만 쓴다.',
+            },
+            {
               group: ['**/view', '**/view/**', '**/scenes', '**/scenes/**'],
               message: 'core는 view / scenes에 의존하지 않는다.',
             },
@@ -57,6 +61,10 @@ export default tseslint.config(
         {
           paths: [{ name: 'phaser', message: 'modes는 Phaser를 import하지 않는다.' }],
           patterns: [
+            {
+              group: ['@capacitor/*'],
+              message: '네이티브 기능(Capacitor)은 scenes(와 W4-08의 storage)에서만 쓴다.',
+            },
             {
               group: ['**/view', '**/view/**', '**/scenes', '**/scenes/**'],
               message: 'modes는 view / scenes에 의존하지 않는다.',
@@ -94,6 +102,10 @@ export default tseslint.config(
         {
           paths: [{ name: 'phaser', message: 'data는 Phaser를 import하지 않는다.' }],
           patterns: [
+            {
+              group: ['@capacitor/*'],
+              message: '네이티브 기능(Capacitor)은 scenes(와 W4-08의 storage)에서만 쓴다.',
+            },
             {
               group: ['**/view', '**/view/**', '**/scenes', '**/scenes/**'],
               message: 'data는 view / scenes에 의존하지 않는다.',
