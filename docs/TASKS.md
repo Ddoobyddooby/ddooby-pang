@@ -161,7 +161,7 @@
 - [x] **W4-07** Capacitor Android 프로젝트 정식 설정, 세로 고정, 앱 이름·아이콘 (+ 뒤로 가기, API 36 안전 영역 확인)
   - W3-13 메모: Android 15 이상 AVD에서 edge-to-edge(화면이 상태바·내비바 밑까지)일 때 안전 영역 확인, Logcat `Error injecting safe area CSS` 경고 확인
   - Windows PC에서도 빌드한다면 `.gitattributes`에 `*.bat text eol=crlf` 추가 (`android/gradlew.bat`)
-- [ ] **W4-08** 🧪 `CapacitorPreferencesStorage` 구현, `isNativePlatform()`으로 선택
+- [x] **W4-08** 🧪 `CapacitorPreferencesStorage` 구현, `isNativePlatform()`으로 선택 (+ 이전 APK의 localStorage 기록 한 번 옮기기)
 - [ ] **W4-09** 👀 실기기 설치, 터치 입력 확인, 앱 재시작 후 진행·최고 점수 유지 확인
 - [ ] **W4-10** 👀 성능 확인 (60fps 근접, 긴 연쇄·슈퍼 블록 발동 시 끊김 여부)
 - [ ] **W4-11** 👀 **조카 시범 플레이** → 피드백 기록 (`docs/FEEDBACK.md`)

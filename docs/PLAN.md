@@ -405,6 +405,7 @@ interface SaveData {
 - **`CapacitorPreferencesStorage` (W4-08)**: `@capacitor/preferences`의 `get({ key })`·`set({ key, value })` 모양 객체를 생성자로 받는다(테스트에서 가짜). 같은 키·같은 `parseSave`를 쓴다. 실패는 경고만 찍고 진행
   - 저장은 순서대로: 이전 `save()`가 끝난 뒤 다음 것을 쓴다(Promise 사슬). 결과 화면 직후 음소거를 눌러도 나중 값이 남는다
   - **한 번 옮기기**: Preferences에 값이 없으면 같은 키의 WebView localStorage 값을 읽어 Preferences에 써 둔다 (W3-13~W4-07 APK로 한 기록 유지). localStorage는 지우지 않는다
+  - Preferences 읽기가 실패해도 localStorage 기록이 있으면 그것으로 시작한다 (기본값으로 덮지 않게)
   - 왜 Preferences인가: WebView localStorage는 기기 저장 공간이 부족할 때 OS가 지울 수 있다. Preferences는 Android `SharedPreferences`라 앱을 지울 때까지 남는다
 - 키 하나(`ddooby-pang/save`)에 JSON 통째로 저장. `version`으로 이후 마이그레이션 대비
 

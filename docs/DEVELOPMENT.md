@@ -424,6 +424,15 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 새로 받은 폴더나 worktree에서 터미널로 빌드하면 `SDK location not found`가 날 수 있다. Android Studio로 `android/`를 한 번 열면 `android/local.properties`가 생겨 해결된다 (git에 올리지 않는 파일)
 - Logcat의 `Error injecting safe area CSS`는 Capacitor 내부 타이밍 경고라 그대로 둔다 (화면에는 영향 없음)
 
+
+### W4-08 앱 전용 저장소 (Preferences)
+1. `npm run android:sync` → Android Studio에서 `android/` 열기 → `Pixel_7_API_36` → ▶
+2. 경쟁 한 판으로 최고 점수를 내거나 스토리 1번을 클리어하고, 메뉴 오른쪽 위 스피커로 음소거
+3. 최근 앱 화면에서 앱을 위로 밀어 완전히 끄기 (또는 터미널 `adb shell am force-stop com.ddooby.pang`) → 다시 실행
+4. 최고 점수·별·열린 스테이지·음소거가 그대로다
+- 예전 버전 앱으로 하던 기록은 이 버전을 덮어 설치해도 처음 실행 때 옮겨 와서 이어진다
+- 저장된 내용 직접 보기: `adb shell run-as com.ddooby.pang cat shared_prefs/CapacitorStorage.xml`
+- 웹(`npm run dev`)은 지금까지처럼 브라우저 localStorage에 저장한다
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -822,3 +831,9 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **edge-to-edge와 안전 영역**: targetSdk 35 이상 앱은 Android 15부터 화면이 상태바·내비바 밑까지 그려지는 게 강제된다. Capacitor 8 SystemBars는 `index.html`에 `viewport-fit=cover`가 없으면 바 크기만큼 native padding을 줘서 막고, 있으면 inset 값을 CSS `env(safe-area-inset-*)`로 넘겨 웹이 처리하게 한다. 지금은 padding 방식이라 게임이 바와 겹치지 않는다 (`node_modules/@capacitor/android/.../SystemBars.java`, `index.html`)
 - **시작 화면(Android 12+)**: 테마의 `windowSplashScreenBackground`(배경색) + 앱 아이콘이 자동으로 뜨고, 끝나면 `postSplashScreenTheme`로 바뀐다. 예전 splash.png 11장은 지웠다 (`android/app/src/main/res/values/styles.xml`, `values/splash.xml`)
 - **줄바꿈 정규화**: `.gitattributes`의 `*.bat text eol=crlf`는 git 안에는 LF로, 작업 폴더에는 CRLF로 둔다. Windows에서 `gradlew.bat`가 깨지지 않게 한다 (`git ls-files --eol`로 확인)
+
+### W4-08 앱 전용 저장소
+- **SharedPreferences와 WebView localStorage**: localStorage는 WebView(Chromium) 데이터 폴더에 있어서 저장 공간이 모자라거나 WebView 데이터가 초기화되면 날아갈 수 있다. `@capacitor/preferences`는 Android `SharedPreferences`(앱 전용 XML `shared_prefs/CapacitorStorage.xml`)라 앱을 지울 때까지 남는다. 같은 키(`ddooby-pang/save`)를 쓰고, Preferences가 비어 있을 때만 localStorage 값을 한 번 옮긴다
+- **플랫폼에 따라 구현 고르기**: 저장 규칙(`SaveStorage` 인터페이스)은 하나, 구현은 둘. `Capacitor.isNativePlatform()`이 참이면 Preferences, 아니면 localStorage. 다른 씬은 어느 쪽인지 모른다 (`src/scenes/BootScene.ts`)
+- **비동기 저장 순서 보장**: `pending = pending.then(write)` 사슬로 앞 쓰기가 끝난 뒤 다음 쓰기를 시작한다. 각 쓰기에 `catch`를 달아 한 번 실패해도 사슬이 끊기지 않는다. 그래서 결과 저장 직후 음소거를 눌러도 나중 값이 남는다
+- **의존성 주입으로 테스트**: storage는 Capacitor를 import하지 않고 `PreferencesLike`·`KeyValueStore` 모양만 받는다. 진짜는 BootScene이 넣고, 테스트는 Map으로 만든 가짜와 늦게 끝나는 가짜를 넣어 순서와 실패를 재현한다 (`src/storage/progress.ts`, `tests/storage/preferencesStorage.test.ts`)
