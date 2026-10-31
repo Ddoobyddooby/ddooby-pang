@@ -356,6 +356,15 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지�
 
 씬 키·데이터·버튼 표와 화면 세부는 `docs/superpowers/specs/2026-10-30-story-screens-design.md` (W3-08 ~ W3-12)
 
+### 6.5 사운드 (W4-02)
+
+- **효과음만** (배경 음악은 v0.2에서 시범 플레이 반응을 보고 정한다). 출처는 **Kenney**(CC0, 출처 표시 의무 없음). 고른 파일·원본 팩 이름은 `public/audio/CREDITS.md`에 적는다
+- 파일은 `public/audio/*.ogg` (Android WebView·Chrome 기준). BootScene이 미리 읽는다. 합계 500KB 이하를 목표
+- 재생은 `src/view/Sfx.ts` 한 곳에서. 씬·FxDirector는 `sfx.play('match', { level })`처럼 이름만 부른다. 이름 → 파일·볼륨·연쇄 단계별 음 높이는 `config.SOUND`
+- 소리 나는 때: 스왑, 되돌아가는 스왑, 매치(연쇄 단계마다 음이 조금씩 높아짐), 특수 발동, 클리어·실패, 버튼, 결과 화면 별 하나 찰 때
+- **음소거**: 메뉴·지도 오른쪽 위 스피커 버튼. 값은 `SaveData.settings.muted`에 저장해 다시 켜도 유지 (`parseSave`가 빠진 필드는 기본값으로 채우므로 `version`은 1 그대로). 게임 중 음소거는 W4-04 일시정지 메뉴에서
+- 브라우저는 첫 터치 전에는 소리를 막는다. Phaser가 첫 입력에서 오디오를 풀어 주므로 메뉴 첫 탭부터 소리가 난다
+
 ## 7. 데이터 / 저장
 
 ### 7.1 스테이지
