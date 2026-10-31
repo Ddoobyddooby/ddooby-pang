@@ -401,7 +401,11 @@ interface SaveData {
 - 구현 두 개: `CapacitorPreferencesStorage`(W4-08), `LocalStorageAdapter`(W3-07). `LocalStorageAdapter`는 `getItem`/`setItem`을 가진 객체를 받아서 테스트에서 가짜를 넣는다
 - 순수 함수: `defaultSave()`(unlocked 1), `parseSave(json: string | null): SaveData`(없음·깨진 JSON·버전 다름 → 기본값, 빠진 필드는 기본값으로 채움), `recordTimeAttack(save, score)`, `recordStory(save, stageId, { cleared, stars, score })`(클리어면 `unlocked = max(unlocked, stageId + 1)`, 별·점수는 큰 값만 남김). 원본은 바꾸지 않고 새 객체를 돌려준다
 - 저장 실패(용량·시크릿 모드)는 게임을 멈추지 않는다. 경고만 찍고 진행
-- `Capacitor.isNativePlatform()`으로 선택
+- `Capacitor.isNativePlatform()`으로 선택 (BootScene). 웹·`npm run dev`는 지금처럼 `LocalStorageAdapter`
+- **`CapacitorPreferencesStorage` (W4-08)**: `@capacitor/preferences`의 `get({ key })`·`set({ key, value })` 모양 객체를 생성자로 받는다(테스트에서 가짜). 같은 키·같은 `parseSave`를 쓴다. 실패는 경고만 찍고 진행
+  - 저장은 순서대로: 이전 `save()`가 끝난 뒤 다음 것을 쓴다(Promise 사슬). 결과 화면 직후 음소거를 눌러도 나중 값이 남는다
+  - **한 번 옮기기**: Preferences에 값이 없으면 같은 키의 WebView localStorage 값을 읽어 Preferences에 써 둔다 (W3-13~W4-07 APK로 한 기록 유지). localStorage는 지우지 않는다
+  - 왜 Preferences인가: WebView localStorage는 기기 저장 공간이 부족할 때 OS가 지울 수 있다. Preferences는 Android `SharedPreferences`라 앱을 지울 때까지 남는다
 - 키 하나(`ddooby-pang/save`)에 JSON 통째로 저장. `version`으로 이후 마이그레이션 대비
 
 ### 7.3 Android 패키징 (W3-13, W4-07)
