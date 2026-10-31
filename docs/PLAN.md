@@ -411,6 +411,11 @@ interface SaveData {
 - `capacitor.config.ts`: `webDir: 'dist'`. 웹 빌드(`npm run build`) → `npx cap sync android` → Gradle로 APK
 - `android/` 폴더는 커밋한다 (Capacitor 권장). 빌드 산출물(`android/app/build/`, `android/.gradle/`, `local.properties`)은 `.gitignore`
 - W3-13은 디버그 APK를 에뮬레이터에서 한 번 띄워 보는 시험. 세로 고정·아이콘·스플래시는 W4-07, Preferences 저장은 W4-08
+- **W4-07 정식 설정** (2026-10-31 결정)
+  - 세로 고정: `AndroidManifest.xml`의 MainActivity `android:screenOrientation="portrait"`
+  - 앱 아이콘: **분홍 배경 + 빨강 말랑이 얼굴 하나**. 게임의 블록 텍스처(`textures.ts`, 빨강 `normal` 표정)를 1024px PNG로 뽑아 원본을 `assets/app-icon/`에 두고, `@capacitor/assets`로 Android 아이콘(적응형 포함)을 만든다. 시작 화면은 Android 12+ 기본(아이콘 + 배경색)을 쓰고 배경색은 하늘 그라데이션 위쪽 색
+  - 뒤로 가기(`@capacitor/app` `backButton`): **화면별로 한 단계 뒤로**. 게임 중 → 일시정지, 일시정지 → 계속, 지도·결과 → 메뉴(스토리 결과는 지도), 메뉴 → 앱 종료(`App.exitApp`). 웹에서는 아무 일도 안 한다
+  - Android 15 이상(targetSdk 36)은 화면이 상태바·내비바 밑까지 그려진다(edge-to-edge). API 36 에뮬레이터에서 안전 영역(`env(safe-area-inset-*)`)이 맞는지 확인한다
 
 ## 8. 테스트 전략
 
