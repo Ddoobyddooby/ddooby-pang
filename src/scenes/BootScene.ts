@@ -1,7 +1,13 @@
 import Phaser from 'phaser';
 import { SOUND, THEME } from '../config';
 import { loadStages, type StageData } from '../data/stageLoader';
-import { LocalStorageAdapter } from '../storage/progress';
+import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
+import {
+  CapacitorPreferencesStorage,
+  LocalStorageAdapter,
+  type SaveStorage,
+} from '../storage/progress';
 import { Sfx, sfxKey, type SfxName } from '../view/Sfx';
 import { registerBackButton } from './backButton';
 import { bootRoute, devUnlock } from './bootRoute';
@@ -75,9 +81,10 @@ export class BootScene extends Phaser.Scene {
     } catch {
       store = undefined;
     }
-    const storage = new LocalStorageAdapter(
-      store ?? { getItem: () => null, setItem: () => undefined },
-    );
+    // 앱은 Preferences(앱을 지울 때까지 남는다), 웹은 localStorage. 앱에서도 옛 localStorage 기록은 한 번 옮겨 온다
+    const storage: SaveStorage = Capacitor.isNativePlatform()
+      ? new CapacitorPreferencesStorage(Preferences, store)
+      : new LocalStorageAdapter(store ?? { getItem: () => null, setItem: () => undefined });
     const save = await storage.load();
     putSave(this.registry, storage, save);
     new Sfx(this).setMuted(save.settings.muted); // 게임 전체 음소거 (모든 씬이 따른다)

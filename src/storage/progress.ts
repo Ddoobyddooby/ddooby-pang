@@ -1,5 +1,5 @@
-// 저장 데이터 (PLAN 7.2). 순수 규칙(parse, record*)과 저장소 어댑터. Phaser와 전역(window)에 의존하지 않는다:
-// localStorage는 BootScene이 getItem/setItem을 가진 객체로 넘겨준다.
+// 저장 데이터 (PLAN 7.2). 순수 규칙(parse, record*)과 저장소 어댑터. Phaser·전역(window)·Capacitor에 의존하지 않는다:
+// localStorage와 Capacitor Preferences는 BootScene이 같은 모양의 객체로 넘겨준다.
 
 import { SAVE } from '../config';
 import type { ModeResult } from '../modes/GameMode';
@@ -147,5 +147,65 @@ export class LocalStorageAdapter implements SaveStorage {
       console.warn('[save] 저장 실패 (용량·시크릿 모드), 계속 진행', error);
     }
     return Promise.resolve();
+  }
+}
+
+/** `@capacitor/preferences`의 Preferences 모양 (테스트에서 가짜를 넣는다) */
+export interface PreferencesLike {
+  get(options: { key: string }): Promise<{ value: string | null }>;
+  set(options: { key: string; value: string }): Promise<void>;
+}
+
+/**
+ * 앱(Android)용: Capacitor Preferences(SharedPreferences)에 JSON 통째로 저장한다 (W4-08).
+ * Preferences에 값이 없으면 같은 키의 WebView localStorage(legacy) 값을 한 번 옮겨 둔다. legacy는 지우지 않는다.
+ * 저장은 앞 save가 끝난 뒤 순서대로 쓴다. 실패해도 게임은 멈추지 않는다 (경고만)
+ */
+export class CapacitorPreferencesStorage implements SaveStorage {
+  /** 마지막 save. 다음 save는 이것이 끝난 뒤(성공·실패 상관없이) 쓴다 */
+  private pending: Promise<void> = Promise.resolve();
+
+  constructor(
+    private readonly prefs: PreferencesLike,
+    private readonly legacy?: KeyValueStore,
+    private readonly key: string = SAVE.key,
+  ) {}
+
+  async load(): Promise<SaveData> {
+    let json: string | null = null;
+    try {
+      json = (await this.prefs.get({ key: this.key })).value;
+    } catch (error) {
+      console.warn(
+        '[save] Preferences 불러오기 실패, localStorage 기록이나 기본값으로 시작',
+        error,
+      );
+    }
+    if (json !== null) return parseSave(json);
+
+    // 한 번 옮기기: 이전 APK가 WebView localStorage에 남긴 기록
+    let legacyJson: string | null = null;
+    try {
+      legacyJson = this.legacy?.getItem(this.key) ?? null;
+    } catch (error) {
+      console.warn('[save] localStorage 읽기 실패, 옮기지 않음', error);
+    }
+    if (legacyJson === null) return defaultSave();
+    try {
+      await this.prefs.set({ key: this.key, value: legacyJson });
+    } catch (error) {
+      console.warn('[save] Preferences로 옮기기 실패, 다음 실행 때 다시 시도', error);
+    }
+    return parseSave(legacyJson);
+  }
+
+  save(data: SaveData): Promise<void> {
+    const value = JSON.stringify(data);
+    this.pending = this.pending.then(() =>
+      this.prefs.set({ key: this.key, value }).catch((error: unknown) => {
+        console.warn('[save] Preferences 저장 실패, 계속 진행', error);
+      }),
+    );
+    return this.pending;
   }
 }
