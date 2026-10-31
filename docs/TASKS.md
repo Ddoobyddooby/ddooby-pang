@@ -158,7 +158,7 @@
   - 2026-10-31 결정: 따로 만들지 않고 메뉴(W3-08)가 타이틀 역할 (큰 타이틀 + 말랑 친구들). 아이가 한 번 덜 누르고 바로 고른다
 
 ### 모바일
-- [ ] **W4-07** Capacitor Android 프로젝트 정식 설정, 세로 고정, 앱 이름·아이콘
+- [x] **W4-07** Capacitor Android 프로젝트 정식 설정, 세로 고정, 앱 이름·아이콘 (+ 뒤로 가기, API 36 안전 영역 확인)
   - W3-13 메모: Android 15 이상 AVD에서 edge-to-edge(화면이 상태바·내비바 밑까지)일 때 안전 영역 확인, Logcat `Error injecting safe area CSS` 경고 확인
   - Windows PC에서도 빌드한다면 `.gitattributes`에 `*.bat text eol=crlf` 추가 (`android/gradlew.bat`)
 - [ ] **W4-08** 🧪 `CapacitorPreferencesStorage` 구현, `isNativePlatform()`으로 선택

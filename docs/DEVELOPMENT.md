@@ -35,6 +35,7 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 | `npm run fonts:subset` | Jua 글꼴을 상용 한글 2,350자 + 영문·기호만 남긴 WOFF2로 다시 만든다 (원본: `assets/fonts-src/`) |
 | `npm run build` | 타입체크 + 배포용 빌드 (`dist/`) |
 | `npm run android:sync` | 웹 빌드 후 `android/` 앱에 복사 (`cap sync`). 웹 코드를 고친 뒤 Android Studio에서 ▶ 하기 전에 실행 |
+| `npm run icons` | `assets/app-icon/`의 원본 그림으로 Android 앱 아이콘(mipmap-*)을 다시 만든다 |
 
 ## 3. 게임 화면 확인하기
 
@@ -64,6 +65,7 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 | `?stage=3` | (개발 모드) 메뉴를 건너뛰고 스토리 3번 스테이지로 |
 | `?unlock=5` | (개발 모드) 스테이지 5까지 열고 **저장까지 한다** (새로고침해도 유지). 되돌리기: `?unlock=1` |
 | `?hint=1000` | (개발 모드) 힌트가 뜨기까지 기다리는 시간을 1초로 (기본 5초) |
+| `?icon` | (개발 모드) 게임 대신 앱 아이콘 원본 그림 3장을 만들어 받는 페이지 (`assets/app-icon/README.md`) |
 
 주소 옵션이 없으면 메뉴부터 시작한다. `?demo`, `?seed`, `?time`, `?specials`는 메뉴를 건너뛰고 바로 경쟁 모드로 간다. 스테이지 지도에서 **U 키**(개발 모드)를 누르면 다음 스테이지가 하나 열린다.
 
@@ -406,6 +408,21 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 5. 스토리에서는 세 번째 버튼이 [지도]
 6. 창의 스피커로 소리를 끄면 메뉴에서도 꺼져 있다
 7. 게임 중 다른 탭으로 갔다 오거나(휴대폰은 홈으로 나갔다 오기) 하면 일시정지 창이 떠 있다
+
+### W4-07 Android 앱 설정 (세로 고정, 아이콘, 뒤로 가기)
+1. `npm run android:sync`
+2. Android Studio → Open → `android/` → Gradle sync가 끝날 때까지 기다린다
+3. 위쪽 기기 목록에서 **`Pixel_7_API_36`**(Android 16) 선택 → ▶ Run (Android 14 확인은 `Pixel_3a_API_34`)
+4. 홈 → 앱 서랍: 분홍 원 안에 빨강 말랑이 아이콘 `Ddooby-Pang`. 누르면 하늘색 시작 화면 → 메뉴
+5. 에뮬레이터 옆 회전 버튼을 눌러도 게임은 세로 그대로
+6. 뒤로 가기(에뮬레이터 ◁ 또는 아래에서 옆으로 쓸기)
+   - 게임 중 → 일시정지 창, 한 번 더 → 계속
+   - 지도 → 메뉴, 결과 → 메뉴 (스토리 결과는 지도)
+   - 메뉴 → 앱 종료
+7. 위 상태바, 아래 제스처 바에 버튼이나 글자가 가리지 않는다 (바 뒤는 흰색/연회색으로 보인다. 색 맞추기는 다음 폴리싱 후보)
+- 아이콘 바꾸기: `npm run dev` → `?icon` 페이지에서 그림 3장 받기 → `assets/app-icon/`에 덮어쓰기 → `npm run icons`
+- 새로 받은 폴더나 worktree에서 터미널로 빌드하면 `SDK location not found`가 날 수 있다. Android Studio로 `android/`를 한 번 열면 `android/local.properties`가 생겨 해결된다 (git에 올리지 않는 파일)
+- Logcat의 `Error injecting safe area CSS`는 Capacitor 내부 타이밍 경고라 그대로 둔다 (화면에는 영향 없음)
 
 ## 5. 문제 해결
 
@@ -791,8 +808,17 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **위치는 안 건드린다**: 크기만 바꾸므로 DEV 화면 ↔ 게임 상태 위치 대조가 깨지지 않는다
 
 ### W4-04 일시정지
-- **씬 위에 씬 띄우기**: `scene.launch('Pause')`는 다른 씬을 끄지 않고 하나 더 띄운다. `scene.pause()`는 그 씬의 update·트윈·타이머·입력을 멈추고 그리기는 계속한다(멈춘 화면이 보인다). `resume`은 멈춘 자리부터 이어간다. 그래서 연쇄 재생 중에도 멈췄다 이어진다 (`GameScene.pauseGame`, `src/scenes/PauseScene.ts`)
+- **씬 위에 씬 띄우기**: `scene.launch('Pause')`는 다른 씬을 끄지 않고 하나 더 띄운다. `scene.pause()`는 그 씬의 update·트윈·타이머·입력을 멈추고 그리기는 계속한다(멈춘 화면이 보인다). `resume`은 멈춘 자리부터 이어간다. 그래서 연쇄 재생 중에도 멈췄다 이어진다 (`GameScene.requestPause`, `src/scenes/PauseScene.ts`)
 - **그리는 순서와 입력 삼키기**: 씬은 `main.ts`의 배열 순서대로 그려지므로 Pause를 Game 뒤에 둔다. 덮개에 `setInteractive`를 걸면 위 씬이 입력을 먼저 받아 아래 게임에 닿지 않는다
 - **리스너는 직접 뗀다**: `document`와 `scene.events`에 단 리스너는 씬이 끝나도 자동으로 사라지지 않는다. 다시하기를 반복하면 쌓이므로 `events.once('shutdown')`에서 같은 함수 참조로 뗀다 (`visibilitychange`)
 - **화면이 가려질 때**: `document.visibilitychange` + `document.hidden`. Phaser도 같은 이벤트로 게임 루프를 재우고 깨우므로, 우리는 돌아왔을 때 바로 이어지지 않게 창만 띄운다
 - **공통 컴포넌트로 묶기**: 동그란 아이콘 버튼이 세 곳(스피커, ❚❚, [←])이 되어 `RoundButton`으로 묶고 아이콘 그리는 함수만 넘긴다. 크림 판도 `drawCreamPanel`로 결과·일시정지가 같이 쓴다 (`src/view/ui/RoundButton.ts`, `src/view/ui/Panel.ts`)
+
+### W4-07 Android 앱 설정
+- **적응형 아이콘**: Android 8 이상은 앞면(투명 + 그림)과 뒷면(단색) 두 장을 108dp 캔버스에 겹치고, 런처가 원·둥근 사각형 등으로 잘라 가운데 72dp만 보여 준다. 그래서 중요한 그림은 가운데에 둔다. `mipmap-anydpi-v26/ic_launcher.xml`이 두 장을 묶고, 옛 기기는 `mipmap-*dpi/ic_launcher.png` 한 장짜리를 쓴다 (`assets/app-icon/`, `src/dev/appIcon.ts`, `android/app/src/main/res/mipmap-*`)
+- **같은 그림 재사용**: 아이콘을 따로 그리지 않고 게임 블록을 그리는 함수(`drawBlockOnCanvas`, `src/view/textures.ts`)로 1024px 캔버스에 그린다. DEV 전용 `?icon` 페이지는 배포 빌드에서 tree-shake로 빠진다
+- **screenOrientation**: Activity 단위 설정. 시스템 회전 설정과 상관없이 세로로 고정한다 (Android 16은 600dp 이상 큰 화면에서 이 값을 무시할 수 있다) (`android/app/src/main/AndroidManifest.xml`)
+- **뒤로 가기 버튼**: `@capacitor/app`의 `App.addListener('backButton')`을 등록하면 WebView 기본 동작(뒤로·종료)이 꺼지고 앱이 정한다. 웹에서는 `Capacitor.isNativePlatform()`으로 건너뛴다. "지금 무엇을 할지"는 순수 함수 `backAction`으로 판단해 테스트하고, 실행(씬 호출)은 `backButton.ts`가 한다. 일시정지는 ❚❚와 같은 `GameScene.requestPause`, 계속은 [계속]과 같은 `PauseScene.resumeGame` 경로를 탄다 (`src/scenes/backAction.ts`, `src/scenes/backButton.ts`, `tests/scenes/backAction.test.ts`)
+- **edge-to-edge와 안전 영역**: targetSdk 35 이상 앱은 Android 15부터 화면이 상태바·내비바 밑까지 그려지는 게 강제된다. Capacitor 8 SystemBars는 `index.html`에 `viewport-fit=cover`가 없으면 바 크기만큼 native padding을 줘서 막고, 있으면 inset 값을 CSS `env(safe-area-inset-*)`로 넘겨 웹이 처리하게 한다. 지금은 padding 방식이라 게임이 바와 겹치지 않는다 (`node_modules/@capacitor/android/.../SystemBars.java`, `index.html`)
+- **시작 화면(Android 12+)**: 테마의 `windowSplashScreenBackground`(배경색) + 앱 아이콘이 자동으로 뜨고, 끝나면 `postSplashScreenTheme`로 바뀐다. 예전 splash.png 11장은 지웠다 (`android/app/src/main/res/values/styles.xml`, `values/splash.xml`)
+- **줄바꿈 정규화**: `.gitattributes`의 `*.bat text eol=crlf`는 git 안에는 LF로, 작업 폴더에는 CRLF로 둔다. Windows에서 `gradlew.bat`가 깨지지 않게 한다 (`git ls-files --eol`로 확인)
