@@ -424,7 +424,6 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 새로 받은 폴더나 worktree에서 터미널로 빌드하면 `SDK location not found`가 날 수 있다. Android Studio로 `android/`를 한 번 열면 `android/local.properties`가 생겨 해결된다 (git에 올리지 않는 파일)
 - Logcat의 `Error injecting safe area CSS`는 Capacitor 내부 타이밍 경고라 그대로 둔다 (화면에는 영향 없음)
 
-
 ### W4-08 앱 전용 저장소 (Preferences)
 1. `npm run android:sync` → Android Studio에서 `android/` 열기 → `Pixel_7_API_36` → ▶
 2. 경쟁 한 판으로 최고 점수를 내거나 스토리 1번을 클리어하고, 메뉴 오른쪽 위 스피커로 음소거
@@ -433,6 +432,7 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 예전 버전 앱으로 하던 기록은 이 버전을 덮어 설치해도 처음 실행 때 옮겨 와서 이어진다
 - 저장된 내용 직접 보기: `adb shell run-as com.ddooby.pang cat shared_prefs/CapacitorStorage.xml`
 - 웹(`npm run dev`)은 지금까지처럼 브라우저 localStorage에 저장한다
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
