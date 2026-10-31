@@ -138,7 +138,7 @@
 - [x] **W3-10** 👀 HUD 스토리 버전 — 남은 이동, 점수, 미션 진행도
 - [x] **W3-11** 👀 `ResultScene` — 클리어/실패, 별, 점수, [다시하기] [다음 스테이지] [지도]
 - [x] **W3-12** 👀 해금 흐름: 클리어 시 다음 스테이지 해금, 최고 별·점수 갱신
-- [ ] **W3-13** Capacitor로 빈 Android 앱 APK 빌드 한 번 시험 (4주차 리스크 선제 확인)
+- [x] **W3-13** Capacitor로 빈 Android 앱 APK 빌드 한 번 시험 (4주차 리스크 선제 확인)
 
 **3주차 완료 기준**: 스테이지 1~10을 순서대로 해금하며 플레이, 새로고침 후에도 진행 유지
 
@@ -158,6 +158,8 @@
 
 ### 모바일
 - [ ] **W4-07** Capacitor Android 프로젝트 정식 설정, 세로 고정, 앱 이름·아이콘
+  - W3-13 메모: Android 15 이상 AVD에서 edge-to-edge(화면이 상태바·내비바 밑까지)일 때 안전 영역 확인, Logcat `Error injecting safe area CSS` 경고 확인
+  - Windows PC에서도 빌드한다면 `.gitattributes`에 `*.bat text eol=crlf` 추가 (`android/gradlew.bat`)
 - [ ] **W4-08** 🧪 `CapacitorPreferencesStorage` 구현, `isNativePlatform()`으로 선택
 - [ ] **W4-09** 👀 실기기 설치, 터치 입력 확인, 앱 재시작 후 진행·최고 점수 유지 확인
 - [ ] **W4-10** 👀 성능 확인 (60fps 근접, 긴 연쇄·슈퍼 블록 발동 시 끊김 여부)

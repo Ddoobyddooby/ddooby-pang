@@ -34,6 +34,7 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 | `npm run format` | Prettier로 코드 정리 (md 문서는 제외) |
 | `npm run fonts:subset` | Jua 글꼴을 상용 한글 2,350자 + 영문·기호만 남긴 WOFF2로 다시 만든다 (원본: `assets/fonts-src/`) |
 | `npm run build` | 타입체크 + 배포용 빌드 (`dist/`) |
+| `npm run android:sync` | 웹 빌드 후 `android/` 앱에 복사 (`cap sync`). 웹 코드를 고친 뒤 Android Studio에서 ▶ 하기 전에 실행 |
 
 ## 3. 게임 화면 확인하기
 
@@ -356,6 +357,16 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 1번 클리어 → 결과 화면 [다음 스테이지]가 보인다 → [지도]로 가면 2번이 튀어나오며 열린다 → 새로고침해도 그대로
 - 빠른 확인: `?stage=1&demo` (스토리에서도 자동 플레이). 개발자도구 Local Storage `ddooby-pang/save`에 `unlocked`, `bestStars`, `bestScore`가 쌓인다
 - 같은 스테이지를 다시 해서 별이 적게 나와도 최고 별은 줄지 않는다
+
+### W3-13 Android 앱 시험 빌드
+1. 터미널에서 `npm run android:sync` (웹 빌드 + `android/`에 복사)
+2. Android Studio → Open → 프로젝트의 **`android/`** 폴더 (프로젝트 최상위가 아님)
+3. 오른쪽 아래 Gradle sync가 끝날 때까지 기다린다 (처음엔 1분쯤)
+4. 위쪽 기기 목록에서 `Pixel_3a_API_34` 선택 → ▶ Run
+5. 에뮬레이터에 메뉴가 뜨면 경쟁 60초 한 판, 스토리 1번을 해 본다
+- 에뮬레이터를 막 켠 직후 앱이 한 번 꺼질 수 있다 (에뮬레이터 부팅 마무리 중 글꼴 서비스가 재시작되는 것). 다시 ▶ 하면 된다
+- 터미널로만 APK 만들기: `cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew assembleDebug` → `android/app/build/outputs/apk/debug/app-debug.apk` (약 5MB). 시스템 java가 17이면 꼭 Android Studio 내장 Java 21을 지정한다
+- Logcat에 `Error injecting safe area CSS`가 몇 번 보이는 건 Capacitor가 넣는 스크립트의 경고라 무시해도 된다 (W4-07에서 Android 15 이상으로 다시 확인)
 
 ## 5. 문제 해결
 
@@ -712,3 +723,9 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 ### W3-12 해금 + 저장
 - **결과 → 저장 규칙도 순수 함수로**: `applyModeResult(save, result, stageCount)`가 모드에 따라 최고 점수·해금·별을 갱신한 새 저장 데이터를 돌려준다. 10번을 깨도 11번이 열리지 않게 상한도 여기서 (`src/storage/progress.ts`)
 - **순서가 중요한 곳**: 저장 데이터(registry)를 먼저 갱신한 뒤 결과 화면으로 간다. 결과 화면이 그 값을 보고 [다음 스테이지]를 보일지 정하기 때문이다. 실제 저장소 쓰기는 기다리지 않는다 (`GameScene.finish`)
+
+### W3-13 Android 앱 시험 빌드
+- **Capacitor는 껍데기**: 웹 빌드(`dist/`)를 Android 앱 안의 WebView에 담는다. `MainActivity`(BridgeActivity)가 WebView를 띄우고 `https://localhost`로 앱 안 파일을 보여 준다. 그래서 `fetch('/stages/story.json')`도 그대로 동작한다 (`capacitor.config.ts`, `android/app/src/main/java/com/ddooby/pang/MainActivity.java`)
+- **sync = 복사 + 설정 갱신**: `cap sync`가 `dist/`를 `android/app/src/main/assets/public`에 복사하고 플러그인 Gradle 설정을 갱신한다. 복사본은 산출물이라 커밋하지 않는다 (`package.json`의 `android:sync`, `android/.gitignore`)
+- **Gradle·JDK·SDK**: Gradle(+ Android Gradle Plugin)이 빌드 도구, JDK는 그걸 돌리는 Java(여기선 21), SDK는 Android API와 빌드 도구. `compileSdk`(컴파일 기준 API 36) / `targetSdk`(동작을 맞추는 API 36) / `minSdk`(설치 가능한 최저 API 24) (`android/variables.gradle`, `android/gradle/wrapper/gradle-wrapper.properties`)
+- **앱 ID와 서명은 바꾸면 다른 앱**: 디버그 APK는 `~/.android/debug.keystore`로 자동 서명된다. 스토어 배포용은 따로 만든 release 키로 서명해야 하고, 앱 ID(`com.ddooby.pang`)나 서명 키가 바뀌면 기존 앱 위에 업데이트로 설치되지 않는다 (PLAN 7.3)
