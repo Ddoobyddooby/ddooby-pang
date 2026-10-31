@@ -39,6 +39,17 @@ export const SPECIAL = {
 } as const;
 
 /** 애니메이션 시간 (ms) */
+/** 무입력 힌트 (W4-03). 입력할 수 있는 상태로 idleMs가 지나면 가능한 수의 두 블록이 말랑하게 커졌다 작아지기를 반복한다 */
+export const HINT = {
+  idleMs: 5000,
+  /** 커지는 배율 (몸통 이미지 기준, 위치는 그대로) */
+  scale: 1.15,
+  /** 커지는 시간 = 작아지는 시간 (ms) */
+  pulseMs: 260,
+  /** 한 번 커졌다 작아진 뒤 쉬는 시간 (ms) */
+  restMs: 500,
+} as const;
+
 export const ANIM = {
   swap: 120,
   remove: 150,

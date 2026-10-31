@@ -27,6 +27,8 @@ export class BoardView {
   private tracker: EventTracker;
   private readonly highlight: Phaser.GameObjects.Graphics;
   private selectedId: number | null = null;
+  /** 힌트로 깜빡이는 블록 id (없으면 빈 배열) */
+  private hintIds: number[] = [];
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -66,6 +68,23 @@ export class BoardView {
     for (const sprite of this.sprites.values()) {
       if (!sprite.removing) sprite.setFace(face);
     }
+  }
+
+  /** 가능한 수의 두 칸을 깜빡인다 (scale만, 위치는 그대로). 재생 중이 아닐 때만 부른다 */
+  showHint(a: Pos, b: Pos): void {
+    this.hideHint();
+    for (const pos of [a, b]) {
+      const id = this.tracker.idAt(pos);
+      if (id === undefined) continue;
+      this.sprites.get(id)?.setHint(true);
+      this.hintIds.push(id);
+    }
+  }
+
+  /** 힌트를 끄고 원래 크기로. 그 사이 사라진 블록은 건너뛴다 */
+  hideHint(): void {
+    for (const id of this.hintIds) this.sprites.get(id)?.setHint(false);
+    this.hintIds = [];
   }
 
   /** 탭으로 고른 칸을 표시한다. null이면 해제. 재생 중이 아닐 때만 부른다 */

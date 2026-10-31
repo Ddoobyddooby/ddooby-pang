@@ -2,7 +2,7 @@
 // 표정은 텍스처를 바꿔 끼우는 것으로 처리한다. 특수 블록 표시는 임시 (W2-07에서 다듬는다).
 
 import Phaser from 'phaser';
-import { ANIM, VIEW } from '../config';
+import { ANIM, HINT, VIEW } from '../config';
 import type { Block } from '../core/types';
 import { blockKey, specialKey, type Face } from './theme/textures';
 
@@ -47,6 +47,25 @@ export class BlockSprite extends Phaser.GameObjects.Container {
       scale: this.baseScale * (on ? VIEW.select.scale : 1),
       duration: VIEW.select.ms,
       ease: on ? 'Back.easeOut' : 'Sine.easeOut',
+    });
+  }
+
+  /**
+   * 힌트: 몸통 이미지가 말랑하게 커졌다 작아지기를 반복한다 (위치는 그대로).
+   * 끄면 반복 트윈을 멈추고 원래 크기로 돌린다. 선택 표시와 같은 이미지를 쓰지만 힌트는 입력이 오면 먼저 꺼진다
+   */
+  setHint(on: boolean): void {
+    this.scene.tweens.killTweensOf(this.faceImage);
+    this.faceImage.setScale(this.baseScale);
+    if (!on || this.removing) return;
+    this.scene.tweens.add({
+      targets: this.faceImage,
+      scale: this.baseScale * HINT.scale,
+      duration: HINT.pulseMs,
+      yoyo: true,
+      repeat: -1,
+      repeatDelay: HINT.restMs,
+      ease: 'Sine.easeInOut',
     });
   }
 

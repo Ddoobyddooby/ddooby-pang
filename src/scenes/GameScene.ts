@@ -10,7 +10,7 @@
 //   ?specials   (개발 모드) 시작 보드에 특수 블록 5종을 하나씩 놓는다
 
 import Phaser from 'phaser';
-import { GAME } from '../config';
+import { GAME, HINT } from '../config';
 import { createInitialState, resolveSwap } from '../core/engine';
 import { findHint } from '../core/moves';
 import type { GameState, Pos, SpecialKind } from '../core/types';
@@ -20,6 +20,7 @@ import { Sfx } from '../view/Sfx';
 import { StoryPanel } from '../view/StoryPanel';
 import { TimePanel } from '../view/TimePanel';
 import { FxDirector } from '../view/fx/FxDirector';
+import { HintTimer } from '../view/hintTimer';
 import { BoardInput } from '../view/input';
 import { createLayout, screenLayout } from '../view/layout';
 import { addHills } from '../view/theme/Hills';
@@ -69,6 +70,10 @@ export class GameScene extends Phaser.Scene {
   private timeLimitMs = 0;
   /** 결과 화면으로 넘어갔는지 (한 번만) */
   private finished = false;
+  /** 무입력 힌트: 타이머(순수)와 지금 깜빡이는 중인지 */
+  private hintTimer!: HintTimer;
+  private hinting = false;
+  private demo = false;
 
   constructor() {
     super('Game');
@@ -151,10 +156,21 @@ export class GameScene extends Phaser.Scene {
       this,
       layout,
       (a, b) => void this.trySwap(a, b),
-      (pos) => this.view.setSelected(pos),
+      (pos) => {
+        this.clearHint();
+        this.view.setSelected(pos);
+      },
     );
 
-    if (params.has('demo')) this.time.delayedCall(800, () => void this.demoLoop());
+    // DEV ?hint=N(ms): 힌트 대기 시간을 바꾼다 (확인용)
+    const hintMs = Number(params.get('hint'));
+    this.hinting = false;
+    this.hintTimer = new HintTimer(import.meta.env.DEV && hintMs > 0 ? hintMs : HINT.idleMs);
+    // 터치·드래그 시작만으로도 힌트를 끄고 다시 잰다 (보드 밖 터치 포함)
+    this.input.on('pointerdown', () => this.clearHint());
+
+    this.demo = params.has('demo');
+    if (this.demo) this.time.delayedCall(800, () => void this.demoLoop());
     if (import.meta.env.DEV) {
       this.exposeDebug();
       // 키 1~5: 그 연쇄 단계의 연출 미리보기, Q W E R T: 특수 블록 발동 연출 미리보기
@@ -188,7 +204,29 @@ export class GameScene extends Phaser.Scene {
     this.updateHud();
     // 시간이 0이 되면 입력을 막는다 (재생 중이면 setBusy가 이미 막고 있고, 끝난 뒤 trySwap이 결과로 보낸다)
     if (!this.mode.canInput()) this.boardInput.enabled = false;
+    this.updateHint(delta);
     if (this.mode.isOver() && !this.busy) this.finish();
+  }
+
+  /** 입력할 수 있는 상태로 idleMs가 지나면 가능한 수를 깜빡인다. 그렇지 않게 되면 끈다 */
+  private updateHint(delta: number): void {
+    const ready = !this.busy && !this.finished && !this.demo && this.mode.canInput();
+    const show = this.hintTimer.tick(delta, ready);
+    if (show && !this.hinting) {
+      this.hinting = true; // 수가 없어도 다시 찾지 않는다 (셔플은 재생 중에 일어나 타이머가 처음부터)
+      const hint = findHint(this.state.board);
+      if (hint) this.view.showHint(hint.a, hint.b);
+    } else if (!show && this.hinting) {
+      this.clearHint();
+    }
+  }
+
+  /** 힌트를 끄고 타이머를 처음부터 */
+  private clearHint(): void {
+    this.hintTimer.reset();
+    if (!this.hinting) return;
+    this.hinting = false;
+    this.view.hideHint();
   }
 
   /** 재생이 끝난 상태에서 끝났으면(시간·이동·미션) 결과를 저장하고 결과 화면으로 */
@@ -204,6 +242,7 @@ export class GameScene extends Phaser.Scene {
 
   private async trySwap(a: Pos, b: Pos): Promise<void> {
     if (this.busy || this.finished || !this.mode.canInput()) return;
+    this.clearHint(); // 재생 전에 원래 크기로 (트윈 대상이 사라질 수 있다)
     this.setBusy(true);
 
     const result = resolveSwap(this.state, a, b);
@@ -269,6 +308,8 @@ export class GameScene extends Phaser.Scene {
       busy: () => this.busy,
       moves: () => this.moves,
       score: () => this.mode.score(),
+      /** 지금 깜빡이는 힌트 두 칸 (없으면 null) */
+      hint: () => (this.hinting ? findHint(this.state.board) : null),
       seed: this.seed,
     };
   }
