@@ -3,6 +3,7 @@
 
 import Phaser from 'phaser';
 import { DECOR, THEME, UI } from '../../config';
+import { Sfx } from '../Sfx';
 
 export interface ButtonSpec {
   label: string;
@@ -61,9 +62,11 @@ export function addButton(
     .setSize(w, h)
     .setInteractive({ useHandCursor: true });
 
+  const sfx = new Sfx(scene);
   button.on('pointerup', () => {
     if (lock.pressed) return;
     lock.pressed = true;
+    sfx.play('button');
     scene.tweens.add({
       targets: button,
       scale: UI.button.pressScale,

@@ -7,6 +7,7 @@ import {
   parseSave,
   recordStory,
   recordTimeAttack,
+  setMuted,
   type KeyValueStore,
   type SaveData,
 } from '../../src/storage/progress';
@@ -48,6 +49,42 @@ describe('parseSave', () => {
     expect(save.story.bestStars).toEqual({ 1: 3 });
     expect(save.story.bestScore).toEqual({ 2: 100 });
     expect(save.timeattack.bestScore).toBe(0);
+  });
+
+  it('settings가 없는 옛 저장값(W4-02 전)은 음소거 꺼짐으로 채우고 나머지는 그대로', () => {
+    const old = {
+      version: 1,
+      story: { unlocked: 4, bestStars: { 1: 3 }, bestScore: { 1: 2500 } },
+      timeattack: { bestScore: 900 },
+    };
+    const save = parseSave(JSON.stringify(old));
+    expect(save.settings).toEqual({ muted: false });
+    expect(save.story.unlocked).toBe(4);
+    expect(save.timeattack.bestScore).toBe(900);
+  });
+
+  it('settings.muted는 boolean일 때만 읽는다', () => {
+    const withMuted = (muted: unknown) =>
+      parseSave(JSON.stringify({ ...defaultSave(), settings: { muted } })).settings.muted;
+    expect(withMuted(true)).toBe(true);
+    expect(withMuted(false)).toBe(false);
+    expect(withMuted('yes')).toBe(false);
+    expect(withMuted(1)).toBe(false);
+  });
+});
+
+describe('setMuted', () => {
+  it('음소거만 바꾸고 원본은 그대로', () => {
+    const before = defaultSave();
+    const after = setMuted(before, true);
+    expect(after.settings.muted).toBe(true);
+    expect(before.settings.muted).toBe(false);
+    expect(after.story).toBe(before.story);
+  });
+
+  it('저장 → 불러오기로 유지된다', () => {
+    const save = setMuted(defaultSave(), true);
+    expect(parseSave(JSON.stringify(save))).toEqual(save);
   });
 });
 

@@ -5,6 +5,7 @@
 import Phaser from 'phaser';
 import { DECOR, GAME, RESULT, THEME } from '../config';
 import type { ModeResult } from '../modes/GameMode';
+import { Sfx } from '../view/Sfx';
 import { Background } from '../view/theme/Background';
 import { addButton, type PressLock } from '../view/ui/Button';
 import { formatScore, resultView, type ResultButton } from './resultText';
@@ -14,6 +15,7 @@ import { getStages } from './stageRegistry';
 
 export class ResultScene extends Phaser.Scene {
   private result!: ModeResult;
+  private sfx!: Sfx;
 
   constructor() {
     super('Result');
@@ -32,6 +34,10 @@ export class ResultScene extends Phaser.Scene {
       stageCount: getStages(this.registry).story.length,
       unlocked: getSave(this.registry).story.unlocked,
     });
+
+    this.sfx = new Sfx(this);
+    // 경쟁은 늘 클리어 소리, 스토리는 성공/실패
+    this.sfx.play(this.result.kind === 'story' && !this.result.cleared ? 'fail' : 'clear');
 
     new Background(this);
     const b = RESULT.button;
@@ -155,6 +161,7 @@ export class ResultScene extends Phaser.Scene {
             duration: s.popMs * 0.6,
             delay: s.delay + k * s.interval,
             ease: 'Back.easeOut',
+            onStart: () => this.sfx.play('star'), // delay가 끝나 차오르기 시작할 때
           },
           { scale: 1, duration: s.popMs * 0.4, ease: 'Quad.easeIn' },
         ],

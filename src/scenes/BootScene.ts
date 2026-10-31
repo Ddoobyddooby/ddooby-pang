@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
-import { THEME } from '../config';
+import { SOUND, THEME } from '../config';
 import { loadStages, type StageData } from '../data/stageLoader';
 import { LocalStorageAdapter } from '../storage/progress';
+import { Sfx, sfxKey, type SfxName } from '../view/Sfx';
 import { bootRoute, devUnlock } from './bootRoute';
 import { commitSave, getSave, putSave } from './saveRegistry';
 import { putStages } from './stageRegistry';
@@ -13,6 +14,16 @@ const FONT_TIMEOUT_MS = 2000;
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('Boot');
+  }
+
+  /** 효과음을 미리 읽는다. 실패한 파일은 캐시에 없을 뿐이고 Sfx가 조용히 넘어간다 */
+  preload(): void {
+    this.load.on('loaderror', (file: Phaser.Loader.File) =>
+      console.warn('[boot] 효과음 로드 실패, 소리 없이 진행', file.key),
+    );
+    for (const [name, { file }] of Object.entries(SOUND.effects)) {
+      this.load.audio(sfxKey(name as SfxName), `audio/${file}`);
+    }
   }
 
   create(): void {
@@ -65,7 +76,9 @@ export class BootScene extends Phaser.Scene {
     const storage = new LocalStorageAdapter(
       store ?? { getItem: () => null, setItem: () => undefined },
     );
-    putSave(this.registry, storage, await storage.load());
+    const save = await storage.load();
+    putSave(this.registry, storage, save);
+    new Sfx(this).setMuted(save.settings.muted); // 게임 전체 음소거 (모든 씬이 따른다)
   }
 
   private async loadFont(): Promise<void> {

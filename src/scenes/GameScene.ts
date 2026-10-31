@@ -16,6 +16,7 @@ import { findHint } from '../core/moves';
 import type { GameState, Pos, SpecialKind } from '../core/types';
 import { BoardView, type BoardViewHooks } from '../view/BoardView';
 import { Hud } from '../view/Hud';
+import { Sfx } from '../view/Sfx';
 import { StoryPanel } from '../view/StoryPanel';
 import { TimePanel } from '../view/TimePanel';
 import { FxDirector } from '../view/fx/FxDirector';
@@ -54,6 +55,7 @@ export class GameScene extends Phaser.Scene {
   private startData: GameData = { mode: 'timeattack' };
   private state!: GameState;
   private view!: BoardView;
+  private sfx!: Sfx;
   private boardInput!: BoardInput;
   private hud!: Hud;
   private mode!: GameMode;
@@ -124,8 +126,16 @@ export class GameScene extends Phaser.Scene {
     const hooks: BoardViewHooks = {}; // FxDirector가 BoardView를 필요로 해서 알림 연결은 나중에 채운다
     this.view = new BoardView(this, this.state.board, layout, hooks);
     const fx = new FxDirector(this, layout, this.view);
-    hooks.onMatch = (level, removed) => fx.playMatch(level, removed);
-    hooks.onActivate = (special, at, cleared) => fx.playActivate(special, at, cleared);
+    // 소리는 여기서 함께 부른다: FxDirector는 그림만, 어디서 무슨 소리가 나는지는 이 씬에서 한눈에
+    this.sfx = new Sfx(this);
+    hooks.onMatch = (level, removed) => {
+      fx.playMatch(level, removed);
+      this.sfx.play('match', { level });
+    };
+    hooks.onActivate = (special, at, cleared) => {
+      fx.playActivate(special, at, cleared);
+      this.sfx.play('special');
+    };
     hooks.onScore = (delta, level, at) => fx.playScore(delta, level, at);
 
     this.hud = new Hud(this, 'Ddooby-Pang', screen);
@@ -197,6 +207,7 @@ export class GameScene extends Phaser.Scene {
     this.setBusy(true);
 
     const result = resolveSwap(this.state, a, b);
+    this.sfx.play(result.valid ? 'swap' : 'bad');
     await this.view.play(result.steps);
     this.state = result.state;
     if (result.valid) {

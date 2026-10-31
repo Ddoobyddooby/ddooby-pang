@@ -9,7 +9,9 @@ import { GAME, MAP, THEME, UI } from '../config';
 import { mapNodes, nodeStates, type NodeState } from '../view/mapLayout';
 import { Background } from '../view/theme/Background';
 import { addHills } from '../view/theme/Hills';
+import { Sfx } from '../view/Sfx';
 import type { PressLock } from '../view/ui/Button';
+import { addSceneMuteButton } from './muteToggle';
 import { commitSave, getSave } from './saveRegistry';
 import type { GameData } from './sceneData';
 import { getStages } from './stageRegistry';
@@ -19,6 +21,7 @@ const SEEN_KEY = 'stageMap.seenUnlocked';
 
 export class StageMapScene extends Phaser.Scene {
   private lock: PressLock = { pressed: false };
+  private sfx!: Sfx;
 
   constructor() {
     super('StageMap');
@@ -28,6 +31,7 @@ export class StageMapScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.cameras.main.setScroll(-(width - GAME.width) / 2, 0); // 넓은 화면에서 가운데 맞춤
     this.lock = { pressed: false };
+    this.sfx = new Sfx(this);
 
     new Background(this);
     addHills(this, width, height);
@@ -62,6 +66,7 @@ export class StageMapScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     this.addBackButton();
+    addSceneMuteButton(this);
 
     if (import.meta.env.DEV) {
       this.input.keyboard?.on('keydown-U', () => {
@@ -195,6 +200,7 @@ export class StageMapScene extends Phaser.Scene {
   private startStage(node: Phaser.GameObjects.Container, stageId: number): void {
     if (this.lock.pressed) return;
     this.lock.pressed = true;
+    this.sfx.play('button');
     this.tweens.killTweensOf(node);
     this.tweens.add({
       targets: node,
@@ -230,6 +236,7 @@ export class StageMapScene extends Phaser.Scene {
     button.on('pointerup', () => {
       if (this.lock.pressed) return;
       this.lock.pressed = true;
+      this.sfx.play('button');
       this.tweens.add({
         targets: button,
         scale: UI.button.pressScale,

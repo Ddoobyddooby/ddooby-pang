@@ -394,3 +394,21 @@ export const MAP = {
   /** 한 화면에 들어가는 최대 수. 넘으면 개발 모드 경고 (스크롤은 v0.2) */
   maxNodes: 10,
 } as const;
+
+/** 효과음 (PLAN 6.5). 파일은 public/audio/<file>, 출처는 public/audio/CREDITS.md. volume 0~1 */
+export const SOUND = {
+  effects: {
+    swap: { file: 'swap.ogg', volume: 0.45 },
+    bad: { file: 'bad.ogg', volume: 0.35 },
+    match: { file: 'match.ogg', volume: 0.5 },
+    special: { file: 'special.ogg', volume: 0.45 },
+    clear: { file: 'clear.ogg', volume: 0.45 },
+    fail: { file: 'fail.ogg', volume: 0.4 },
+    button: { file: 'button.ogg', volume: 0.5 },
+    star: { file: 'star.ogg', volume: 0.5 },
+  },
+  /** match 소리의 연쇄 단계별 재생 속도(음 높이). index = 단계 - 1, 마지막 값이 상한. 1.0595 ≈ 반음 */
+  matchRateByLevel: [1, 1.12, 1.26, 1.33, 1.5],
+  /** 같은 소리를 이 시간(ms) 안에 다시 부르면 건너뛴다 (한 번에 여러 특수 발동 등) */
+  minGapMs: 60,
+} as const;

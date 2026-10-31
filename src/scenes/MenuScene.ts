@@ -9,6 +9,7 @@ import { Background } from '../view/theme/Background';
 import { addHills } from '../view/theme/Hills';
 import { blockKey, ensureTextures } from '../view/theme/textures';
 import { storyLabel, storyProgress, timeAttackLabel } from './menuText';
+import { addSceneMuteButton } from './muteToggle';
 import { getSave } from './saveRegistry';
 import type { GameData } from './sceneData';
 import { getStages } from './stageRegistry';
@@ -37,6 +38,7 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     this.addFriends(cx, cy + MENU.friends.dy);
+    addSceneMuteButton(this);
 
     const save = getSave(this.registry);
     const stageCount = getStages(this.registry).story.length;

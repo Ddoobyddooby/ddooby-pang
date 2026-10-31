@@ -10,6 +10,8 @@ export interface SaveData {
   version: 1;
   story: { unlocked: number; bestStars: Record<number, Stars>; bestScore: Record<number, number> };
   timeattack: { bestScore: number };
+  /** 옛 저장값에는 없다. parseSave가 기본값으로 채운다 (version은 1 그대로) */
+  settings: { muted: boolean };
 }
 
 /** DOM의 Storage와 겹치지 않게 SaveStorage. Capacitor Preferences(비동기)도 같은 모양으로 붙인다 */
@@ -29,6 +31,7 @@ export function defaultSave(): SaveData {
     version: 1,
     story: { unlocked: 1, bestStars: {}, bestScore: {} },
     timeattack: { bestScore: 0 },
+    settings: { muted: false },
   };
 }
 
@@ -67,7 +70,14 @@ export function parseSave(json: string | null): SaveData {
   }
   const timeattack = isRecord(raw.timeattack) ? raw.timeattack : {};
   if (nonNegative(timeattack.bestScore)) save.timeattack.bestScore = timeattack.bestScore;
+  const settings = isRecord(raw.settings) ? raw.settings : {};
+  if (typeof settings.muted === 'boolean') save.settings.muted = settings.muted;
   return save;
+}
+
+/** 음소거 설정을 바꾼다. 원본은 바꾸지 않는다 */
+export function setMuted(save: SaveData, muted: boolean): SaveData {
+  return { ...save, settings: { ...save.settings, muted } };
 }
 
 /** 최고 점수는 큰 값만 남긴다. 원본은 바꾸지 않는다 */
