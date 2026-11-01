@@ -54,3 +54,23 @@ afconvert -f m4af -d aac -b 96000 menu.wav menu.m4a
 - macOS `afconvert`는 Ogg Vorbis를 읽을 수만 있고 쓰지 못해서 `.ogg`는 `oggenc`로 만든다
 - 반복 이음새: 디코드한 길이가 두 형식 모두 원본 WAV와 샘플 단위로 같다(menu 769,132 / timeattack 2,000,878 / story 1,820,904, Chrome에서 확인). AAC 인코더가 앞에 넣는 무음(priming)은 `afconvert`가 파일에 길이를 적어 두어 디코더가 잘라 낸다
 - 크기: ogg 합계 약 1.0MB, m4a 약 1.3MB (기기는 한 형식만 받는다)
+
+## 칭찬 목소리 (W4-15, `voice/`)
+
+가족 녹음, 사용자 제공 (공개 저장소·공개 웹에 올리는 것에 사용자 동의, PLAN 6.9). 원본은 `assets/voice-src/voice1~4.m4a`(아이폰, 48kHz 모노), 앞뒤를 자른 편집본은 `assets/voice-src/trimmed/voice1~4.wav`다.
+
+| 파일 | 쓰는 곳 |
+|---|---|
+| `voice/voice1.{ogg,m4a}` | 연쇄 2단계 `이안팡!` |
+| `voice/voice2.{ogg,m4a}` | 연쇄 3단계 `이서팡!` |
+| `voice/voice3.{ogg,m4a}` | 연쇄 4단계 `보라팡!!` |
+| `voice/voice4.{ogg,m4a}` | 연쇄 5단계 `사랑해!!!` |
+
+편집본 WAV에서 바로 만들었다 (모노 48kHz 그대로). 크기는 파일을 줄이지 않고 `src/config.ts` `SOUND.effects.voice1~4.volume`으로 맞춘다:
+
+```sh
+for i in 1 2 3 4; do
+  oggenc -q 4 -o public/audio/voice/voice$i.ogg assets/voice-src/trimmed/voice$i.wav
+  afconvert -f m4af -d aac -b 96000 assets/voice-src/trimmed/voice$i.wav public/audio/voice/voice$i.m4a
+done
+```

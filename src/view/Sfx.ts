@@ -1,4 +1,4 @@
-// 효과음 재생 (PLAN 6.5). 씬·버튼은 이름만 부른다: sfx.play('match', { level }).
+// 효과음 재생 (PLAN 6.5, 칭찬 목소리 6.9). 씬·버튼은 이름만 부른다: sfx.play('match', { level }).
 // 효과음 끄기는 게임 하나에 하나인 모듈 변수 (모든 씬이 같이 따른다). 게임 전체 sound.mute는 쓰지 않는다:
 // 배경 음악(Music.ts)은 따로 켜고 끈다 (W4-13). 저장값(settings.muted)이 단일 진실 원천이고, Boot와 스피커 버튼이 setMuted로 반영한다.
 // 기다리게 하지 않는다. 파일이 없거나 로드에 실패했으면 조용히 넘어간다.
@@ -16,6 +16,11 @@ export function sfxRate(level: number): number {
   const rates = SOUND.matchRateByLevel;
   const i = Math.min(Math.max(1, Math.round(level)), rates.length) - 1;
   return rates[i] ?? 1;
+}
+
+/** 연쇄 단계(1부터) → 칭찬 목소리. 2~5단계만 있고 1단계와 6단계 이상은 null (PLAN 6.9) */
+export function voiceFor(level: number): SfxName | null {
+  return SOUND.voiceByLevel[level] ?? null;
 }
 
 /** 효과음 끔 */

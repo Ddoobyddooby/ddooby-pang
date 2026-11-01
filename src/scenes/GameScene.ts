@@ -17,7 +17,7 @@ import type { GameState, Pos, SpecialKind } from '../core/types';
 import { BoardView, type BoardViewHooks } from '../view/BoardView';
 import { Hud } from '../view/Hud';
 import { Music } from '../view/Music';
-import { Sfx } from '../view/Sfx';
+import { Sfx, voiceFor } from '../view/Sfx';
 import { StoryPanel } from '../view/StoryPanel';
 import { TimePanel } from '../view/TimePanel';
 import { FxDirector } from '../view/fx/FxDirector';
@@ -140,6 +140,9 @@ export class GameScene extends Phaser.Scene {
     hooks.onMatch = (level, removed) => {
       fx.playMatch(level, removed);
       this.sfx.play('match', { level });
+      // match 이벤트는 연쇄 단계마다 하나라서 그룹이 여럿이어도 목소리는 한 번
+      const voice = voiceFor(level);
+      if (voice) this.sfx.play(voice);
     };
     hooks.onActivate = (special, at, cleared) => {
       fx.playActivate(special, at, cleared);

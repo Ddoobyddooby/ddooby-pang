@@ -443,10 +443,19 @@ export const SOUND = {
     fail: { file: 'fail', volume: 0.4 },
     button: { file: 'button', volume: 0.5 },
     star: { file: 'star', volume: 0.5 },
+    // 칭찬 목소리 (PLAN 6.9). 경쟁 곡(가장 큰 곡) 위로 또렷이 들리게 다른 효과음보다 크게 둔다
+    voice1: { file: 'voice/voice1', volume: 0.7 },
+    voice2: { file: 'voice/voice2', volume: 0.7 },
+    voice3: { file: 'voice/voice3', volume: 0.7 },
+    voice4: { file: 'voice/voice4', volume: 0.7 },
   },
   formats: ['ogg', 'm4a'],
   /** match 소리의 연쇄 단계별 재생 속도(음 높이). index = 단계 - 1, 마지막 값이 상한. 1.0595 ≈ 반음 */
   matchRateByLevel: [1, 1.12, 1.26, 1.33, 1.5],
+  /** 연쇄 단계 → 칭찬 목소리 (PLAN 6.9). 여기 없는 단계(1, 6 이상)는 목소리 없음 */
+  voiceByLevel: { 2: 'voice1', 3: 'voice2', 4: 'voice3', 5: 'voice4' } as Partial<
+    Record<number, 'voice1' | 'voice2' | 'voice3' | 'voice4'>
+  >,
   /** 같은 소리를 이 시간(ms) 안에 다시 부르면 건너뛴다 (한 번에 여러 특수 발동 등) */
   minGapMs: 60,
 } as const;
