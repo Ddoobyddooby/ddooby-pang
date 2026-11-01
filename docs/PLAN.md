@@ -422,6 +422,15 @@ interface SaveData {
   - 뒤로 가기(`@capacitor/app` `backButton`): **화면별로 한 단계 뒤로**. 게임 중 → 일시정지, 일시정지 → 계속, 지도·결과 → 메뉴(스토리 결과는 지도), 메뉴 → 앱 종료(`App.exitApp`). 웹에서는 아무 일도 안 한다
   - Android 15 이상(targetSdk 36)은 화면이 상태바·내비바 밑까지 그려진다(edge-to-edge). API 36 에뮬레이터에서 안전 영역(`env(safe-area-inset-*)`)이 맞는지 확인한다
 
+### 7.4 아이폰용 웹 배포 (W4-12)
+
+- **GitHub Pages**: 저장소가 공개라 무료. `main`에 push하면 GitHub Actions가 `npm ci && npm run build` 후 `dist/`를 배포한다 (`.github/workflows/pages.yml`, `actions/deploy-pages`). 주소 `https://ddoobyddooby.github.io/ddooby-pang/`. `base: './'`라 하위 경로에서도 그대로 동작
+  - 배포 전에 lint·test도 돌려 실패하면 배포하지 않는다
+- **홈 화면에 추가**: `index.html`에 `apple-touch-icon`(180px, `assets/app-icon/` 원본으로 만든 PNG), `apple-mobile-web-app-capable`·`mobile-web-app-capable`, `apple-mobile-web-app-title`(`Ddooby-Pang`), `theme-color`. `manifest.webmanifest`(이름, 아이콘 192·512, `display: standalone`, `orientation: portrait`, 배경색 `THEME.sky.top`). 서비스 워커(오프라인)는 넣지 않는다
+- **효과음 형식**: 아이폰 Safari는 Ogg Vorbis를 못 읽을 수 있다. 같은 이름의 `.m4a`(AAC)를 `public/audio/`에 같이 두고 Phaser 로더에 `[ogg, m4a]` 두 URL을 넘겨 브라우저가 고르게 한다. 변환은 `afconvert`(macOS 내장) 또는 ffmpeg로, 방법은 `public/audio/CREDITS.md`에 적는다
+- **저장**: 웹이라 Safari localStorage(`LocalStorageAdapter`). 홈 화면 앱은 Safari 탭과 저장소가 따로라 기록도 따로다. Safari는 오래 쓰지 않은 사이트 데이터를 지울 수 있다(v0.1에서는 받아들인다)
+- **뒤로 가기**: 웹에는 없음 (W4-07 `registerBackButton`은 native에서만)
+
 ## 8. 테스트 전략
 
 | 대상 | 방식 |
