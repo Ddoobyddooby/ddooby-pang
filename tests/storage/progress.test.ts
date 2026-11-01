@@ -7,6 +7,7 @@ import {
   parseSave,
   recordStory,
   recordTimeAttack,
+  setMusic,
   setMuted,
   type KeyValueStore,
   type SaveData,
@@ -58,7 +59,7 @@ describe('parseSave', () => {
       timeattack: { bestScore: 900 },
     };
     const save = parseSave(JSON.stringify(old));
-    expect(save.settings).toEqual({ muted: false });
+    expect(save.settings).toEqual({ muted: false, music: true });
     expect(save.story.unlocked).toBe(4);
     expect(save.timeattack.bestScore).toBe(900);
   });
@@ -70,6 +71,32 @@ describe('parseSave', () => {
     expect(withMuted(false)).toBe(false);
     expect(withMuted('yes')).toBe(false);
     expect(withMuted(1)).toBe(false);
+  });
+});
+
+describe('settings.music (W4-13)', () => {
+  it('music이 없는 저장값(W4-02~W4-12)은 켜짐으로 채우고 muted는 그대로', () => {
+    const old = { ...defaultSave(), settings: { muted: true } };
+    expect(parseSave(JSON.stringify(old)).settings).toEqual({ muted: true, music: true });
+  });
+
+  it('boolean이 아니면 켜짐', () => {
+    const withMusic = (music: unknown) =>
+      parseSave(JSON.stringify({ ...defaultSave(), settings: { muted: false, music } })).settings
+        .music;
+    expect(withMusic(false)).toBe(false);
+    expect(withMusic('off')).toBe(true);
+    expect(withMusic(0)).toBe(true);
+    expect(withMusic(null)).toBe(true);
+  });
+
+  it('setMusic은 음악만 바꾸고 원본·효과음 설정은 그대로', () => {
+    const before = setMuted(defaultSave(), true);
+    const after = setMusic(before, false);
+    expect(after.settings).toEqual({ muted: true, music: false });
+    expect(before.settings.music).toBe(true);
+    expect(after.story).toBe(before.story);
+    expect(parseSave(JSON.stringify(after))).toEqual(after);
   });
 });
 

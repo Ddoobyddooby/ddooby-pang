@@ -9,7 +9,9 @@ import { Background } from '../view/theme/Background';
 import { addHills } from '../view/theme/Hills';
 import { blockKey, ensureTextures } from '../view/theme/textures';
 import { storyLabel, storyProgress, timeAttackLabel } from './menuText';
-import { addSceneMuteButton } from './muteToggle';
+import { Music } from '../view/Music';
+import { musicFor } from './musicRules';
+import { addSceneMusicButton, addSceneMuteButton } from './muteToggle';
 import { getSave } from './saveRegistry';
 import type { GameData } from './sceneData';
 import { getStages } from './stageRegistry';
@@ -39,6 +41,10 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.addFriends(cx, cy + MENU.friends.dy);
     addSceneMuteButton(this);
+    addSceneMusicButton(this);
+    const music = Music.of(this.game);
+    music.play(musicFor('Menu'));
+    music.load(this, ['timeattack', 'story']); // 게임 곡은 메뉴가 뜬 뒤 뒤에서
 
     const save = getSave(this.registry);
     const stageCount = getStages(this.registry).story.length;

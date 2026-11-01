@@ -5,7 +5,7 @@ import Phaser from 'phaser';
 import { GAME, PAUSE, THEME, VIEW } from '../config';
 import { addButton, type PressLock } from '../view/ui/Button';
 import { drawCreamPanel } from '../view/ui/Panel';
-import { addSceneMuteButton } from './muteToggle';
+import { addSceneMusicButton, addSceneMuteButton } from './muteToggle';
 import { pauseButtons, type PauseButton } from './pauseRules';
 import type { GameData, PauseData } from './sceneData';
 
@@ -64,6 +64,7 @@ export class PauseScene extends Phaser.Scene {
     });
     // 게임 화면의 ❚❚ 자리에 음소거 버튼
     addSceneMuteButton(this, VIEW.screen.titleY);
+    addSceneMusicButton(this, VIEW.screen.titleY);
   }
 
   /** [계속]과 Android 뒤로 가기(backButton.ts) */

@@ -522,4 +522,4 @@ SPEC 9절 마일스톤을 구체화한다. 세부 작업은 TASKS.md.
 | 실기기 성능 | 끊김 | 1주차부터 저사양 기기에서 한 번 확인. 파티클 수 제한, WebGL 렌더러 사용 |
 | Capacitor/Android 빌드 환경 | 4주차 지연 | 2~3주차 중 빈 앱으로 APK 빌드를 미리 한 번 해본다 |
 | 난이도 | 조카가 못 깨거나 너무 쉬움 | 스테이지 JSON만 고치면 되도록 유지, 시범 플레이 후 조정 |
-| 아이폰 Safari 오디오 형식 (2026-11-01 발견, W4-12) | iOS Safari·홈 화면 앱은 Ogg Vorbis를 못 읽을 수 있어 효과음·음악이 안 남 (Android·Chrome은 정상) | 모든 소리를 `.ogg` + `.m4a`(AAC) 두 개로 두고 로더에 `[ogg, m4a]` 배열을 넘긴다. Phaser가 `canPlayType`으로 고른다 (PLAN 7.4). **새 소리를 넣을 때 m4a를 빼먹지 않는다** (`afconvert -f m4af -d aac x.ogg x.m4a`). 실제 아이폰 확인은 W4-12 |
+| 아이폰 Safari 오디오 형식 (2026-11-01 발견, W4-12) | iOS Safari·홈 화면 앱은 Ogg Vorbis를 못 읽을 수 있어 효과음·음악이 안 남 (Android·Chrome은 정상) | 모든 소리를 `.ogg` + `.m4a`(AAC) 두 개로 두고 로더에 `[ogg, m4a]` 배열을 넘긴다. Phaser가 `canPlayType`으로 고른다 (PLAN 7.4). **새 소리를 넣을 때 m4a를 빼먹지 않는다** (`afconvert -f m4af -d aac x.ogg x.m4a`). 실제 아이폰 확인은 W4-12. W4-13: macOS `afconvert`는 Vorbis를 **읽기만** 하고 쓰지 못한다(WAV·mp3에서 `.ogg`를 새로 만들 땐 `oggenc`, `brew install vorbis-tools`). AAC는 인코더가 앞에 무음(priming)을 넣지만 `afconvert`가 그 길이를 파일에 적어 두어, Chrome에서 디코드한 길이가 원본 WAV와 샘플 단위로 같았다(반복 끊김 없음). iOS의 loop 이음새는 실기기로 확인 |

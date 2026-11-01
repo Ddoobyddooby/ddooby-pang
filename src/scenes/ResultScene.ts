@@ -3,12 +3,14 @@
 // 배치는 화면 가운데 기준 dy라 EXPAND로 세로가 길어져도 가운데에 온다.
 
 import Phaser from 'phaser';
-import { GAME, RESULT, THEME } from '../config';
+import { GAME, MUSIC, RESULT, THEME } from '../config';
 import type { ModeResult } from '../modes/GameMode';
+import { Music } from '../view/Music';
 import { Sfx } from '../view/Sfx';
 import { Background } from '../view/theme/Background';
 import { addButton, type PressLock } from '../view/ui/Button';
 import { drawCreamPanel } from '../view/ui/Panel';
+import { musicFor } from './musicRules';
 import { formatScore, resultView, type ResultButton } from './resultText';
 import { getSave } from './saveRegistry';
 import type { GameData, ResultData } from './sceneData';
@@ -41,6 +43,8 @@ export class ResultScene extends Phaser.Scene {
       unlocked: getSave(this.registry).story.unlocked,
     });
 
+    // 게임 곡을 줄여 끝낸다. 결과 화면은 음악 없이 클리어·실패 소리만
+    Music.of(this.game).play(musicFor('Result'), MUSIC.resultFadeMs);
     this.sfx = new Sfx(this);
     // 경쟁은 늘 클리어 소리, 스토리는 성공/실패
     this.sfx.play(this.result.kind === 'story' && !this.result.cleared ? 'fail' : 'clear');

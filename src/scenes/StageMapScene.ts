@@ -11,7 +11,9 @@ import { Background } from '../view/theme/Background';
 import { addHills } from '../view/theme/Hills';
 import { Sfx } from '../view/Sfx';
 import type { PressLock } from '../view/ui/Button';
-import { addSceneMuteButton } from './muteToggle';
+import { Music } from '../view/Music';
+import { musicFor } from './musicRules';
+import { addSceneMusicButton, addSceneMuteButton } from './muteToggle';
 import { commitSave, getSave } from './saveRegistry';
 import type { GameData } from './sceneData';
 import { getStages } from './stageRegistry';
@@ -67,6 +69,10 @@ export class StageMapScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.addBackButton();
     addSceneMuteButton(this);
+    addSceneMusicButton(this);
+    const music = Music.of(this.game);
+    music.play(musicFor('StageMap')); // 메뉴에서 왔으면 같은 곡이 이어진다
+    music.load(this, ['story']);
 
     if (import.meta.env.DEV) {
       this.input.keyboard?.on('keydown-U', () => {

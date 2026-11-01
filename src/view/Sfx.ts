@@ -1,6 +1,6 @@
 // 효과음 재생 (PLAN 6.5). 씬·버튼은 이름만 부른다: sfx.play('match', { level }).
-// 음소거는 게임 하나에 하나: 모듈 변수 + 게임 전체 sound.mute (모든 씬이 같이 따른다).
-// 저장값(settings.muted)이 단일 진실 원천이고, Boot와 스피커 버튼이 setMuted로 여기에 반영한다.
+// 효과음 끄기는 게임 하나에 하나인 모듈 변수 (모든 씬이 같이 따른다). 게임 전체 sound.mute는 쓰지 않는다:
+// 배경 음악(Music.ts)은 따로 켜고 끈다 (W4-13). 저장값(settings.muted)이 단일 진실 원천이고, Boot와 스피커 버튼이 setMuted로 반영한다.
 // 기다리게 하지 않는다. 파일이 없거나 로드에 실패했으면 조용히 넘어간다.
 
 import type Phaser from 'phaser';
@@ -18,10 +18,7 @@ export function sfxRate(level: number): number {
   return rates[i] ?? 1;
 }
 
-/**
- * sound.mute는 WebAudio gain을 예약해 바꾸므로 바로 다시 읽으면 옛값일 수 있다.
- * 그래서 재생 여부는 이 값으로 판단한다
- */
+/** 효과음 끔 */
 let muted = false;
 
 export class Sfx {
@@ -46,6 +43,5 @@ export class Sfx {
 
   setMuted(value: boolean): void {
     muted = value;
-    this.scene.sound.mute = value;
   }
 }

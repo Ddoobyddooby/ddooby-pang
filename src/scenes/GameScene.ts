@@ -16,6 +16,7 @@ import { findHint } from '../core/moves';
 import type { GameState, Pos, SpecialKind } from '../core/types';
 import { BoardView, type BoardViewHooks } from '../view/BoardView';
 import { Hud } from '../view/Hud';
+import { Music } from '../view/Music';
 import { Sfx } from '../view/Sfx';
 import { StoryPanel } from '../view/StoryPanel';
 import { TimePanel } from '../view/TimePanel';
@@ -27,6 +28,7 @@ import { addHills } from '../view/theme/Hills';
 import { addRoundButton, drawPauseIcon } from '../view/ui/RoundButton';
 import { applyModeResult } from '../storage/progress';
 import { commitSave, getSave } from './saveRegistry';
+import { musicFor } from './musicRules';
 import { canPause } from './pauseRules';
 import type { GameData, PauseData } from './sceneData';
 import { getStages } from './stageRegistry';
@@ -176,10 +178,16 @@ export class GameScene extends Phaser.Scene {
       this.sfx.play('button');
       this.requestPause();
     });
-    // 일시정지에서 돌아오면 힌트를 처음부터 재고, 멈추기 전 누르고 있던 상태를 버린다
+    // 모드 곡. [다시하기]로 같은 모드를 다시 시작하면 곡은 이어진다. 아직 안 읽혔으면 다 읽힌 순간부터
+    const music = Music.of(this.game);
+    const track = musicFor('Game', this.startData);
+    music.play(track);
+    if (track) music.load(this, [track]);
+    // 일시정지에서 돌아오면 힌트를 처음부터 재고, 멈추기 전 누르고 있던 상태를 버린다. 음악은 원래 볼륨으로
     const onResume = () => {
       this.clearHint();
       this.boardInput.cancelPress();
+      music.duck(false);
     };
     // 화면이 가려지면(다른 탭, 앱 백그라운드) 게임 중일 때 일시정지 창을 띄운다
     const onVisibility = () => {
@@ -250,6 +258,7 @@ export class GameScene extends Phaser.Scene {
   requestPause(): void {
     if (!canPause({ finished: this.finished, paused: this.scene.isPaused() })) return;
     this.clearHint();
+    Music.of(this.game).duck(true);
     this.scene.launch('Pause', { from: this.startData } satisfies PauseData);
     this.scene.pause();
   }

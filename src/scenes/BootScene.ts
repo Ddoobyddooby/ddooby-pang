@@ -8,6 +8,7 @@ import {
   LocalStorageAdapter,
   type SaveStorage,
 } from '../storage/progress';
+import { Music, musicKey, musicUrls } from '../view/Music';
 import { Sfx, sfxKey, type SfxName } from '../view/Sfx';
 import { registerBackButton } from './backButton';
 import { bootRoute, devUnlock } from './bootRoute';
@@ -23,7 +24,10 @@ export class BootScene extends Phaser.Scene {
     super('Boot');
   }
 
-  /** 효과음을 미리 읽는다. 실패한 파일은 캐시에 없을 뿐이고 Sfx가 조용히 넘어간다 */
+  /**
+   * 효과음과 메뉴 곡을 미리 읽는다. 게임 곡 둘은 메뉴가 뜬 뒤 뒤에서 읽는다 (첫 화면이 늦어지지 않게).
+   * 실패한 파일은 캐시에 없을 뿐이고 Sfx·Music이 조용히 넘어간다
+   */
   preload(): void {
     this.load.on('loaderror', (file: Phaser.Loader.File) =>
       console.warn('[boot] 효과음 로드 실패, 소리 없이 진행', file.key),
@@ -35,6 +39,7 @@ export class BootScene extends Phaser.Scene {
         SOUND.formats.map((ext) => `audio/${file}.${ext}`),
       );
     }
+    this.load.audio(musicKey('menu'), musicUrls('menu'));
   }
 
   create(): void {
@@ -91,7 +96,8 @@ export class BootScene extends Phaser.Scene {
       : new LocalStorageAdapter(store ?? { getItem: () => null, setItem: () => undefined });
     const save = await storage.load();
     putSave(this.registry, storage, save);
-    new Sfx(this).setMuted(save.settings.muted); // 게임 전체 음소거 (모든 씬이 따른다)
+    new Sfx(this).setMuted(save.settings.muted); // 효과음 끔 (모든 씬이 따른다)
+    Music.of(this.game).setEnabled(save.settings.music);
   }
 
   private async loadFont(): Promise<void> {

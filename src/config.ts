@@ -438,3 +438,20 @@ export const SOUND = {
   /** 같은 소리를 이 시간(ms) 안에 다시 부르면 건너뛴다 (한 번에 여러 특수 발동 등) */
   minGapMs: 60,
 } as const;
+
+/**
+ * 배경 음악 (PLAN 6.7). 파일은 public/audio/music/<이름>.<형식> (SOUND.formats와 같은 대체), 출처는 public/audio/CREDITS.md.
+ * volume 0~1, 시간 ms
+ */
+export const MUSIC = {
+  tracks: ['menu', 'timeattack', 'story'],
+  volume: 0.35,
+  /** 곡을 바꿀 때 페이드 (나가는 곡은 줄이며 끝내고 들어오는 곡은 0에서 올린다) */
+  fadeMs: 600,
+  /** 결과 화면에 들어갈 때 게임 곡을 줄여 끝내는 시간 */
+  resultFadeMs: 900,
+  /** 일시정지 중 볼륨 배율 */
+  pauseDuck: 0.35,
+  /** ♪ 버튼은 스피커 버튼 왼쪽에 이만큼 떨어져 놓인다 (원 중심 사이, px) */
+  buttonGap: 92,
+} as const;

@@ -27,3 +27,30 @@ for f in *.ogg; do afconvert -f m4af -d aac "$f" "${f%.ogg}.m4a"; done
 ```
 
 `.ogg`를 바꾸면 이 명령으로 `.m4a`도 다시 만든다. ffmpeg가 있으면 `ffmpeg -i swap.ogg -c:a aac swap.m4a`도 된다.
+
+## 배경 음악 (W4-13, `music/`)
+
+모두 OpenGameArt의 **CC0** 곡이다. 원본은 저장소에 넣지 않고 변환한 것만 둔다.
+
+| 파일 | 곡 · 작가 | 원본 | 쓰는 곳 |
+|---|---|---|---|
+| `music/menu.{ogg,m4a}` | Happy Clappy Loop · OwlishMedia | `HappyClappyLoop.wav` · https://opengameart.org/content/happy-clappy-loop | 메뉴·스테이지 지도 |
+| `music/timeattack.{ogg,m4a}` | Happy Vibes · Ruskerdax | `ruskerdax_-_happy_vibes.mp3` · https://opengameart.org/node/160228 | 경쟁 60초 |
+| `music/story.{ogg,m4a}` | Two Simple Game Music Loops 중 게임 곡 · qubodup | `levelmusicloop-tigrun.wav` · https://opengameart.org/node/174263 | 스토리 |
+
+변환 (모노 96kbps, 44.1kHz):
+
+```sh
+# 1) 모노 16비트 WAV로 풀기 (afconvert는 macOS 내장)
+afconvert -f WAVE -d LEI16@44100 -c 1 HappyClappyLoop.wav menu.wav
+afconvert -f WAVE -d LEI16@44100 -c 1 ruskerdax_-_happy_vibes.mp3 timeattack.wav
+afconvert -f WAVE -d LEI16@44100 -c 1 levelmusicloop-tigrun.wav story.wav
+# 2) mp3만 앞뒤 무음 자르기: |샘플| <= 8 인 앞 987·뒤 126 샘플 (약 22ms·3ms). 두 wav 루프는 무음이 없어 그대로
+# 3) 인코딩: ogg는 oggenc(brew install vorbis-tools), m4a는 afconvert
+oggenc -b 96 -o menu.ogg menu.wav
+afconvert -f m4af -d aac -b 96000 menu.wav menu.m4a
+```
+
+- macOS `afconvert`는 Ogg Vorbis를 읽을 수만 있고 쓰지 못해서 `.ogg`는 `oggenc`로 만든다
+- 반복 이음새: 디코드한 길이가 두 형식 모두 원본 WAV와 샘플 단위로 같다(menu 769,132 / timeattack 2,000,878 / story 1,820,904, Chrome에서 확인). AAC 인코더가 앞에 넣는 무음(priming)은 `afconvert`가 파일에 길이를 적어 두어 디코더가 잘라 낸다
+- 크기: ogg 합계 약 1.0MB, m4a 약 1.3MB (기기는 한 형식만 받는다)
