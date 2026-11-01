@@ -444,6 +444,18 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - Android 휴대폰 Chrome에서도 같은 주소 → 메뉴(⋮) → 홈 화면에 추가 로 쓸 수 있다
 - 배포가 실패하면 GitHub → Actions 탭에서 빨간 X를 눌러 어느 단계(lint·test·build)에서 멈췄는지 본다
 
+### W4-13 배경 음악
+1. https://ddoobyddooby.github.io/ddooby-pang/ (또는 `npm run dev`) → 아무 곳이나 한 번 탭하면 피아노 메뉴 곡
+2. [스토리]로 지도에 가도 곡이 끊기지 않고 이어진다. 1번을 누르면 스토리 곡으로 바뀐다
+3. ❚❚ → 음악이 작아진다. [계속] → 원래대로. [다시하기] → 곡이 이어진다
+4. 판이 끝나면 음악이 줄어들며 꺼지고 클리어·실패 소리만 난다. 메뉴로 가면 메뉴 곡
+5. 경쟁 60초는 레트로 신스 곡
+6. 오른쪽 위 ♪(음악)와 스피커(효과음)는 따로 켜고 끈다. 새로고침해도 유지
+7. 곡이 한 바퀴 돌 때(메뉴 17초, 스토리 41초, 경쟁 45초) 툭 끊기지 않는지, 특히 아이폰에서
+8. Android 앱: 홈으로 나갔다 오면 음악이 멈춰 있다가 이어지는지 (일시정지 창이 떠 있다)
+- 소리 크기는 `src/config.ts`의 `MUSIC.volume`(0.35)과 `pauseDuck`
+- 곡 출처와 변환 방법: `public/audio/CREDITS.md`. ogg를 만들려면 `brew install vorbis-tools`의 `oggenc`가 필요하다 (macOS `afconvert`는 m4a만 만든다)
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -774,6 +786,14 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **workflow 권한**: `.github/workflows/` 파일을 push하려면 로그인 토큰에 `workflow` 권한이 있어야 한다. 남의 코드가 몰래 자동화를 바꾸지 못하게 하려는 것 (`gh auth refresh -s workflow`)
 - **web manifest와 홈 화면에 추가**: `manifest.webmanifest`(이름, 아이콘, `display: standalone`, `orientation`)는 Android Chrome이 읽고, iOS Safari는 `apple-touch-icon`과 `apple-mobile-web-app-*` meta를 읽는다. `start_url`·`scope`를 `./`로 두면 하위 경로(`/ddooby-pang/`)에서도 맞다 (vite `base: './'`와 같은 이유) (`index.html`, `public/manifest.webmanifest`, `public/icons/`)
 - **오디오 형식 대체**: 브라우저마다 읽는 형식이 다르다(iOS Safari는 Ogg Vorbis를 못 읽을 수 있다). 같은 소리를 ogg·m4a 두 개로 두고 로더에 URL 배열을 넘기면 Phaser가 `canPlayType`으로 재생할 수 있는 첫 형식을 고른다. 배열 순서가 우선순위 (`src/config.ts` `SOUND.formats`, `src/scenes/BootScene.ts`, `public/audio/CREDITS.md`)
+
+### W4-13 배경 음악
+- **끊김 없는 반복(loop)**: `loop: true`는 디코드한 소리를 끝에서 처음으로 바로 이어 튼다. 파일 앞뒤에 무음이 있으면 그대로 틈이 된다. mp3는 인코더가 앞에 무음을 넣어서 잘라 냈다. AAC(m4a)도 앞에 무음(priming)을 넣지만 파일에 길이를 적어 두어 디코더가 잘라 낸다 (`public/audio/CREDITS.md`)
+- **씬과 상관없는 페이드**: 씬 트윈은 씬이 끝나면 같이 사라진다. 곡을 바꾸는 도중 씬이 바뀌어도 끊기지 않게 `game.events`의 `step`에서 볼륨을 직접 조금씩 바꾼다. 음악 객체는 게임에 하나(`Music.of(game)`)라 씬이 바뀌어도 남는다 (`src/view/Music.ts`)
+- **규칙은 순수 함수로**: "이 화면에선 어떤 곡?"(`musicFor`), "지금 곡 → 다음 곡이면 유지·바꾸기·멈추기?"(`musicTransition`)를 Phaser 없이 테스트한다 (`src/scenes/musicRules.ts`, `src/view/Music.ts`)
+- **지연 로드**: 첫 화면에 필요한 메뉴 곡만 Boot에서 기다리고, 나머지는 메뉴가 뜬 뒤 씬 로더로 읽는다(`load.audio` → `load.start()`). `filecomplete` 이벤트에서 "그 곡이 아직 필요하면" 튼다
+- **설정 추가와 옛 저장값**: `settings.music`을 `defaultSave`에 넣고 `parseSave`는 boolean일 때만 덮어쓴다. 옛 저장값에는 없으니 자동으로 켜짐. 데이터 모양이 늘기만 해서 `version`은 1 그대로 (`src/storage/progress.ts`)
+- **효과음과 음악 분리**: Phaser `sound.mute`는 모든 소리를 끈다. 그래서 효과음은 `Sfx`가 재생을 건너뛰는 방식으로, 음악은 `Music.setEnabled`로 따로 끈다
 - **실패하면 시작하지 않기**: 데이터가 틀린 채로 게임이 돌면 원인을 찾기 어렵다. Boot에서 한 번 읽고, 틀리면 화면에 바로 보여준다 (`src/scenes/BootScene.ts`, `src/scenes/stageRegistry.ts`)
 
 ### W3-03 스토리 스테이지 1~10
