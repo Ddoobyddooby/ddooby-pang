@@ -50,6 +50,7 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 4. **실제 휴대폰으로 보기**: PC와 같은 Wi-Fi에 연결한 뒤 휴대폰 브라우저로 `Network` 주소를 연다
    - 밖에서는 Tailscale로: PC와 휴대폰을 같은 Tailscale에 연결하고 `http://<PC 이름>.<tailnet>.ts.net:5173/` 또는 `100.x.x.x:5173`을 연다. `.ts.net` 주소는 `vite.config.ts`의 `allowedHosts`에 넣어 두어서 열린다
 5. 에러가 나면 개발자도구의 **Console** 탭을 확인한다
+6. **배포된 주소 (아이폰 등)**: https://ddoobyddooby.github.io/ddooby-pang/ — main에 push하면 1~2분 뒤 자동으로 새로 배포된다. 진행 상황은 GitHub 저장소 → Actions 탭
 
 **URL 옵션 (개발용)**
 
@@ -433,6 +434,16 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 저장된 내용 직접 보기: `adb shell run-as com.ddooby.pang cat shared_prefs/CapacitorStorage.xml`
 - 웹(`npm run dev`)은 지금까지처럼 브라우저 localStorage에 저장한다
 
+### W4-12 아이폰용 웹 배포
+1. 아이폰 Safari로 https://ddoobyddooby.github.io/ddooby-pang/ 열기
+2. 메뉴가 뜨면 아무 곳이나 한 번 탭 → 버튼·블록 효과음이 나는지 (옆면 무음 스위치가 켜져 있으면 안 들린다)
+3. 아래 공유 버튼(□↑) → **홈 화면에 추가** → 이름 `Ddooby-Pang` → 추가
+4. 홈 화면의 분홍 말랑이 아이콘으로 실행 → 주소창 없이 전체 화면
+5. 경쟁 한 판 → 앱을 완전히 끄고 다시 열어 최고 점수가 남아 있는지
+- 홈 화면 앱과 Safari 탭은 기록이 따로다 (홈 화면 앱은 처음부터 시작)
+- Android 휴대폰 Chrome에서도 같은 주소 → 메뉴(⋮) → 홈 화면에 추가 로 쓸 수 있다
+- 배포가 실패하면 GitHub → Actions 탭에서 빨간 X를 눌러 어느 단계(lint·test·build)에서 멈췄는지 본다
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -755,6 +766,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 ### W3-02 스테이지 파일 읽기
 - **에러를 감싸서 다시 던지기**: 네트워크 실패, 404, 깨진 JSON, 검증 실패를 모두 `stages/story.json: 이유` 형태로 바꾼다. 원래 에러는 `cause`에 남겨서 추적할 수 있다 (`src/data/stageLoader.ts`)
 - **의존성 주입으로 테스트**: `loadStages(fetchFn)`처럼 `fetch`를 인자로 받으면 테스트에서 가짜 fetch로 404·깨진 응답을 마음대로 만든다 (`tests/data/stageLoader.test.ts`)
+
+### W4-12 아이폰용 웹 배포
+- **GitHub Actions + Pages**: 워크플로는 `on`(언제), `jobs`(무엇을), `permissions`(토큰 권한)로 이루어진다. build job이 `dist/`를 artifact로 올리고 deploy job이 `github-pages` 환경에 배포한다. 저장소 설정의 Pages를 "workflow" 방식으로 켜야 이 artifact가 사이트가 된다. lint·test가 실패하면 배포하지 않는다. `concurrency`로 배포가 겹치지 않게 한다 (`.github/workflows/pages.yml`)
+- **workflow 권한**: `.github/workflows/` 파일을 push하려면 로그인 토큰에 `workflow` 권한이 있어야 한다. 남의 코드가 몰래 자동화를 바꾸지 못하게 하려는 것 (`gh auth refresh -s workflow`)
+- **web manifest와 홈 화면에 추가**: `manifest.webmanifest`(이름, 아이콘, `display: standalone`, `orientation`)는 Android Chrome이 읽고, iOS Safari는 `apple-touch-icon`과 `apple-mobile-web-app-*` meta를 읽는다. `start_url`·`scope`를 `./`로 두면 하위 경로(`/ddooby-pang/`)에서도 맞다 (vite `base: './'`와 같은 이유) (`index.html`, `public/manifest.webmanifest`, `public/icons/`)
+- **오디오 형식 대체**: 브라우저마다 읽는 형식이 다르다(iOS Safari는 Ogg Vorbis를 못 읽을 수 있다). 같은 소리를 ogg·m4a 두 개로 두고 로더에 URL 배열을 넘기면 Phaser가 `canPlayType`으로 재생할 수 있는 첫 형식을 고른다. 배열 순서가 우선순위 (`src/config.ts` `SOUND.formats`, `src/scenes/BootScene.ts`, `public/audio/CREDITS.md`)
 - **실패하면 시작하지 않기**: 데이터가 틀린 채로 게임이 돌면 원인을 찾기 어렵다. Boot에서 한 번 읽고, 틀리면 화면에 바로 보여준다 (`src/scenes/BootScene.ts`, `src/scenes/stageRegistry.ts`)
 
 ### W3-03 스토리 스테이지 1~10
