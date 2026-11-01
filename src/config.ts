@@ -357,6 +357,30 @@ export const PAUSE = {
   sound: { dy: 120, gap: 100 },
 } as const;
 
+/**
+ * 스토리 시작 미션 카드 (PLAN 6.10). 보드 가운데에 통통 나타남 → 머묾 → 작아지며 정보 패널로 날아감.
+ * 시간 ms, 크기 px. 누르면 머묾을 건너뛴다
+ */
+export const MISSION_CARD = {
+  appearMs: 420,
+  holdMs: 1600,
+  flyMs: 520,
+  /** 나타날 때 이 크기에서 1로 (Back.easeOut이라 살짝 넘쳤다가 돌아온다) */
+  startScale: 0.3,
+  /** 날아가 패널 가운데에 닿을 때 크기와 투명도 */
+  endScale: 0.2,
+  endAlpha: 0,
+  panel: { width: 540, alpha: 0.96, padTop: 40, padBottom: 40 },
+  title: { fontSize: 64, strokeThickness: 10, h: 84 },
+  /** 미션 줄: 수집은 블록 그림 + 글자, 줄 묶음은 가로 가운데 */
+  goal: { fontSize: 48, h: 72, icon: { size: 60, gap: 14 } },
+  moves: { fontSize: 34, h: 48 },
+  /** 제목 아래, 이동 줄 위 여백 */
+  gap: 12,
+  /** 나타날 때 효과음 (새 파일 없이 기존 것) */
+  sound: 'star',
+} as const;
+
 /** 공통 웨이퍼 버튼 (view/ui/Button.ts). 크기·글자는 쓰는 곳에서 정한다 */
 export const UI = {
   button: {

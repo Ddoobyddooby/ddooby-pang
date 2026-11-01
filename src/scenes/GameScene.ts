@@ -10,12 +10,13 @@
 //   ?specials   (개발 모드) 시작 보드에 특수 블록 5종을 하나씩 놓는다
 
 import Phaser from 'phaser';
-import { GAME, HINT, MAP, VIEW } from '../config';
+import { GAME, HINT, HUD, MAP, MISSION_CARD, VIEW } from '../config';
 import { createInitialState, resolveSwap } from '../core/engine';
 import { findHint } from '../core/moves';
 import type { GameState, Pos, SpecialKind } from '../core/types';
 import { BoardView, type BoardViewHooks } from '../view/BoardView';
 import { Hud } from '../view/Hud';
+import { MissionCard } from '../view/MissionCard';
 import { Music } from '../view/Music';
 import { Sfx, voiceFor } from '../view/Sfx';
 import { StoryPanel } from '../view/StoryPanel';
@@ -23,7 +24,8 @@ import { TimePanel } from '../view/TimePanel';
 import { FxDirector } from '../view/fx/FxDirector';
 import { HintTimer } from '../view/hintTimer';
 import { BoardInput } from '../view/input';
-import { createLayout, screenLayout } from '../view/layout';
+import { createLayout, screenLayout, type Layout, type ScreenLayout } from '../view/layout';
+import { missionCardLines } from '../view/missionCardLines';
 import { addHills } from '../view/theme/Hills';
 import { addRoundButton, drawPauseIcon } from '../view/ui/RoundButton';
 import { applyModeResult } from '../storage/progress';
@@ -32,6 +34,7 @@ import { musicFor } from './musicRules';
 import { canPause } from './pauseRules';
 import type { GameData, PauseData } from './sceneData';
 import { getStages } from './stageRegistry';
+import type { StageDef } from '../data/stageSchema';
 import type { GameMode } from '../modes/GameMode';
 import { StoryMode } from '../modes/StoryMode';
 import { TimeAttackMode } from '../modes/TimeAttackMode';
@@ -78,6 +81,8 @@ export class GameScene extends Phaser.Scene {
   private hintTimer!: HintTimer;
   private hinting = false;
   private demo = false;
+  /** 스토리 시작 미션 카드 (떠 있는 동안만) */
+  private missionCard?: MissionCard;
 
   constructor() {
     super('Game');
@@ -104,6 +109,7 @@ export class GameScene extends Phaser.Scene {
     this.moves = 0;
     this.busy = false;
     this.finished = false;
+    this.missionCard = undefined; // 카드 중에 [다시하기]로 끝났으면 남아 있다
     if (stage) {
       this.storyMode = new StoryMode(stage); // 스토리는 시간 제한이 없다
       this.mode = this.storyMode;
@@ -175,6 +181,8 @@ export class GameScene extends Phaser.Scene {
     this.hintTimer = new HintTimer(import.meta.env.DEV && hintMs > 0 ? hintMs : HINT.idleMs);
     // 터치·드래그 시작만으로도 힌트를 끄고 다시 잰다 (보드 밖 터치 포함)
     this.input.on('pointerdown', () => this.clearHint());
+    // 스토리는 미션 카드부터 (PLAN 6.10). 카드가 사라진 뒤에 보드 입력과 힌트 대기가 시작된다
+    if (stage) this.showMissionCard(stage, layout, screen);
 
     // 오른쪽 위 ❚❚ (메뉴·지도의 스피커 버튼과 같은 모양·자리, 높이는 타이틀 줄)
     addRoundButton(this, GAME.width - MAP.back.x, VIEW.screen.titleY, drawPauseIcon, () => {
@@ -216,6 +224,30 @@ export class GameScene extends Phaser.Scene {
         if (special) fx.previewSpecial(special);
       });
     }
+  }
+
+  /** 카드가 떠 있는 동안 보드를 막는다. 아무 데나 누르면 머묾을 건너뛰고, 그 터치는 블록 입력으로 쓰지 않는다
+   * (막힌 채로 눌렸으니 BoardInput이 시작점을 잡지 않는다). ❚❚ 같은 버튼 위를 누르면 건너뛰지 않는다 */
+  private showMissionCard(stage: StageDef, layout: Layout, screen: ScreenLayout): void {
+    this.setBusy(true);
+    const { panel } = screen;
+    const onDown = (_pointer: Phaser.Input.Pointer, over: readonly unknown[]) => {
+      if (over.length === 0) this.missionCard?.skip();
+    };
+    this.missionCard = new MissionCard(
+      this,
+      missionCardLines(stage, HUD.story.maxGoalLines),
+      { x: layout.x + layout.width / 2, y: layout.y + layout.height / 2 },
+      { x: panel.x + panel.w / 2, y: panel.y + panel.h / 2 },
+      () => {
+        this.missionCard = undefined;
+        this.input.off('pointerdown', onDown);
+        this.setBusy(false);
+        this.clearHint();
+      },
+    );
+    this.input.on('pointerdown', onDown);
+    this.sfx.play(MISSION_CARD.sound);
   }
 
   /**
@@ -358,6 +390,8 @@ export class GameScene extends Phaser.Scene {
       /** 지금 깜빡이는 힌트 두 칸 (없으면 null) */
       hint: () => (this.hinting ? findHint(this.state.board) : null),
       seed: this.seed,
+      /** 미션 카드 단계 (없으면 null) */
+      missionCard: () => this.missionCard?.state ?? null,
     };
   }
 }
