@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 창 배경 (W4-14): 위 하늘(THEME.sky.top) → 아래 땅(THEME.hills.front). WebView가 시스템 바 크기만큼 안쪽에
+     그려질 때(WebView 140 미만) 상태바·아래 바 뒤로 이 색이 보여서 화면과 이어진다 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:startColor="#BFE4FF"
+        android:endColor="#FFF3D9" />
+</shape>

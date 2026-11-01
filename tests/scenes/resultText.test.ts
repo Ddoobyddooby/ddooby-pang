@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { formatScore, previewResult, resultView } from '../../src/scenes/resultText';
+import { RESULT } from '../../src/config';
+import { formatScore, previewResult, resultLayout, resultView } from '../../src/scenes/resultText';
 import type { ModeResult } from '../../src/modes/GameMode';
 
 describe('scenes/resultText', () => {
@@ -130,5 +131,63 @@ describe('scenes/resultText: resultView (설계 4절 표)', () => {
       resultView(story({ stageId: 10, cleared: false, stars: 0 }), { stageCount: 10, unlocked: 10 })
         .allClear,
     ).toBe(false);
+  });
+});
+
+describe('resultLayout (W4-14)', () => {
+  const ta = resultView(
+    { kind: 'timeattack', score: 1200, bestScore: 900, newBest: true },
+    { stageCount: 10, unlocked: 1 },
+  );
+  const clear = resultView(
+    { kind: 'story', stageId: 2, cleared: true, stars: 3, score: 2400, bonus: 300 },
+    { stageCount: 10, unlocked: 3 },
+  );
+  const fail = resultView(
+    { kind: 'story', stageId: 2, cleared: false, stars: 0, score: 500, bonus: 0 },
+    { stageCount: 10, unlocked: 2 },
+  );
+
+  it.each([
+    ['경쟁', ta],
+    ['스토리 클리어', clear],
+    ['실패', fail],
+  ])('%s: 묶음이 화면 가운데에 놓인다', (_name, view) => {
+    const l = resultLayout(view);
+    expect(l.top + l.bottom).toBeCloseTo(0);
+  });
+
+  it.each([
+    ['경쟁', ta],
+    ['스토리 클리어', clear],
+    ['실패', fail],
+  ])('%s: 줄 사이는 RESULT.layout 간격이고 겹치지 않는다', (_name, view) => {
+    const { gap, scoreGap, h } = RESULT.layout;
+    const l = resultLayout(view);
+    const rows = Object.entries(l.rows).sort((a, b) => a[1] - b[1]) as [keyof typeof h, number][];
+    for (let i = 1; i < rows.length; i++) {
+      const [prev, py] = rows[i - 1]!;
+      const [cur, y] = rows[i]!;
+      const space = y - h[cur] / 2 - (py + h[prev] / 2);
+      expect(space).toBeCloseTo(cur === 'score' ? scoreGap : gap);
+    }
+    // 마지막 줄과 첫 버튼 사이
+    const [last, ly] = rows[rows.length - 1]!;
+    expect(l.buttons[0]! - RESULT.button.height / 2 - (ly + h[last] / 2)).toBeCloseTo(
+      RESULT.layout.beforeButtons,
+    );
+  });
+
+  it('경쟁은 별 줄이 없고, 최고 점수 줄 아래에 배지가 gap만큼 떨어진다', () => {
+    const l = resultLayout(ta);
+    expect(l.rows.stars).toBeUndefined();
+    const { h, gap } = RESULT.layout;
+    expect(l.rows.badge! - h.badge / 2 - (l.rows.line! + h.line / 2)).toBeCloseTo(gap);
+  });
+
+  it('버튼 수만큼 위치가 있고 step 간격', () => {
+    const l = resultLayout(clear);
+    expect(l.buttons).toHaveLength(clear.buttons.length);
+    expect(l.buttons[1]! - l.buttons[0]!).toBe(RESULT.button.step);
   });
 });

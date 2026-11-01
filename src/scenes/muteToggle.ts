@@ -9,8 +9,8 @@ import { addMusicButton } from '../view/ui/MusicButton';
 import { addMuteButton } from '../view/ui/MuteButton';
 import { commitSave, getSave } from './saveRegistry';
 
-/** y를 주지 않으면 메뉴·지도 자리(MAP.back.y) */
-export function addSceneMuteButton(scene: Phaser.Scene, y?: number): void {
+/** 자리를 주지 않으면 메뉴·지도의 오른쪽 위 (MAP.back과 대칭) */
+export function addSceneMuteButton(scene: Phaser.Scene, y?: number, x?: number): void {
   const sfx = new Sfx(scene);
   addMuteButton(
     scene,
@@ -21,11 +21,12 @@ export function addSceneMuteButton(scene: Phaser.Scene, y?: number): void {
       sfx.play('button'); // 소리를 켰을 때만 들린다
     },
     y,
+    x,
   );
 }
 
-/** ♪: 스피커 왼쪽. y를 주지 않으면 메뉴·지도 자리 */
-export function addSceneMusicButton(scene: Phaser.Scene, y?: number): void {
+/** ♪: 자리를 주지 않으면 메뉴·지도의 스피커 왼쪽 */
+export function addSceneMusicButton(scene: Phaser.Scene, y?: number, x?: number): void {
   const sfx = new Sfx(scene);
   addMusicButton(
     scene,
@@ -36,5 +37,6 @@ export function addSceneMusicButton(scene: Phaser.Scene, y?: number): void {
       sfx.play('button');
     },
     y,
+    x,
   );
 }

@@ -84,3 +84,46 @@ export function resultView(
     buttons: hasNext ? ['next', 'retry', 'map'] : ['retry', 'map'],
   };
 }
+
+export type ResultRow = 'title' | 'stars' | 'scoreLabel' | 'score' | 'line' | 'badge' | 'allClear';
+
+export interface ResultLayout {
+  /** 있는 줄의 가운데 y (화면 가운데 기준) */
+  rows: Partial<Record<ResultRow, number>>;
+  /** 버튼 가운데 y, 위에서부터 */
+  buttons: number[];
+  /** 묶음의 맨 위·맨 아래 (판을 그릴 때) */
+  top: number;
+  bottom: number;
+}
+
+/**
+ * 결과 화면 줄 배치 (W4-14). 있는 줄만 RESULT.layout 간격으로 쌓고, 묶음 전체를 화면 가운데(0)에 맞춘다.
+ * 그래서 경쟁(별 없음)·스토리 클리어·실패 어느 쪽도 한쪽만 비어 보이지 않는다
+ */
+export function resultLayout(view: ResultView): ResultLayout {
+  const { gap, scoreGap, beforeButtons, h } = RESULT.layout;
+  const b = RESULT.button;
+  const present: ResultRow[] = ['title'];
+  if (view.stars !== null) present.push('stars');
+  present.push('scoreLabel', 'score');
+  if (view.best ?? view.bonus) present.push('line');
+  if (view.newBest) present.push('badge');
+  if (view.allClear) present.push('allClear');
+
+  // 위(0)에서부터 쌓아 가운데 y를 적고, 나중에 전체 높이의 절반만큼 올린다
+  const rows: Partial<Record<ResultRow, number>> = {};
+  let y = 0;
+  present.forEach((row, i) => {
+    if (i > 0) y += row === 'score' ? scoreGap : gap;
+    rows[row] = y + h[row] / 2;
+    y += h[row];
+  });
+  y += beforeButtons;
+  const buttons = view.buttons.map((_, i) => y + b.height / 2 + i * b.step);
+  const total = y + (view.buttons.length - 1) * b.step + b.height;
+
+  const shift = -total / 2;
+  for (const row of present) rows[row] = rows[row]! + shift;
+  return { rows, buttons: buttons.map((v) => v + shift), top: shift, bottom: shift + total };
+}

@@ -10,14 +10,14 @@ export interface ScorePopupStyle {
 
 type PraiseColorKey = keyof typeof THEME.praiseColors;
 
-/** 단계 1은 제목 분홍, 2 이상은 칭찬 문구와 같은 색. 단계가 오를수록 커지고 마지막 배율에서 멈춘다 */
+/** 단계 1은 갈색(THEME.popupBase), 2 이상은 칭찬 문구와 같은 색. 단계가 오를수록 커지고 마지막 배율에서 멈춘다 */
 export function scorePopupStyle(delta: number, level: number): ScorePopupStyle {
   const scales = FX.scorePopup.scaleByLevel;
   const lv = Math.max(1, Math.round(level));
   const key = Math.min(lv, FX.maxLevel) as PraiseColorKey;
   return {
     text: `+${formatScore(delta)}`,
-    color: key in THEME.praiseColors ? THEME.praiseColors[key] : THEME.title.fill,
+    color: key in THEME.praiseColors ? THEME.praiseColors[key] : THEME.popupBase,
     scale: scales[Math.min(lv, scales.length) - 1] ?? 1,
   };
 }

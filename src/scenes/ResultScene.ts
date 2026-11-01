@@ -11,7 +11,13 @@ import { Background } from '../view/theme/Background';
 import { addButton, type PressLock } from '../view/ui/Button';
 import { drawCreamPanel } from '../view/ui/Panel';
 import { musicFor } from './musicRules';
-import { formatScore, resultView, type ResultButton } from './resultText';
+import {
+  formatScore,
+  resultLayout,
+  resultView,
+  type ResultButton,
+  type ResultRow,
+} from './resultText';
 import { getSave } from './saveRegistry';
 import type { GameData, ResultData } from './sceneData';
 import { getStages } from './stageRegistry';
@@ -50,46 +56,44 @@ export class ResultScene extends Phaser.Scene {
     this.sfx.play(this.result.kind === 'story' && !this.result.cleared ? 'fail' : 'clear');
 
     new Background(this);
-    const b = RESULT.button;
-    const lastButtonY = cy + b.dy + (view.buttons.length - 1) * b.step;
+    // 있는 줄만 고른 간격으로 쌓아 화면 가운데에 (resultLayout)
+    const layout = resultLayout(view);
+    const at = (row: ResultRow) => cy + (layout.rows[row] ?? 0);
     drawCreamPanel(
       this,
       cx,
-      cy + RESULT.title.dy - RESULT.panel.padTop,
-      lastButtonY + b.height / 2 + RESULT.panel.padBottom,
+      cy + layout.top - RESULT.panel.padTop,
+      cy + layout.bottom + RESULT.panel.padBottom,
       RESULT.panel,
     );
 
+    this.label(cx, at('title'), view.title, RESULT.title.fontSize, THEME.title.fill).setStroke(
+      THEME.title.stroke,
+      RESULT.title.strokeThickness,
+    );
+    if (view.stars !== null) this.addStars(cx, at('stars'), view.stars);
     this.label(
       cx,
-      cy + RESULT.title.dy,
-      view.title,
-      RESULT.title.fontSize,
-      THEME.title.fill,
-    ).setStroke(THEME.title.stroke, RESULT.title.strokeThickness);
-    if (view.stars !== null) this.addStars(cx, cy + RESULT.stars.dy, view.stars);
-    this.label(
-      cx,
-      cy + RESULT.scoreLabel.dy,
+      at('scoreLabel'),
       RESULT.text.scoreLabel,
       RESULT.scoreLabel.fontSize,
       THEME.info.text,
     );
     this.label(
       cx,
-      cy + RESULT.score.dy,
+      at('score'),
       formatScore(this.result.score),
       RESULT.score.fontSize,
       THEME.title.fill,
     ).setStroke(THEME.title.stroke, RESULT.score.strokeThickness);
 
     const line = view.best ?? view.bonus;
-    if (line) this.label(cx, cy + RESULT.line.dy, line, RESULT.line.fontSize, THEME.info.text);
-    if (view.newBest) this.addBadge(cx, cy + RESULT.badge.dy);
+    if (line) this.label(cx, at('line'), line, RESULT.line.fontSize, THEME.info.text);
+    if (view.newBest) this.addBadge(cx, at('badge'));
     if (view.allClear) {
       this.label(
         cx,
-        cy + RESULT.allClear.dy,
+        at('allClear'),
         RESULT.text.allClear,
         RESULT.allClear.fontSize,
         THEME.title.fill,
@@ -97,11 +101,12 @@ export class ResultScene extends Phaser.Scene {
     }
 
     const lock: PressLock = { pressed: false };
+    const b = RESULT.button;
     view.buttons.forEach((id, i) => {
       addButton(
         this,
         cx,
-        cy + b.dy + i * b.step,
+        cy + (layout.buttons[i] ?? 0),
         { ...b, label: RESULT.buttons[id] },
         () => this.go(id),
         lock,

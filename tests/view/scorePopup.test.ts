@@ -8,8 +8,9 @@ describe('scorePopupStyle', () => {
     expect(scorePopupStyle(1350, 3).text).toBe('+1,350');
   });
 
-  it('단계 1은 제목 분홍, 2 이상은 칭찬 문구 색', () => {
-    expect(scorePopupStyle(30, 1).color).toBe(THEME.title.fill);
+  it('단계 1은 갈색(2단계 분홍과 다름), 2 이상은 칭찬 문구 색', () => {
+    expect(scorePopupStyle(30, 1).color).toBe(THEME.popupBase);
+    expect(THEME.popupBase).not.toBe(THEME.praiseColors[2]);
     expect(scorePopupStyle(45, 2).color).toBe(THEME.praiseColors[2]);
     expect(scorePopupStyle(60, 3).color).toBe(THEME.praiseColors[3]);
     expect(scorePopupStyle(90, 5).color).toBe(THEME.praiseColors[5]);

@@ -2,7 +2,7 @@
 // 반투명 덮개가 아래 입력을 삼킨다. 나가기·다시하기는 결과가 아니므로 저장하지 않는다.
 
 import Phaser from 'phaser';
-import { GAME, PAUSE, THEME, VIEW } from '../config';
+import { GAME, MAP, PAUSE, THEME } from '../config';
 import { addButton, type PressLock } from '../view/ui/Button';
 import { drawCreamPanel } from '../view/ui/Panel';
 import { addSceneMusicButton, addSceneMuteButton } from './muteToggle';
@@ -34,11 +34,12 @@ export class PauseScene extends Phaser.Scene {
     const buttons = pauseButtons(this.from);
     const b = PAUSE.button;
     const lastButtonY = cy + b.dy + (buttons.length - 1) * b.step;
+    const soundY = lastButtonY + PAUSE.sound.dy;
     drawCreamPanel(
       this,
       cx,
       cy + PAUSE.title.dy - PAUSE.panel.padTop,
-      lastButtonY + b.height / 2 + PAUSE.panel.padBottom,
+      soundY + MAP.back.r + PAUSE.panel.padBottom,
       PAUSE.panel,
     );
     this.add
@@ -62,9 +63,9 @@ export class PauseScene extends Phaser.Scene {
         lock,
       );
     });
-    // 게임 화면의 ❚❚ 자리에 음소거 버튼
-    addSceneMuteButton(this, VIEW.screen.titleY);
-    addSceneMusicButton(this, VIEW.screen.titleY);
+    // 판 안 맨 아래 줄 가운데: ♪(음악) 왼쪽, 스피커(효과음) 오른쪽
+    addSceneMusicButton(this, soundY, cx - PAUSE.sound.gap / 2);
+    addSceneMuteButton(this, soundY, cx + PAUSE.sound.gap / 2);
   }
 
   /** [계속]과 Android 뒤로 가기(backButton.ts) */

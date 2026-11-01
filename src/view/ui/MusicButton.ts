@@ -1,4 +1,4 @@
-// 동그란 ♪ 버튼 (PLAN 6.7): 배경 음악 켜고 끄기. 스피커 버튼(효과음) 왼쪽에 MUSIC.buttonGap만큼 떨어져 놓인다.
+// 동그란 ♪ 버튼 (PLAN 6.7): 배경 음악 켜고 끄기. 기본 자리는 스피커 버튼(효과음) 왼쪽 MUSIC.buttonGap (메뉴·지도).
 // 저장은 모른다: 누르면 onToggle(새 값)을 부른다.
 
 import type Phaser from 'phaser';
@@ -10,9 +10,9 @@ export function addMusicButton(
   on: boolean,
   onToggle: (on: boolean) => void,
   y: number = MAP.back.y,
+  x: number = GAME.width - MAP.back.x - MUSIC.buttonGap,
 ): Phaser.GameObjects.Container {
   let current = on;
-  const x = GAME.width - MAP.back.x - MUSIC.buttonGap;
   const button = addRoundButton(scene, x, y, note(current), () => {
     current = !current;
     button.redraw(note(current));

@@ -10,9 +10,10 @@ export function addMuteButton(
   muted: boolean,
   onToggle: (muted: boolean) => void,
   y: number = MAP.back.y,
+  x: number = GAME.width - MAP.back.x,
 ): Phaser.GameObjects.Container {
   let current = muted;
-  const button = addRoundButton(scene, GAME.width - MAP.back.x, y, speaker(current), () => {
+  const button = addRoundButton(scene, x, y, speaker(current), () => {
     current = !current;
     button.redraw(speaker(current));
     onToggle(current);

@@ -10,6 +10,7 @@ import { FX_TEX, type Face } from '../theme/textures';
 import { fxLevel, particleCount } from './fxLevels';
 import type { RemovedCell } from './matchInfo';
 import { clampCenterX, scorePopupStyle } from './scorePopup';
+import { pickShake, type ShakeRequest, type ShakeState } from './shake';
 import { specialFxPlan } from './specialFx';
 
 const WHITE = 0xffffff;
@@ -25,6 +26,8 @@ export class FxDirector {
   /** 웃음 타이머는 하나만 둔다. 새 연쇄가 오면 다시 잰다 */
   private happyTimer?: Phaser.Time.TimerEvent;
   private praiseText?: Phaser.GameObjects.Text;
+  /** 지금 흔들림 (센 쪽이 이기게 pickShake로 고른다) */
+  private shaking: ShakeState | null = null;
   /** 칸("r,c")마다 떠 있는 점수 팝업 수. 겹치면 그만큼 위에 띄운다 */
   private readonly popupsAt = new Map<string, number>();
 
@@ -88,7 +91,7 @@ export class FxDirector {
 
     if (info.praise && info.praiseColor)
       this.showPraise(info.praise, info.praiseScale, info.praiseColor);
-    if (info.shake) this.scene.cameras.main.shake(info.shake.duration, info.shake.intensity);
+    if (info.shake) this.shake(info.shake);
     if (info.happy) this.beHappy();
   }
 
@@ -98,8 +101,7 @@ export class FxDirector {
     const { x, y } = cellCenter(this.layout, at);
     for (const beam of plan.beams) this.beam(beam, x, y);
     if (plan.ring > 0) this.ring(x, y, plan.ring * this.layout.cell);
-    // 이미 흔들리는 중(연쇄 흔들림이나 먼저 발동한 특수)이면 Phaser가 무시한다 (force 없음)
-    if (plan.shake) this.scene.cameras.main.shake(plan.shake.duration, plan.shake.intensity);
+    if (plan.shake) this.shake(plan.shake);
     for (const p of plan.sparkles) {
       const c = cellCenter(this.layout, p);
       this.stars.explode(FX.special.starsPerSparkle, c.x, c.y);
@@ -144,6 +146,14 @@ export class FxDirector {
         else this.popupsAt.delete(key);
       },
     });
+  }
+
+  /** 연쇄·특수 흔들림 모두 여기로: 지금 것이 끝났거나 새 것이 더 세면 force로 다시 흔든다 */
+  private shake(request: ShakeRequest): void {
+    const next = pickShake(this.shaking, request, this.scene.time.now);
+    if (!next) return;
+    this.shaking = next;
+    this.scene.cameras.main.shake(request.duration, request.intensity, true);
   }
 
   /** 보드를 가로지르는 빛줄기가 가늘어지며 사라진다 */

@@ -43,7 +43,7 @@ export const SPECIAL = {
 export const HINT = {
   idleMs: 5000,
   /** 커지는 배율 (몸통 이미지 기준, 위치는 그대로) */
-  scale: 1.15,
+  scale: 1.25,
   /** 커지는 시간 = 작아지는 시간 (ms) */
   pulseMs: 260,
   /** 한 번 커졌다 작아진 뒤 쉬는 시간 (ms) */
@@ -138,6 +138,8 @@ export const THEME = {
     cupFrosting: 0xffb3d0,
     cherry: 0xff7b88,
   },
+  /** 점수 팝업 1단계 색: 2단계 분홍과 구별되고 크림 보드 위에서 또렷한 따뜻한 갈색 (W4-14, 분홍·갈색·민트·주황 비교) */
+  popupBase: '#a8692e',
   /** 칭찬 문구 색 (단계 2~5) */
   praiseColors: { 2: '#ff6b9a', 3: '#ff9a3c', 4: '#4d96ff', 5: '#b37cf0' },
 } as const;
@@ -304,11 +306,20 @@ export const RESULT = {
   },
   /** 버튼 글자 (resultView의 버튼 id → 글자) */
   buttons: { next: '다음 스테이지', retry: '다시하기', map: '지도', menu: '메뉴' },
-  panel: { width: 580, alpha: 0.92, padTop: 80, padBottom: 44 },
-  title: { dy: -330, fontSize: 96, strokeThickness: 12 },
+  panel: { width: 580, alpha: 0.92, padTop: 44, padBottom: 44 },
+  /**
+   * 줄 쌓기 (W4-14): 있는 줄만 위에서부터 gap 간격으로 쌓고 묶음 전체를 화면 가운데에 둔다 (resultLayout).
+   * h = 줄 높이(px). 점수 이름표와 점수는 한 덩어리라 scoreGap만 띄운다
+   */
+  layout: {
+    gap: 26,
+    scoreGap: 6,
+    beforeButtons: 44,
+    h: { title: 104, stars: 84, scoreLabel: 40, score: 104, line: 40, badge: 64, allClear: 44 },
+  },
+  title: { fontSize: 96, strokeThickness: 12 },
   /** 스토리 별 3칸: 받은 만큼 하나씩 차오른다 */
   stars: {
-    dy: -215,
     r: 42,
     gap: 104,
     empty: 0xffffff,
@@ -317,12 +328,11 @@ export const RESULT = {
     popScale: 1.3,
     popMs: 220,
   },
-  scoreLabel: { dy: -125, fontSize: 40 },
-  score: { dy: -45, fontSize: 108, strokeThickness: 10 },
+  scoreLabel: { fontSize: 40 },
+  score: { fontSize: 108, strokeThickness: 10 },
   /** 경쟁: 최고 점수 줄과 새 기록 배지 / 스토리: 보너스 줄과 전체 클리어 줄 */
-  line: { dy: 55, fontSize: 36 },
+  line: { fontSize: 36 },
   badge: {
-    dy: 120,
     fontSize: 40,
     padX: 28,
     height: 64,
@@ -330,8 +340,8 @@ export const RESULT = {
     bounceScale: 1.12,
     bounceMs: 420,
   },
-  allClear: { dy: 115, fontSize: 40 },
-  button: { dy: 225, step: 116, width: 340, height: 96, fontSize: 44 },
+  allClear: { fontSize: 40 },
+  button: { step: 116, width: 340, height: 96, fontSize: 44 },
 } as const;
 
 /** 일시정지 창 (PLAN 6.6). dy = 화면 가운데 기준 세로 위치(px). 판·버튼 모양은 결과 화면과 같다 */
@@ -343,6 +353,8 @@ export const PAUSE = {
   /** 버튼 글자 (pauseButtons의 id → 글자) */
   buttons: { resume: '계속', retry: '다시하기', map: '지도', menu: '메뉴' },
   button: { dy: -80, step: 116, width: 340, height: 96, fontSize: 44 },
+  /** 판 안 맨 아래 줄 가운데: ♪·스피커 (W4-14). dy = 마지막 버튼 가운데에서 이 줄 가운데까지, gap = 두 원 중심 사이 */
+  sound: { dy: 120, gap: 100 },
 } as const;
 
 /** 공통 웨이퍼 버튼 (view/ui/Button.ts). 크기·글자는 쓰는 곳에서 정한다 */
