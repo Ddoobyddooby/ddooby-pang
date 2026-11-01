@@ -454,6 +454,8 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 | 화면이 갱신 안 됨 | 브라우저 강력 새로고침 `Cmd+Shift+R` |
 | `npm install`이 `SELF_SIGNED_CERT_IN_CHAIN` | 회사·보안 프로그램이 HTTPS를 검사하는 네트워크. Node가 OS 인증서 저장소를 쓰게 한다: Windows PowerShell `[Environment]::SetEnvironmentVariable('NODE_OPTIONS','--use-system-ca','User')` 후 VSCode 재시작 (`strict-ssl false`로 검사를 끄지 않는다) |
 | `git push`가 403 (`Permission ... denied`) | 등록된 토큰에 쓰기 권한이 없다. `gh auth status`에서 확인. Classic 토큰은 `repo` scope, Fine-grained 토큰은 이 저장소 + Contents: Read and write로 다시 만들고 `gh auth login` → `gh auth setup-git` |
+| 아이폰(Safari·홈 화면 앱)에서만 소리가 안 난다 | ① 옆면 무음 스위치를 끈다 ② 화면을 한 번 탭했는지 (첫 터치 전엔 소리가 막힘) ③ 그래도 안 나면 그 소리의 `.m4a`가 `public/audio/`에 있는지 확인. iOS Safari는 `.ogg`(Ogg Vorbis)를 못 읽을 수 있어 m4a로 대신 재생한다 (PLAN 7.4, 10절). 없으면 `afconvert -f m4af -d aac 이름.ogg 이름.m4a` |
+| `git push`가 `refusing to allow an OAuth App to create or update workflow` | `.github/workflows/` 파일을 올리려면 토큰에 `workflow` 권한이 필요하다. `gh auth refresh -h github.com -s workflow` → 브라우저에서 코드 입력 → 다시 push |
 | Windows에서 받은 뒤 파일이 전부 "수정됨" 또는 prettier 경고가 많다 | `core.autocrlf=true`로 CRLF가 풀린 것. 저장소는 `.gitattributes`로 LF 고정이라 내용 변경은 없다. 할 일이 없을 때 `git rm --cached -r -q . && git reset --hard -q`로 다시 받으면 LF로 풀린다 (커밋 안 한 변경이 없을 때만) |
 
 ## 6. Study for App

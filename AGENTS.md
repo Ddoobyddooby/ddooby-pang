@@ -29,6 +29,7 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 MVP 개발 중).
 - 점수, 배율, 애니메이션 시간은 `src/config.ts`에 두고 코드에 박지 않는다.
 - view는 core가 준 이벤트를 재생만 한다. 게임 상태를 직접 계산하지 않는다.
 - 의존 방향: `scenes → view/modes → core`, `scenes → data/storage`. core는 아무것도 의존하지 않는다.
+- 소리 파일은 `.ogg`와 `.m4a`를 항상 같이 둔다 (iOS Safari는 Ogg Vorbis를 못 읽을 수 있다. PLAN 7.4·10절)
 
 ## 명령어
 
