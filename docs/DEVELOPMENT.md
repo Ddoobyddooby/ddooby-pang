@@ -456,6 +456,15 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - 소리 크기는 `src/config.ts`의 `MUSIC.volume`(0.35)과 `pauseDuck`
 - 곡 출처와 변환 방법: `public/audio/CREDITS.md`. ogg를 만들려면 `brew install vorbis-tools`의 `oggenc`가 필요하다 (macOS `afconvert`는 m4a만 만든다)
 
+### W4-14 다듬기 묶음
+1. `npm run dev` 또는 https://ddoobyddooby.github.io/ddooby-pang/
+2. 게임에서 ❚❚ → 창 안 아래쪽에 ♪·스피커가 나란히. 좁은 폰에서도 겹치지 않는다
+3. 블록 3개를 맞추면 첫 팝업 `+30`이 갈색. 연쇄 2단계부터 분홍·주황·파랑·보라
+4. `?specials`에서 폭탄이 슈퍼를 터뜨리는 등 발동이 이어질 때 더 센 흔들림이 보인다
+5. 결과 화면(경쟁·스토리 클리어·실패)의 위아래 간격이 고르고, "최고 점수"와 "최고 기록!" 배지가 붙지 않는다. 빨리 보기: `?result=1200&best=900`, `?result=3200&stage=2&stars=2&bonus=900`, `?result=800&stage=2&stars=0`
+6. 5초 가만히 있으면 힌트 블록이 전보다 크게 말랑거린다
+7. Android 앱: 위 상태바 뒤가 하늘색, 아래 바 뒤가 땅 크림색으로 화면과 이어지고 시계·배터리 아이콘이 잘 보인다
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -794,6 +803,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **지연 로드**: 첫 화면에 필요한 메뉴 곡만 Boot에서 기다리고, 나머지는 메뉴가 뜬 뒤 씬 로더로 읽는다(`load.audio` → `load.start()`). `filecomplete` 이벤트에서 "그 곡이 아직 필요하면" 튼다
 - **설정 추가와 옛 저장값**: `settings.music`을 `defaultSave`에 넣고 `parseSave`는 boolean일 때만 덮어쓴다. 옛 저장값에는 없으니 자동으로 켜짐. 데이터 모양이 늘기만 해서 `version`은 1 그대로 (`src/storage/progress.ts`)
 - **효과음과 음악 분리**: Phaser `sound.mute`는 모든 소리를 끈다. 그래서 효과음은 `Sfx`가 재생을 건너뛰는 방식으로, 음악은 `Music.setEnabled`로 따로 끈다
+
+### W4-14 다듬기 묶음
+- **"센 쪽이 이긴다" 판단**: Phaser 카메라는 흔들리는 중에 온 새 요청을 무시한다. 그래서 지금 흔들림(세기·끝나는 시각)을 우리가 들고 있다가, 끝났거나 새 것이 더 세면 `force`로 덮어쓴다. 시각(`now`)을 인자로 받는 순수 함수라 표로 테스트하기 쉽다 (`src/view/fx/shake.ts`, `tests/view/shake.test.ts`)
+- **내용에 맞춘 레이아웃**: 고정 좌표 대신 "있는 줄만 위에서부터 쌓고, 묶음 전체를 가운데에". 별·보너스·배지가 있든 없든 간격이 일정하다. 계산을 순수 함수로 빼서 간격을 테스트로 확인한다 (`src/scenes/resultText.ts`의 `resultLayout`, `config.RESULT.layout`)
+- **색 고르기**: 이미 뜻이 있는 색(칭찬 단계 색, 블록 색)과 겹치지 않는 색을 고르고 스크린샷으로 비교한다. `THEME.popupBase`처럼 이름을 붙여 한 곳에서 바꾼다
+- **Android 창 배경과 실행 순서**: 바 뒤에 보이는 것은 decorView 배경이다. Capacitor SystemBars가 시작할 때와 화면 설정이 바뀔 때 테마 색으로 다시 칠하므로, 그보다 나중에(같은 메인 큐에 `post`, `onConfigurationChanged`의 `super` 다음) 우리 그라데이션을 칠해야 이긴다. 테마의 `windowBackground`를 drawable로 바꾸면 플러그인이 그것을 색으로 읽어 검정이 된다 (`android/app/src/main/java/.../MainActivity.java`, `res/drawable/app_background.xml`)
 - **실패하면 시작하지 않기**: 데이터가 틀린 채로 게임이 돌면 원인을 찾기 어렵다. Boot에서 한 번 읽고, 틀리면 화면에 바로 보여준다 (`src/scenes/BootScene.ts`, `src/scenes/stageRegistry.ts`)
 
 ### W3-03 스토리 스테이지 1~10
