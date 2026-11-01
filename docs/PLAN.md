@@ -475,6 +475,7 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지�
 - 길이가 화면보다 짧으면(스테이지 10개 이하) 스크롤 없이 지금처럼 보인다
 - `MAP.maxNodes`와 10개 넘으면 경고는 없앤다
 - 메뉴의 `스테이지 N / 20`, 결과 화면 "모든 스테이지 클리어!"(마지막 번호), 해금 상한은 스테이지 수를 읽으므로 그대로 동작하는지만 확인
+- 결과 (W4-18): `mapNodes(count, screenHeight)` → { nodes, worldHeight }. 간격 = max(`MAP.gap` 86, 화면을 고르게 나눈 값)이라 10개는 1280·1558 모두 지금처럼 한 화면이고(1280에서 87.8), 넘치면 86 고정으로 길어진다(20개 = 세계 높이 2124). 노드·길·별·바닥 언덕은 내용 묶음(Container) 하나에 넣어 y만 옮기고, 나머지는 그대로 고정. 끌기 문턱 `MAP.dragThreshold` 12. 끌다 놓으면 노드·[←]를 누르지 않는다. 끝에서 딱 멈추고(튕김·관성 없음), 방금 열린 곳은 직전에 할 곳에서 시작해 250ms 뒤 700ms 동안 옮겨 간 다음 튀어나온다. 순수 함수 `clampScroll`·`contentY`·`scrollToCenter`·`isDrag`·`mapFocus`(`src/view/mapLayout.ts`). `MAP.maxNodes`·경고 제거. 스테이지 수 상한은 코드·스키마에 없었다(`tests/data/stories.test.ts`의 10개 확인은 W4-19에서 20으로)
 
 **스테이지 11~20 (W4-19)**
 - `public/stages/story.json`에 데이터만 추가 (코드 수정 없이, SPEC 6절). 스키마·검사 그대로

@@ -8,8 +8,12 @@ const DEPTH = -90;
 
 const css = (hex: number): string => `#${hex.toString(16).padStart(6, '0')}`;
 
-/** 화면 맨 아래에 언덕을 놓는다. screenWidth는 EXPAND로 넓어진 화면 폭 */
-export function addHills(scene: Phaser.Scene, screenWidth: number, screenHeight: number): void {
+/** 화면 맨 아래(bottom)에 언덕을 놓는다. screenWidth는 EXPAND로 넓어진 화면 폭. 스크롤 지도는 돌려받은 그림을 내용 묶음에 넣는다 */
+export function addHills(
+  scene: Phaser.Scene,
+  screenWidth: number,
+  screenHeight: number,
+): Phaser.GameObjects.Image {
   const w = Math.ceil(Math.max(screenWidth, GAME.width));
   const h = VIEW.screen.decorH;
   const key = `hills-${w}`;
@@ -21,7 +25,7 @@ export function addHills(scene: Phaser.Scene, screenWidth: number, screenHeight:
   }
   // 넓어진 폭은 카메라가 가운데 맞춤으로 밀어 두므로, 그 왼쪽 끝에서 시작한다
   const left = (GAME.width - w) / 2;
-  scene.add.image(left, screenHeight, key).setOrigin(0, 1).setDepth(DEPTH);
+  return scene.add.image(left, screenHeight, key).setOrigin(0, 1).setDepth(DEPTH);
 }
 
 function drawHills(ctx: CanvasRenderingContext2D, w: number, h: number): void {

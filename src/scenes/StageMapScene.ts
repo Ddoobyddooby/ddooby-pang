@@ -1,12 +1,24 @@
 // 스테이지 지도 (스토리 화면 설계 3절, A안): 아래(1번)에서 위로 올라가는 사탕 길 위의 동그라미 노드.
 // 완료(분홍 + 별), 지금 할 곳(진한 분홍, 크게, 숨쉬기), 잠김(회보라 + 자물쇠, 누르면 흔들림).
 // 방금 열린 스테이지는 한 번 크게 튀어나온다 (직전에 본 unlocked를 registry에 기억해 비교, 세션 안에서만).
+// 길이 화면보다 길면 위로 스크롤한다 (PLAN 6.12): 노드·길·바닥 언덕은 내용 묶음(content)에 넣어 같이 움직이고,
+// 하늘·구름·제목·[←]·♪·스피커는 화면에 고정. 끌기(문턱 넘게 움직임)로 놓은 손은 노드를 누르지 않는다.
 //
 // 개발 모드: U 키 = 다음 스테이지 열기(저장) 후 지도 다시 열기 → 튀어나오는 연출 확인
 
 import Phaser from 'phaser';
 import { GAME, MAP, THEME, UI } from '../config';
-import { mapNodes, nodeStates, type NodeState } from '../view/mapLayout';
+import {
+  clampScroll,
+  contentY,
+  isDrag,
+  mapFocus,
+  mapNodes,
+  maxScroll,
+  nodeStates,
+  scrollToCenter,
+  type NodeState,
+} from '../view/mapLayout';
 import { Background } from '../view/theme/Background';
 import { addHills } from '../view/theme/Hills';
 import { Sfx } from '../view/Sfx';
@@ -24,6 +36,12 @@ const SEEN_KEY = 'stageMap.seenUnlocked';
 export class StageMapScene extends Phaser.Scene {
   private lock: PressLock = { pressed: false };
   private sfx!: Sfx;
+  /** 노드·길·언덕 묶음과 스크롤 상태 */
+  private content!: Phaser.GameObjects.Container;
+  private worldHeight = 0;
+  private scroll = 0;
+  /** 이번 누름이 끌기가 됐는지 (그러면 놓아도 노드·[←]를 누르지 않는다) */
+  private dragged = false;
 
   constructor() {
     super('StageMap');
@@ -36,27 +54,31 @@ export class StageMapScene extends Phaser.Scene {
     this.sfx = new Sfx(this);
 
     new Background(this);
-    addHills(this, width, height);
 
     const stages = getStages(this.registry).story;
     const save = getSave(this.registry);
-    if (import.meta.env.DEV && stages.length > MAP.maxNodes) {
-      console.warn(`[map] 스테이지 ${stages.length}개: 한 화면에 ${MAP.maxNodes}개까지만 맞춘다`);
-    }
-    const nodes = mapNodes(stages.length, height);
+    const { nodes, worldHeight } = mapNodes(stages.length, height);
     const states = nodeStates(save.story.unlocked, stages.length);
+    this.worldHeight = worldHeight;
+    this.dragged = false;
+    // 언덕(바닥 장식과 같은 깊이) 위에 길, 그 위에 노드. 묶음 안에서는 넣은 순서가 앞뒤
+    this.content = this.add.container(0, 0).setDepth(-90);
+    this.content.add(addHills(this, width, worldHeight));
 
     this.drawPath(nodes);
     const views = nodes.map((p, i) =>
       this.addNode(p.x, p.y, i + 1, states[i]!, save.story.bestStars[i + 1] ?? 0),
     );
 
-    // 방금 열린 스테이지: 이 세션에서 지도를 본 적이 있고, 그때보다 더 열렸을 때만
+    // 처음 위치: 지금 할 곳이 화면 가운데 근처. 방금 열린 스테이지(이 세션에서 지도를 본 뒤 더 열림)가 있으면
+    // 직전에 할 곳에서 시작해 그곳으로 부드럽게 옮겨 간 뒤 튀어나온다
     const seen = this.registry.get(SEEN_KEY) as number | undefined;
-    const unlocked = save.story.unlocked;
-    const fresh = views[unlocked - 1];
-    if (seen !== undefined && unlocked > seen && fresh) this.popIn(fresh);
-    this.registry.set(SEEN_KEY, unlocked);
+    const focus = mapFocus(save.story.unlocked, seen, stages.length);
+    this.registry.set(SEEN_KEY, save.story.unlocked);
+    this.setScroll(scrollToCenter(nodes[focus.from]?.y ?? 0, worldHeight, height));
+    const fresh = views[focus.to];
+    if (focus.fresh && fresh) this.revealFresh(fresh, nodes[focus.to]!.y);
+    this.enableDrag();
 
     this.add
       .text(GAME.width / 2, MAP.title.y, MAP.title.text, {
@@ -75,12 +97,66 @@ export class StageMapScene extends Phaser.Scene {
     music.load(this, ['story']);
 
     if (import.meta.env.DEV) {
+      // 확인용: 스크롤 양과 노드의 화면 위치
+      (window as unknown as { __map?: unknown }).__map = {
+        scroll: () => this.scroll,
+        maxScroll: () => maxScroll(this.worldHeight, this.scale.height),
+        nodeY: (id: number) => (views[id - 1]?.y ?? NaN) + this.content.y,
+        nodeX: (id: number) => views[id - 1]?.x ?? NaN,
+        scene: () => this.scene.key,
+      };
       this.input.keyboard?.on('keydown-U', () => {
         const s = getSave(this.registry);
         commitSave(this.registry, { ...s, story: { ...s.story, unlocked: s.story.unlocked + 1 } });
         this.scene.restart();
       });
     }
+  }
+
+  /** 내용 묶음을 scroll만큼 올린다 (끝에서 막는다) */
+  private setScroll(value: number): void {
+    const height = this.scale.height;
+    this.scroll = clampScroll(value, this.worldHeight, height);
+    this.content.y = contentY(this.scroll, this.worldHeight, height);
+  }
+
+  /** 끌어서 스크롤. 길이 화면보다 짧으면 아무것도 하지 않는다 */
+  private enableDrag(): void {
+    if (maxScroll(this.worldHeight, this.scale.height) === 0) return;
+    let start: { y: number; scroll: number } | null = null;
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.dragged = false;
+      start = { y: pointer.y, scroll: this.scroll };
+    });
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!start || !pointer.isDown) return;
+      const dy = pointer.y - start.y;
+      if (!this.dragged && !isDrag(pointer.x - pointer.downX, dy, MAP.dragThreshold)) return;
+      this.dragged = true;
+      this.setScroll(start.scroll + dy); // 손가락을 내리면 위쪽(높은 번호)이 내려와 보인다
+    });
+    this.input.on('pointerup', () => {
+      start = null;
+    });
+  }
+
+  /** 방금 열린 노드: 숨겨 두고 그 자리로 옮겨 간 뒤 튀어나온다 */
+  private revealFresh(node: Phaser.GameObjects.Container, worldY: number): void {
+    this.tweens.killTweensOf(node);
+    node.setScale(0);
+    const target = scrollToCenter(worldY, this.worldHeight, this.scale.height);
+    const move = { scroll: this.scroll };
+    this.tweens.add({
+      targets: move,
+      scroll: target,
+      delay: MAP.scrollTo.delayMs,
+      duration: target === this.scroll ? 0 : MAP.scrollTo.ms,
+      ease: 'Sine.easeInOut',
+      onUpdate: () => {
+        if (!this.dragged) this.setScroll(move.scroll); // 옮겨 가는 중에 끌면 손가락이 이긴다
+      },
+      onComplete: () => this.popIn(node),
+    });
   }
 
   /** 노드를 잇는 흰 점선 사탕 길 */
@@ -91,6 +167,7 @@ export class StageMapScene extends Phaser.Scene {
     const dots = Math.max(2, Math.floor(spline.getLength() / p.spacing));
     const g = this.add.graphics().fillStyle(p.color, p.alpha);
     for (const pt of spline.getSpacedPoints(dots)) g.fillCircle(pt.x, pt.y, p.dot);
+    this.content.add(g);
   }
 
   private addNode(
@@ -126,6 +203,7 @@ export class StageMapScene extends Phaser.Scene {
       .setSize(n.r * 2, n.r * 2)
       .setInteractive({ useHandCursor: true });
 
+    this.content.add(node);
     if (state === 'done') this.addStars(x, y + MAP.stars.dy, stars);
     if (state === 'current') {
       node.setScale(n.currentScale);
@@ -133,6 +211,7 @@ export class StageMapScene extends Phaser.Scene {
     }
 
     node.on('pointerup', () => {
+      if (this.dragged) return;
       if (state === 'locked') this.shake(node, x);
       else this.startStage(node, id);
     });
@@ -156,9 +235,10 @@ export class StageMapScene extends Phaser.Scene {
   private addStars(cx: number, y: number, count: number): void {
     const s = MAP.stars;
     for (let k = 0; k < 3; k++) {
-      this.add
+      const star = this.add
         .star(cx + (k - 1) * s.gap, y, 5, s.r * 0.45, s.r, k < count ? THEME.star : s.empty)
         .setStrokeStyle(2, THEME.wafer.stroke);
+      this.content.add(star);
     }
   }
 
@@ -240,7 +320,7 @@ export class StageMapScene extends Phaser.Scene {
       .setSize(b.r * 2, b.r * 2)
       .setInteractive({ useHandCursor: true });
     button.on('pointerup', () => {
-      if (this.lock.pressed) return;
+      if (this.lock.pressed || this.dragged) return;
       this.lock.pressed = true;
       this.sfx.play('button');
       this.tweens.add({
