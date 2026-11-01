@@ -29,7 +29,11 @@ export class BootScene extends Phaser.Scene {
       console.warn('[boot] 효과음 로드 실패, 소리 없이 진행', file.key),
     );
     for (const [name, { file }] of Object.entries(SOUND.effects)) {
-      this.load.audio(sfxKey(name as SfxName), `audio/${file}`);
+      // [ogg, m4a]: Phaser가 이 브라우저가 재생할 수 있는 첫 형식을 고른다
+      this.load.audio(
+        sfxKey(name as SfxName),
+        SOUND.formats.map((ext) => `audio/${file}.${ext}`),
+      );
     }
   }
 

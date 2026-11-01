@@ -13,4 +13,17 @@
 | `button.ogg` | UI Audio (UI SFX Set) | `Audio/click1.ogg` | 버튼 |
 | `star.ogg` | Interface Sounds 1.0 | `Audio/glass_005.ogg` | 결과 화면 별 하나 찰 때 |
 
-파일은 이름만 바꾸고 내용은 손대지 않았다. 볼륨과 음 높이는 `src/config.ts`의 `SOUND`에서 맞춘다.
+`.ogg`는 이름만 바꾸고 내용은 손대지 않았다. 볼륨과 음 높이는 `src/config.ts`의 `SOUND`에서 맞춘다.
+
+## m4a (아이폰 Safari용, W4-12)
+
+iOS Safari는 Ogg Vorbis를 못 읽을 수 있어 같은 이름의 `.m4a`(AAC)를 같이 둔다. 게임은 `[ogg, m4a]`를 넘기고 브라우저가 재생할 수 있는 첫 번째를 쓴다 (`src/config.ts` `SOUND.formats`).
+
+변환은 macOS 내장 `afconvert`로 `.ogg`에서 바로 만들었다 (무손실 원본은 없다):
+
+```sh
+cd public/audio
+for f in *.ogg; do afconvert -f m4af -d aac "$f" "${f%.ogg}.m4a"; done
+```
+
+`.ogg`를 바꾸면 이 명령으로 `.m4a`도 다시 만든다. ffmpeg가 있으면 `ffmpeg -i swap.ogg -c:a aac swap.m4a`도 된다.

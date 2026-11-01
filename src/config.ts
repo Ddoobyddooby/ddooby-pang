@@ -417,18 +417,22 @@ export const MAP = {
   maxNodes: 10,
 } as const;
 
-/** 효과음 (PLAN 6.5). 파일은 public/audio/<file>, 출처는 public/audio/CREDITS.md. volume 0~1 */
+/**
+ * 효과음 (PLAN 6.5, 7.4). 파일은 public/audio/<file>.<형식>, 출처는 public/audio/CREDITS.md. volume 0~1.
+ * 같은 이름을 formats 순서로 모두 넘기고 브라우저가 재생할 수 있는 첫 번째를 고른다 (iOS Safari는 ogg를 못 읽을 수 있다)
+ */
 export const SOUND = {
   effects: {
-    swap: { file: 'swap.ogg', volume: 0.45 },
-    bad: { file: 'bad.ogg', volume: 0.35 },
-    match: { file: 'match.ogg', volume: 0.5 },
-    special: { file: 'special.ogg', volume: 0.45 },
-    clear: { file: 'clear.ogg', volume: 0.45 },
-    fail: { file: 'fail.ogg', volume: 0.4 },
-    button: { file: 'button.ogg', volume: 0.5 },
-    star: { file: 'star.ogg', volume: 0.5 },
+    swap: { file: 'swap', volume: 0.45 },
+    bad: { file: 'bad', volume: 0.35 },
+    match: { file: 'match', volume: 0.5 },
+    special: { file: 'special', volume: 0.45 },
+    clear: { file: 'clear', volume: 0.45 },
+    fail: { file: 'fail', volume: 0.4 },
+    button: { file: 'button', volume: 0.5 },
+    star: { file: 'star', volume: 0.5 },
   },
+  formats: ['ogg', 'm4a'],
   /** match 소리의 연쇄 단계별 재생 속도(음 높이). index = 단계 - 1, 마지막 값이 상한. 1.0595 ≈ 반음 */
   matchRateByLevel: [1, 1.12, 1.26, 1.33, 1.5],
   /** 같은 소리를 이 시간(ms) 안에 다시 부르면 건너뛴다 (한 번에 여러 특수 발동 등) */

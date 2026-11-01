@@ -21,14 +21,18 @@ describe('sfxRate', () => {
 });
 
 describe('SOUND', () => {
-  it('볼륨은 0~1, 파일은 .ogg, 키는 이름마다 다르다', () => {
+  it('볼륨은 0~1, 파일은 확장자 없는 이름, 키는 이름마다 다르다', () => {
     const entries = Object.entries(SOUND.effects);
     for (const [, { file, volume }] of entries) {
       expect(volume).toBeGreaterThan(0);
       expect(volume).toBeLessThanOrEqual(1);
-      expect(file).toMatch(/\.ogg$/);
+      expect(file).toMatch(/^[a-z]+$/);
     }
     const keys = entries.map(([name]) => sfxKey(name as keyof typeof SOUND.effects));
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('형식은 ogg 먼저, iOS용 m4a 다음', () => {
+    expect(SOUND.formats).toEqual(['ogg', 'm4a']);
   });
 });
