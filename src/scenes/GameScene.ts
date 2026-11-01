@@ -16,6 +16,7 @@ import { findHint } from '../core/moves';
 import type { GameState, Pos, SpecialKind } from '../core/types';
 import { BoardView, type BoardViewHooks } from '../view/BoardView';
 import { Hud } from '../view/Hud';
+import { gameTitle } from '../view/gameTitle';
 import { MissionCard } from '../view/MissionCard';
 import { Music } from '../view/Music';
 import { Sfx, voiceFor } from '../view/Sfx';
@@ -156,7 +157,7 @@ export class GameScene extends Phaser.Scene {
     };
     hooks.onScore = (delta, level, at) => fx.playScore(delta, level, at);
 
-    this.hud = new Hud(this, 'Ddooby-Pang', screen);
+    this.hud = new Hud(this, gameTitle(this.startData), screen);
     if (import.meta.env.DEV) this.hud.setSeed(this.seed);
     if (stage && this.storyMode) {
       this.storyPanel = new StoryPanel(this, screen, this.storyMode.goalProgress());

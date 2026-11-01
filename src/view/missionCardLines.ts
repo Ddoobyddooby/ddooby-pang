@@ -4,6 +4,7 @@
 import type { Color } from '../core/types';
 import type { Goal } from '../data/stageSchema';
 import { formatScore } from './format';
+import { gameTitle } from './gameTitle';
 
 /** 카드에 필요한 스테이지 값만 (StageDef의 일부) */
 export interface MissionStageLike {
@@ -30,10 +31,10 @@ export function missionLine(goal: Goal): MissionLine {
   return { color: goal.color, text: `${goal.count}개 모으기!` };
 }
 
-/** 제목 / 미션 줄(최대 maxLines, 스테이지 순서 그대로) / 이동 줄 */
+/** 제목(게임 화면 제목과 같은 문구) / 미션 줄(최대 maxLines, 스테이지 순서 그대로) / 이동 줄 */
 export function missionCardLines(stage: MissionStageLike, maxLines: number): MissionCardLines {
   return {
-    title: `스테이지 ${stage.id}`,
+    title: gameTitle({ mode: 'story', stageId: stage.id }),
     goals: stage.goals.slice(0, maxLines).map(missionLine),
     movesText: `이동 ${stage.moves}번`,
   };

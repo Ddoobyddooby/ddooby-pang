@@ -460,6 +460,7 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지�
 - 글자가 길어져도 오른쪽 위 일시정지 버튼과 겹치지 않는지 360×640에서 확인
 - 문구는 순수 함수로 (모드 → 제목), 테스트
 - W4-16 미션 카드 첫 줄과 같은 문구라 같은 함수를 쓴다
+- 결과: `src/view/gameTitle.ts`의 `gameTitle(mode)` (스토리 `스테이지 N`, 경쟁은 `MENU.timeattack.text`를 그대로 읽어 메뉴 버튼과 늘 같은 말). `Hud` 제목과 `missionCardLines`의 제목이 이 함수를 쓴다. 360×640에서 가장 긴 `스테이지 10`도 오른쪽 끝이 ❚❚ 왼쪽 끝보다 100px 넘게 떨어져 있다
 
 ## 7. 데이터 / 저장
 
