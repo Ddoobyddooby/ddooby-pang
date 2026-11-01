@@ -363,7 +363,7 @@ export const PAUSE = {
  */
 export const MISSION_CARD = {
   appearMs: 420,
-  holdMs: 1600,
+  holdMs: 2000,
   flyMs: 520,
   /** 나타날 때 이 크기에서 1로 (Back.easeOut이라 살짝 넘쳤다가 돌아온다) */
   startScale: 0.3,
