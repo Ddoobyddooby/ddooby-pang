@@ -358,7 +358,7 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지�
 
 ### 6.5 사운드 (W4-02)
 
-- **효과음만** (배경 음악은 v0.2에서 시범 플레이 반응을 보고 정한다). 출처는 **Kenney**(CC0, 출처 표시 의무 없음). 고른 파일·원본 팩 이름은 `public/audio/CREDITS.md`에 적는다
+- 효과음 (배경 음악은 6.7, W4-13). 출처는 **Kenney**(CC0, 출처 표시 의무 없음). 고른 파일·원본 팩 이름은 `public/audio/CREDITS.md`에 적는다
 - 파일은 `public/audio/*.ogg` (Android WebView·Chrome 기준). BootScene이 미리 읽는다. 합계 500KB 이하를 목표
 - 재생은 `src/view/Sfx.ts` 한 곳에서. 씬은 `sfx.play('match', { level })`처럼 이름만 부른다. 이름 → 파일·볼륨·연쇄 단계별 음 높이(도·레·미·파·솔), 같은 소리 최소 간격(`minGapMs`)은 `config.SOUND`
 - 게임 중 소리는 **GameScene이 BoardView hooks에서** fx와 sfx를 같이 부른다. FxDirector는 그림만 맡는다 (어디서 무슨 소리가 나는지 한 곳에서 보이게)
@@ -374,6 +374,31 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지�
 - **나가기·다시하기는 기록하지 않는다**: 결과가 아니므로 저장·해금·최고 점수에 반영하지 않는다
 - **자동 일시정지**: 화면이 가려지면(`document.visibilitychange` → hidden, 앱이 백그라운드로 갈 때) 게임 중이면 자동으로 일시정지 창을 띄운다. 돌아왔을 때 바로 이어지지 않게 하려는 것
 - Android 뒤로 가기 버튼 연결은 W4-07
+
+### 6.7 배경 음악 (W4-13)
+
+2026-11-01 사용자 결정. 모두 OpenGameArt **CC0** (출처는 `public/audio/CREDITS.md`)
+
+| 화면 | 곡 | 원본 |
+|---|---|---|
+| 메뉴·스테이지 지도 | Happy Clappy Loop (OwlishMedia, 피아노) | `HappyClappyLoop.wav` · https://opengameart.org/content/happy-clappy-loop |
+| 경쟁 60초 게임 | Happy Vibes (Ruskerdax, 레트로 신스) | `ruskerdax_-_happy_vibes.mp3` · https://opengameart.org/node/160228 |
+| 스토리 게임 | Two Simple Game Music Loops 중 게임 곡 (qubodup) | `levelmusicloop-tigrun.ogg/.wav` · https://opengameart.org/node/174263 |
+
+- **파일**: `public/audio/music/{menu,timeattack,story}.ogg` + `.m4a` (W4-12와 같은 대체 방식). 모노 96kbps 정도로 줄여 세 곡 합계 3MB 이하 목표. mp3·인코더가 앞뒤에 넣는 무음은 잘라서 반복할 때 끊김이 없게 한다
+- **읽기**: Boot는 메뉴 곡만 기다린다. 나머지 두 곡은 메뉴가 뜬 뒤 뒤에서 읽고, 게임 시작 때 아직이면 다 읽힌 순간부터 튼다 (첫 화면이 늦어지지 않게)
+- **재생 규칙** (`src/view/Music.ts` 한 곳, 씬은 `music.play('menu')`처럼 이름만)
+  - 메뉴 ↔ 지도를 오가도 메뉴 곡은 끊기지 않고 이어진다 (같은 곡이면 다시 시작하지 않음)
+  - 게임에 들어가면 그 모드 곡으로 바꾼다 (짧은 페이드). [다시하기]도 곡은 이어진다
+  - 일시정지 중에는 음악 볼륨을 줄인다(`MUSIC.pauseDuck`). [계속]에서 원래대로
+  - 결과 화면에 들어가면 게임 곡을 페이드아웃해 끝낸다 (클리어·실패 효과음이 들리게). 결과 화면은 음악 없음, 메뉴·지도로 가면 메뉴 곡
+  - 앱이 뒤로 가거나 탭이 가려지면 Phaser가 소리를 멈췄다 돌아오면 잇는다 (기본 동작)
+- **볼륨·시간 값**은 `config.MUSIC` (`volume` 0.35 근처에서 시작, `fadeMs`, `pauseDuck`)
+- **켜고 끄기 (효과음과 따로)**
+  - 스피커 버튼 = 효과음, 새 ♪ 버튼 = 음악. 메뉴·지도는 오른쪽 위 스피커 왼쪽에, 일시정지 창은 스피커 옆에
+  - 지금 스피커는 게임 전체 음소거(`sound.mute`)라 음악까지 꺼진다 → 효과음만 끄도록 바꾼다 (`Sfx`가 재생을 건너뜀)
+  - 저장: `SaveData.settings`에 `music: boolean`(기본 true) 추가. 기존 `muted`는 "효과음 끔"으로 뜻을 좁힌다 (`version` 1 그대로, `parseSave`가 기본값으로 채움)
+  - 끄면 꺼진 ♪ 모양(사선)으로 바뀐다. 다시 켜면 지금 화면의 곡부터 시작
 
 ## 7. 데이터 / 저장
 
