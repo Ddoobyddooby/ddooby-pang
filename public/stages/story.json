@@ -162,5 +162,185 @@
       }
     ],
     "stars": [900, 2200, 3500]
+  },
+  {
+    "id": 11,
+    "rows": 8,
+    "cols": 8,
+    "colors": 5,
+    "moves": 23,
+    "goals": [
+      {
+        "type": "collect",
+        "color": "purple",
+        "count": 19
+      }
+    ],
+    "stars": [1500, 3400, 4700]
+  },
+  {
+    "id": 12,
+    "rows": 8,
+    "cols": 8,
+    "colors": 5,
+    "moves": 22,
+    "goals": [
+      {
+        "type": "score",
+        "target": 1400
+      }
+    ],
+    "stars": [1400, 3600, 5200]
+  },
+  {
+    "id": 13,
+    "rows": 8,
+    "cols": 8,
+    "colors": 5,
+    "moves": 22,
+    "goals": [
+      {
+        "type": "collect",
+        "color": "green",
+        "count": 20
+      }
+    ],
+    "stars": [1500, 3100, 4400]
+  },
+  {
+    "id": 14,
+    "rows": 8,
+    "cols": 8,
+    "colors": 5,
+    "moves": 21,
+    "goals": [
+      {
+        "type": "collect",
+        "color": "blue",
+        "count": 17
+      },
+      {
+        "type": "collect",
+        "color": "yellow",
+        "count": 18
+      }
+    ],
+    "stars": [1500, 2800, 4200]
+  },
+  {
+    "id": 15,
+    "rows": 8,
+    "cols": 8,
+    "colors": 5,
+    "moves": 20,
+    "goals": [
+      {
+        "type": "score",
+        "target": 1400
+      },
+      {
+        "type": "collect",
+        "color": "purple",
+        "count": 12
+      }
+    ],
+    "stars": [1400, 3200, 4700]
+  },
+  {
+    "id": 16,
+    "rows": 8,
+    "cols": 8,
+    "colors": 5,
+    "moves": 20,
+    "goals": [
+      {
+        "type": "collect",
+        "color": "red",
+        "count": 17
+      },
+      {
+        "type": "collect",
+        "color": "green",
+        "count": 17
+      }
+    ],
+    "stars": [1500, 2800, 4000]
+  },
+  {
+    "id": 17,
+    "rows": 8,
+    "cols": 8,
+    "colors": 5,
+    "moves": 20,
+    "goals": [
+      {
+        "type": "score",
+        "target": 1500
+      },
+      {
+        "type": "collect",
+        "color": "yellow",
+        "count": 16
+      }
+    ],
+    "stars": [1500, 3200, 4500]
+  },
+  {
+    "id": 18,
+    "rows": 8,
+    "cols": 8,
+    "colors": 6,
+    "moves": 20,
+    "goals": [
+      {
+        "type": "collect",
+        "color": "red",
+        "count": 12
+      },
+      {
+        "type": "collect",
+        "color": "purple",
+        "count": 13
+      }
+    ],
+    "stars": [1000, 2100, 3000]
+  },
+  {
+    "id": 19,
+    "rows": 8,
+    "cols": 8,
+    "colors": 6,
+    "moves": 18,
+    "goals": [
+      {
+        "type": "score",
+        "target": 1000
+      },
+      {
+        "type": "collect",
+        "color": "blue",
+        "count": 10
+      }
+    ],
+    "stars": [1000, 2100, 3200]
+  },
+  {
+    "id": 20,
+    "rows": 8,
+    "cols": 8,
+    "colors": 6,
+    "moves": 18,
+    "goals": [
+      {
+        "type": "score",
+        "target": 1100
+      },
+      {
+        "type": "collect",
+        "color": "orange",
+        "count": 12
+      }
+    ],
+    "stars": [1100, 2000, 3000]
   }
 ]
