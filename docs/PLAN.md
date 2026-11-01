@@ -417,6 +417,24 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지�
 6. **Android 상태바·아래 바 색**: 바 뒤가 흰색/연회색으로 보인다 (WebView 140 미만은 native padding이라 창 배경이 보임). 창 배경(`android:windowBackground`)을 위 하늘(`THEME.sky.top` #bfe4ff) → 아래 땅 색으로 이어지는 세로 그라데이션 drawable로 바꿔 위·아래 띠가 화면과 이어지게 한다. 상태바 아이콘은 밝은 배경용(어두운 아이콘). WebView 140+ passthrough일 때는 `html` 배경이 이미 보이므로 영향 없음
    - 결과: `drawable/app_background.xml`(#BFE4FF → #FFF3D9 = `THEME.hills.front`). Capacitor SystemBars가 시작·설정 변경 때 창 배경을 테마 `windowBackground` **단색**으로 다시 칠해서(테마에 drawable을 넣으면 검정), 테마 대신 `MainActivity`가 그 뒤에 decorView 배경을 칠한다. 상태바·내비바 아이콘은 어두운색. 시작 화면 색은 그대로
 
+### 6.9 칭찬 목소리 (W4-15)
+
+2026-11-01 사용자 요청: 칭찬 문구가 뜰 때 가족이 녹음한 목소리가 같이 나온다. 공개 저장소·공개 웹에 올라가는 것은 사용자가 괜찮다고 했다
+
+| 연쇄 단계 | 문구 | 소리 |
+|---|---|---|
+| 2 | `이안팡!` | `voice1` ("팡") |
+| 3 | `이서팡!` | `voice2` ("팡") |
+| 4 | `보라팡!!` | `voice3` ("팡") |
+| 5 | `사랑해!!!` | `voice4` |
+| 6 이상 | `사랑해!!!` | 없음 (한 턴에 한 번만. 계속 반복되면 시끄럽다) |
+
+- **원본**: `assets/voice-src/voice1~4.m4a` (아이폰 녹음, 48kHz 모노). 앞뒤 빈 소리를 자른 것이 `assets/voice-src/trimmed/voice1~4.wav` (사용자가 듣고 승인. 목소리 앞 0.03초·뒤 0.08초 여유, 끝 0.04초 페이드아웃, 녹음 끝 버튼 소리 제거). 길이 0.91 / 0.86 / 0.94 / 1.99초
+- **게임 파일**: `public/audio/voice/voice1~4.ogg` + `.m4a` (6.5·7.4와 같은 대체). trimmed WAV에서 `oggenc`·`afconvert`로 만든다. 모노, 효과음 크기에 맞게 작게
+- **재생**: 효과음의 하나로 다룬다 (`config.SOUND.effects`에 voice1~4, `Sfx`로 재생). 스피커 버튼(효과음 끔)을 따르고 ♪(음악)와는 상관없다. 단계 → 소리 짝은 config에 두고, 순수 함수가 "이 단계에서 낼 목소리(없으면 null)"를 정한다 (2·3·4·5만 소리, 6 이상 없음)
+- **어디서**: `GameScene`의 `hooks.onMatch`에서 match 소리와 같이 부른다 (6.5: 소리는 GameScene 한 곳). 같은 단계에 매치 그룹이 여럿이어도 목소리는 한 번
+- **크기**: 목소리가 match 소리·배경 음악에 묻히지 않게 볼륨을 귀로 맞춘다. 그래도 묻히면 목소리가 나오는 동안 음악을 잠깐 줄이는 것을 검토 (지금은 하지 않음)
+
 ## 7. 데이터 / 저장
 
 ### 7.1 스테이지
