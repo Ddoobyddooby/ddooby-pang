@@ -551,6 +551,7 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지�
   - `applause` ← OpenGameArt "Applause in a large hall or church" `applause-clapping-church-crowd-immersive.wav` (CC0) 5.0~7.5초 구간, 앞 0.05초·뒤 0.8초 페이드, oggenc -q 4
   - `nobest` ← Kenney "85 Short music jingles" (OpenGameArt `jingleSounds_Kenney.zip`, CC0) `jingles_STEEL07.ogg` (1.6초, 손대지 않음)
   - `public/audio/CREDITS.md`에 위 출처를 적는다
+- 결과: config `TIMEATTACK.finale.endHoldMs` 1000. `playFinale`이 마지막 팡 재생(또는 "타임 업!" 대기) 뒤 같은 씬 시계 대기로 1초 더 기다리고 `finish()`. 소리 고르기는 순수 함수 `resultSounds(result)`(`scenes/resultText.ts`, 스토리 `clear`/`fail`, 경쟁 `newBest` → `newbest`+`applause`, 아니면 `nobest`), ResultScene은 돌려받은 이름을 차례로 `sfx.play`. 볼륨 `SOUND.effects` newbest 0.9(원본 RMS 약 -19dB로 조용함) · applause 0.7 · nobest 0.55. `clear.ogg`는 스토리 클리어 전용이 됐다. 브라우저(390×844): 특수 블록 없는 `?time=3`은 시간 0부터 결과 소리까지 약 1.8초(글자 0.8 + 쉼 1.0), `?seed=4&specials&time=5`는 마지막 팡 점수 반영(약 3.2초) 약 1초 뒤 결과. 첫 판 30점 → `newbest`+`applause` 같은 시각, 최고 99,999 → `nobest`, 점수 0 첫 판 → `nobest`. 쉼 도중 ❚❚ 2.5초 동안 결과로 안 넘어가고 [계속] 뒤 남은 약 0.7초 후 결과. 효과음 끔이면 결과 소리 없음, 스토리 미리보기는 `clear`/`fail` 그대로
 
 ## 7. 데이터 / 저장
 

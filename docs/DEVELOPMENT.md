@@ -516,6 +516,15 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 5. 마지막 팡 도중 ❚❚ → 그 자리에서 멈춤, [계속] → 이어서 끝까지. 보드는 눌러도 반응하지 않는다
 6. `?demo&specials&time=5`도 같은 흐름으로 끝난다. 스토리 모드는 예전처럼 이동이 끝나면 바로 결과
 
+### W4-22 경쟁 결과 전 쉼, 기록 소리
+1. `npm run dev` → `?time=3` (경쟁 3초). 아무것도 안 하고 기다린다 → "타임 업!" 뒤 판이 1초쯤 그대로 보이다가 결과 화면
+2. 첫 판(저장 기록 없음)에서 한 번이라도 맞춰 점수를 내고 끝내면 "최고 기록!" 배지와 함께 짧은 축하 곡과 박수가 같이 나온다
+3. 바로 [다시하기] → 이번엔 아무것도 안 하고 0점으로 끝낸다 → 최고 점수를 못 깼으니 아쉬움 곡
+4. `?seed=4&specials&time=5`: 마지막 팡이 다 터지고 점수가 오른 뒤 1초 쉬었다가 결과 화면
+5. 쉬는 1초 사이에 ❚❚ → 결과로 넘어가지 않고 멈춰 있다 → [계속] → 남은 만큼 기다렸다가 결과
+6. 미리보기로 소리만 듣기: `?result=500&best=100`(축하 곡 + 박수), `?result=100&best=500`(아쉬움 곡). 스토리 `?result=1200&stage=1&stars=2`는 예전 클리어 소리, `&stars=0`은 실패 소리
+7. 스피커 버튼으로 효과음을 끄면 결과 소리도 안 난다
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -907,6 +916,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **멈추는 조건 두 개**: "특수 블록이 남지 않음"과 "라운드 상한(`TIMEATTACK.finale.maxRounds`)". 상한이 없으면 터질 때마다 새 특수 블록이 생기는 판에서 끝나지 않을 수 있다
 - **이벤트를 새로 만들지 않기**: 마지막 팡의 첫 단계도 `match`(빈 그룹) + `activate` + `remove` + `score`라서 BoardView·효과음·칭찬 문구가 그대로 재생한다. 새 타입이 없으니 view를 고칠 일이 없다
 - **async 흐름과 씬 시계**: `playFinale`은 글자 → `await` 씬 시계 대기 → `await view.play` → 점수 → 결과 순서로 읽힌다. 기다림을 `scene.time.delayedCall`로 만들어 일시정지하면 같이 멈춘다. `finale` 플래그로 `update`가 매 프레임 다시 부르지 않게 막는다 (`src/scenes/GameScene.ts`의 `end`, `playFinale`)
+
+### W4-22 경쟁 결과 전 쉼, 기록 소리
+- **기다림을 작은 함수로**: `wait(ms)`가 `scene.time.delayedCall`을 Promise로 감싸서 `await wait(bannerMs)`, `await wait(endHoldMs)`처럼 읽힌다. 씬 시계라 일시정지하면 같이 멈추고, 다시하기로 씬이 끝나면 같이 사라진다 (`src/scenes/GameScene.ts`의 `playFinale`)
+- **어떤 소리를 낼지도 순수 함수로**: `resultSounds(result)`가 결과 → 소리 이름 목록을 돌려주고, 씬은 받은 대로 재생만 한다. 경계값(최고와 같은 점수, 첫 판 0점)을 `it.each` 표로 확인한다 (`src/scenes/resultText.ts`, `tests/scenes/resultText.test.ts`)
+- **소리 크기 맞추기**: 파일마다 원래 크기가 다르다. RMS(평균 크기, dB)를 재서 조용한 축하 곡은 볼륨을 올리고, 박수는 곡을 덮지 않게 조금 낮췄다. 파일은 그대로 두고 `SOUND.effects`의 `volume`으로만 맞춘다 (`src/config.ts`)
+- **파일 존재 테스트**: `SOUND.effects`의 모든 파일이 `.ogg`·`.m4a` 둘 다 `public/audio/`에 있는지 `existsSync`로 확인한다. 하나를 빠뜨리면 `npm test`가 잡는다 (`tests/view/sfx.test.ts`)
 
 ### W3-03 스토리 스테이지 1~10
 - **데이터로 게임 조정하기**: 난이도 숫자가 코드가 아니라 JSON에 있어서 코드를 몰라도 바꿀 수 있다 (`public/stages/story.json`)

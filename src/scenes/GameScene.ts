@@ -352,16 +352,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * 경쟁 모드 마지막 팡 (SPEC 3.3, PLAN 6.14): "타임 업!" → 남은 특수 블록을 하나씩 자동 발동 → 점수 반영 → 결과.
+   * 경쟁 모드 마지막 팡 (SPEC 3.3, PLAN 6.14): "타임 업!" → 남은 특수 블록을 하나씩 자동 발동 → 점수 반영
+   * → endHoldMs 쉼 (PLAN 6.15) → 결과.
    * 그동안 입력은 막히고 일시정지는 된다 (기다림은 씬 시계라 같이 멈춘다)
    */
   private async playFinale(): Promise<void> {
     this.finale = true;
     this.clearHint();
     this.setBusy(true);
-    const { bannerMs, text } = TIMEATTACK.finale;
+    const { bannerMs, text, endHoldMs } = TIMEATTACK.finale;
+    const wait = (ms: number) => new Promise<void>((resolve) => this.time.delayedCall(ms, resolve));
     this.fx.showBanner(text, bannerMs);
-    await new Promise<void>((resolve) => this.time.delayedCall(bannerMs, resolve));
+    await wait(bannerMs);
     const result = resolveFinale(this.state);
     if (result.valid) {
       await this.view.play(result.steps);
@@ -370,6 +372,7 @@ export class GameScene extends Phaser.Scene {
       this.updateHud();
       if (import.meta.env.DEV) this.checkViewMatchesBoard();
     }
+    await wait(endHoldMs);
     this.finish();
   }
 

@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { SOUND } from '../../src/config';
 import { sfxKey, sfxRate, voiceFor } from '../../src/view/Sfx';
@@ -54,5 +55,13 @@ describe('SOUND', () => {
 
   it('형식은 ogg 먼저, iOS용 m4a 다음', () => {
     expect(SOUND.formats).toEqual(['ogg', 'm4a']);
+  });
+
+  it('효과음 파일이 형식마다 public/audio에 있다', () => {
+    for (const { file } of Object.values(SOUND.effects)) {
+      for (const ext of SOUND.formats) {
+        expect(existsSync(`public/audio/${file}.${ext}`), `${file}.${ext}`).toBe(true);
+      }
+    }
   });
 });

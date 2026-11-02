@@ -14,6 +14,7 @@ import { musicFor } from './musicRules';
 import {
   formatScore,
   resultLayout,
+  resultSounds,
   resultView,
   type ResultButton,
   type ResultRow,
@@ -49,11 +50,11 @@ export class ResultScene extends Phaser.Scene {
       unlocked: getSave(this.registry).story.unlocked,
     });
 
-    // 게임 곡을 줄여 끝낸다. 결과 화면은 음악 없이 클리어·실패 소리만
+    // 게임 곡을 줄여 끝낸다. 결과 화면은 음악 없이 결과 소리만
     Music.of(this.game).play(musicFor('Result'), MUSIC.resultFadeMs);
     this.sfx = new Sfx(this);
-    // 경쟁은 늘 클리어 소리, 스토리는 성공/실패
-    this.sfx.play(this.result.kind === 'story' && !this.result.cleared ? 'fail' : 'clear');
+    // 스토리는 성공/실패, 경쟁은 최고 기록 여부 (resultSounds)
+    for (const name of resultSounds(this.result)) this.sfx.play(name);
 
     new Background(this);
     // 있는 줄만 고른 간격으로 쌓아 화면 가운데에 (resultLayout)

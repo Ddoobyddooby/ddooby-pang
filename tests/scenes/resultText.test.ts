@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { RESULT } from '../../src/config';
-import { formatScore, previewResult, resultLayout, resultView } from '../../src/scenes/resultText';
+import {
+  formatScore,
+  previewResult,
+  resultLayout,
+  resultSounds,
+  resultView,
+} from '../../src/scenes/resultText';
 import type { ModeResult } from '../../src/modes/GameMode';
 
 describe('scenes/resultText', () => {
@@ -131,6 +137,35 @@ describe('scenes/resultText: resultView (설계 4절 표)', () => {
       resultView(story({ stageId: 10, cleared: false, stars: 0 }), { stageCount: 10, unlocked: 10 })
         .allClear,
     ).toBe(false);
+  });
+});
+
+describe('resultSounds (PLAN 6.15)', () => {
+  const ta = (score: number, bestScore: number): ModeResult => ({
+    kind: 'timeattack',
+    score,
+    bestScore,
+    newBest: score > bestScore,
+  });
+  const story = (cleared: boolean): ModeResult => ({
+    kind: 'story',
+    stageId: 1,
+    cleared,
+    score: 100,
+    bonus: 0,
+    stars: cleared ? 1 : 0,
+  });
+
+  it.each([
+    ['경쟁 최고 기록 갱신', ta(1200, 900), ['newbest', 'applause']],
+    ['경쟁 첫 판 (최고 0, 점수 > 0)', ta(300, 0), ['newbest', 'applause']],
+    ['경쟁 못 깸', ta(500, 900), ['nobest']],
+    ['경쟁 최고와 같은 점수', ta(900, 900), ['nobest']],
+    ['경쟁 첫 판인데 점수 0', ta(0, 0), ['nobest']],
+    ['스토리 클리어', story(true), ['clear']],
+    ['스토리 실패', story(false), ['fail']],
+  ])('%s', (_, result, sounds) => {
+    expect(resultSounds(result)).toEqual(sounds);
   });
 });
 

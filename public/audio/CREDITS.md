@@ -8,7 +8,7 @@
 | `bad.ogg` | Interface Sounds 1.0 | `Audio/back_002.ogg` | 되돌아가는 스왑 |
 | `match.ogg` | Interface Sounds 1.0 | `Audio/glass_002.ogg` | 매치 (연쇄 단계마다 재생 속도를 올려 음이 높아짐) |
 | `special.ogg` | Interface Sounds 1.0 | `Audio/maximize_006.ogg` | 특수 블록 발동 |
-| `clear.ogg` | Interface Sounds 1.0 | `Audio/confirmation_004.ogg` | 클리어 / 경쟁 결과 |
+| `clear.ogg` | Interface Sounds 1.0 | `Audio/confirmation_004.ogg` | 스토리 클리어 |
 | `fail.ogg` | Interface Sounds 1.0 | `Audio/minimize_006.ogg` | 실패 |
 | `button.ogg` | UI Audio (UI SFX Set) | `Audio/click1.ogg` | 버튼 |
 | `star.ogg` | Interface Sounds 1.0 | `Audio/glass_005.ogg` | 결과 화면 별 하나 찰 때 |
@@ -54,6 +54,18 @@ afconvert -f m4af -d aac -b 96000 menu.wav menu.m4a
 - macOS `afconvert`는 Ogg Vorbis를 읽을 수만 있고 쓰지 못해서 `.ogg`는 `oggenc`로 만든다
 - 반복 이음새: 디코드한 길이가 두 형식 모두 원본 WAV와 샘플 단위로 같다(menu 769,132 / timeattack 2,000,878 / story 1,820,904, Chrome에서 확인). AAC 인코더가 앞에 넣는 무음(priming)은 `afconvert`가 파일에 길이를 적어 두어 디코더가 잘라 낸다
 - 크기: ogg 합계 약 1.0MB, m4a 약 1.3MB (기기는 한 형식만 받는다)
+
+## 경쟁 결과 소리 (W4-22)
+
+모두 **CC0**이다. 사용자가 직접 들어 보고 골랐다 (PLAN 6.15).
+
+| 파일 | 원본 | 손질 | 쓰는 곳 |
+|---|---|---|---|
+| `newbest.{ogg,m4a}` | OpenGameArt "Win Jingle" `winfretless_0.ogg` | 손대지 않음 (3.8초) | 경쟁 최고 기록 갱신 (축하 곡) |
+| `applause.{ogg,m4a}` | OpenGameArt "Applause in a large hall or church" `applause-clapping-church-crowd-immersive.wav` | 5.0~7.5초 구간, 앞 0.05초·뒤 0.8초 페이드, `oggenc -q 4` | 경쟁 최고 기록 갱신 (박수, 축하 곡과 같이) |
+| `nobest.{ogg,m4a}` | Kenney "85 Short music jingles" (OpenGameArt `jingleSounds_Kenney.zip`) `jingles_STEEL07.ogg` | 손대지 않음 (1.6초) | 경쟁 최고 기록 못 깸 (아쉬움 곡) |
+
+메인 세션이 ogg·m4a로 변환해 준 파일을 그대로 넣었다. 크기는 `src/config.ts` `SOUND.effects`의 `volume`으로 맞춘다.
 
 ## 칭찬 목소리 (W4-15, `voice/`)
 

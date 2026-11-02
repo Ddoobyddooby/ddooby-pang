@@ -30,7 +30,7 @@ export const TIMEATTACK = {
   /** 남은 시간이 이 아래면 HUD 시간 강조 (W2-11) */
   warnMs: 10000,
   /** 시간 0 뒤 마지막 팡 (SPEC 3.3, PLAN 6.14): 자동 발동 라운드 상한, 글자를 띄우고 기다리는 시간 (ms) */
-  finale: { maxRounds: 20, bannerMs: 800, text: '타임 업!' },
+  finale: { maxRounds: 20, bannerMs: 800, text: '타임 업!', endHoldMs: 1000 },
 } as const;
 
 export const SPECIAL = {
@@ -482,6 +482,11 @@ export const SOUND = {
     fail: { file: 'fail', volume: 0.4 },
     button: { file: 'button', volume: 0.5 },
     star: { file: 'star', volume: 0.5 },
+    // 경쟁 결과 (PLAN 6.15). 결과 화면에 들어갈 때 줄어드는 경쟁 곡 위로 들리게 둔다.
+    // newbest는 원본이 조용해서(RMS 약 -19dB, clear는 -12dB) 크게, 박수는 곡을 덮지 않게 그 아래
+    newbest: { file: 'newbest', volume: 0.9 },
+    applause: { file: 'applause', volume: 0.7 },
+    nobest: { file: 'nobest', volume: 0.55 },
     // 칭찬 목소리 (PLAN 6.9). 경쟁 곡(가장 큰 곡) 위로 또렷이 들리게 다른 효과음보다 크게 둔다
     voice1: { file: 'voice/voice1', volume: 0.7 },
     voice2: { file: 'voice/voice2', volume: 0.7 },

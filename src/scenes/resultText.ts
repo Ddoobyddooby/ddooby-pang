@@ -2,6 +2,7 @@
 
 import { RESULT } from '../config';
 import type { ModeResult } from '../modes/GameMode';
+import type { SfxName } from '../view/Sfx';
 
 /** 12450 → "12,450". 소수는 버리고 음수·NaN은 0으로 본다 */
 export function formatScore(n: number): string {
@@ -34,6 +35,15 @@ export function previewResult(search: string): ModeResult | null {
   }
   const bestScore = intParam(params, 'best');
   return { kind: 'timeattack', score, bestScore, newBest: score > bestScore };
+}
+
+/**
+ * 결과 화면에 들어갈 때 같이 시작하는 소리 (PLAN 6.15). 스토리는 클리어/실패,
+ * 경쟁은 최고 기록이면 축하 곡 + 박수, 못 깨면 아쉬움 곡
+ */
+export function resultSounds(result: ModeResult): SfxName[] {
+  if (result.kind === 'story') return [result.cleared ? 'clear' : 'fail'];
+  return result.newBest ? ['newbest', 'applause'] : ['nobest'];
 }
 
 export type ResultButton = 'next' | 'retry' | 'map' | 'menu';
