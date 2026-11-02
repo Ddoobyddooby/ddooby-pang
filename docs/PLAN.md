@@ -324,6 +324,7 @@ type ModeResult =
 - 시간은 **애니메이션 중에도 흐른다** (타임어택이라 연쇄 구경도 시간에 포함)
 - **연쇄 애니메이션 중 시간 0이 되면**: 진행 중인 연쇄는 끝까지 처리·점수 반영하고 그 뒤에 종료 (입력만 막음). core는 스왑 순간 결과를 다 계산하므로 점수는 이미 들어와 있고, 씬이 재생이 끝날 때까지 결과 화면을 미룬다
 - `canInput()` = 남은 시간 > 0, `isOver()` = 남은 시간 0
+- 시간 0 뒤의 "마지막 팡"(SPEC 3.3, PLAN 6.14) 점수도 `onResolve`로 그대로 더한다. 모드는 바뀌지 않는다
 - 생성자에서 이전 `bestScore`를 받는다(기본 0). `result().newBest` = 점수 > bestScore. **저장은 W3-07(storage)**, 그 전까지 최고 점수는 새로고침하면 사라진다
 - 마지막 `config.TIMEATTACK.warnMs`(10000) 동안 HUD 시간 강조 (W2-11). `TimeAttackMode.timeLeftMs()`로 읽는다
 - W3-04에서 `timeLimit`을 `timeattack.json`으로 옮긴다
@@ -521,6 +522,18 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지�
 - 매치 그룹(일반 매치)의 제거·점수 팝업·칭찬 문구·목소리 시점은 지금 그대로. 연쇄가 큰 턴은 0.1~0.4초 길어진다 (재생 중엔 원래 입력이 막혀 있음)
 - 특수 블록 조합 효과(두 특수 블록 스왑)는 여전히 v0.2 백로그
 - 결과: core `activate` 이벤트에 `depth`(차례)를 더했다. `chainActivate(board, start, activated, depth)`가 BFS 큐에 깊이를 같이 넣어 휘말린 블록은 터뜨린 블록 + 1, 컬러 스왑 발동은 첫 발동 0·휘말린 블록 1부터, 'explode'로 걸린 새 블록은 그 칸을 덮은 가장 이른 차례 + 1. view 계산(cleared 포함 관계)은 매치 그룹 안의 특수 블록끼리 서로 범위에 있으면 차례를 잘못 매겨서 core 쪽이 단순했다. 시간표는 `src/view/fx/chainTimeline.ts`(`activateDelay`·`flashDelay`·`removeDelays`, 순수): 매치 칸 0, 휘말린 특수 블록은 자기 차례, 나머지는 그 칸을 덮은 가장 이른 차례. `ANIM.chainStep` 110ms, 번쩍임 `FX.special.chainFlash` { scale 1.3(chainStep 동안 Back.easeOut), whiteMs 70 }. 지연은 `scene.time.delayedCall`이라 일시정지·다시하기에 같이 멈추고 사라진다. `?seed=4&specials` (1,2)↔(2,2)의 4차례 연쇄(lineH → lineV → super → bomb)가 0.11초 간격으로 보이고 그 단계가 약 0.33초 길어졌다. 단일 발동은 지연 0이라 예전과 같은 코드 경로
+
+### 6.14 경쟁 모드 마지막 팡 (W4-21)
+
+2026-11-02 사용자 결정: 시간이 끝나도 판에 남은 특수 블록을 다 터뜨리고 끝낸다 (SPEC 3.3). 지금은 시간 0 때 재생 중인 연쇄만 끝까지 보고 바로 결과 화면으로 간다
+
+- **core** `resolveFinale(state): ResolveResult` (engine.ts, 순수·결정적). 판에 특수 블록이 없으면 `valid: false`, `steps: []`, 상태 그대로. 있으면 **한 라운드에 하나씩**: 행 우선으로 첫 특수 블록을 `chainActivate`의 시작 칸으로 발동 → 제거 → 낙하·리필 → 생긴 매치는 보통 연쇄처럼(`cascade` 배율, 새 특수 블록 생성 포함) 끝까지 → 다음 라운드. 특수 블록이 남지 않거나 `TIMEATTACK.finale.maxRounds`(config, 20 근처)에 닿으면 멈춘다. 라운드마다 `cascade`는 0부터. 점수·`removedByColor`·불변식(빈칸 0, 매치 0, 가능한 수 ≥ 1, 필요하면 셔플)은 `resolveSwap`과 같다. `resolveSwap`의 연쇄 루프를 "시작 발동 칸"을 받는 내부 함수로 빼서 같이 쓰고, 기존 `resolveSwap` 결과(이벤트·점수)는 한 글자도 바뀌지 않게 한다 (기존 테스트 그대로 통과)
+- **이벤트**: 새 타입은 만들지 않는다. 라운드의 첫 단계는 `match`(groups 빈 배열, cascade 0) + `activate`들(depth는 지금처럼 BFS) + `remove` + `score`(at = 발동 칸). view의 기존 재생 경로를 그대로 쓴다
+- **씬** (GameScene, 타임어택만): 시간 0 → 재생 중인 스왑이 끝나기를 기다림(지금처럼) → "타임 업!" 글자를 `TIMEATTACK.finale.bannerMs`(800 근처) 띄움 → `resolveFinale` 결과를 `view.play` → `mode.onResolve` → HUD 점수 갱신 → `finish()`. 특수 블록이 없으면 글자만 짧게 보이고 결과로. 마지막 팡 동안 입력은 막히고, 일시정지(❚❚·화면 가림)는 지금처럼 된다. 데모(`?demo`)도 같은 흐름
+- **스토리 모드는 안 바꾼다** (남은 이동 보너스는 점수만, PLAN 5절)
+- 소리·목소리·칭찬 문구·흔들림은 보통 연쇄와 같은 규칙으로 나온다
+- 테스트: 특수 블록 없음 → 그대로 / 있음 → 끝난 판에 불변식 성립, 같은 seed 같은 결과, 점수 > 0, `maxRounds` 넘지 않음. 줄 블록 하나 판에서 라운드 1회·그 줄 제거 확인. 타임어택 모드가 시간 0 뒤 `onResolve` 점수를 더하는 테스트
+- 확인: `?time=5&specials`로 시간 0 → "타임 업!" → 특수 블록이 하나씩 터지고 점수가 오른 뒤 결과 화면, 최고 점수에 들어감
 
 ## 7. 데이터 / 저장
 
