@@ -91,9 +91,13 @@ git push origin HEAD:main
 - **어떻게**: 메인이 메인 폴더에서 돌린다. 쓰기를 막는다
 
   ```bash
-  codex review --commit <커밋 해시> -c sandbox_mode='"read-only"' \
-    "AGENTS.md의 아키텍처 규칙, SPEC·docs/PLAN.md의 해당 절과 맞는지, 버그·회귀·빠진 테스트를 한국어로 짧게"
+  codex exec -s read-only -o <결과.md> \
+    "커밋 <해시>(<태스크ID> <요약>)를 코드 리뷰해 줘. git show <해시>로 변경을 보고 필요한 주변 코드를 읽어라. \
+  기준: AGENTS.md 아키텍처 규칙, SPEC <절>, docs/PLAN.md <절>. 찾을 것: 버그, 회귀, 엣지 케이스, 빠진 테스트. \
+  파일은 고치지 마라. 한국어로, 지적마다 심각도(높음/중간/낮음)·파일:줄·근거·재현 조건. 문제가 없으면 없다고."
   ```
+
+  `codex review --commit <해시>`는 지시문(PROMPT)을 같이 받지 못해서(CLI 0.165) 기준을 줄 수 있는 `codex exec`를 쓴다. 한 번에 몇 분 걸린다
 
   사용자가 Codex 앱이나 터미널에서 직접 돌려 결과를 붙여 줘도 된다
 - **거르기**: 메인이 지적마다 코드를 열어 확인한다
