@@ -536,6 +536,22 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지�
 - 확인: `?time=5&specials`로 시간 0 → "타임 업!" → 특수 블록이 하나씩 터지고 점수가 오른 뒤 결과 화면, 최고 점수에 들어감
 - 결과: `resolveSwap`의 연쇄 루프를 내부 `runCascades(board, state, trigger, …)`로 뺐다. `Trigger`는 `match`(스왑 매치, 스왑 칸) / `burst`(컬러 스왑) / `fire`(마지막 팡의 특수 블록 하나). 뺀 뒤 예전 engine.ts와 seed 150 × 색 4~6 × 특수 블록 6개 판의 모든 인접 스왑 × keep/explode(10만 800건, 유효 2만 584건)를 `toEqual`로 비교해 결과가 같았다(임시 비교, 커밋 안 함). 셔플·불변식은 `finishResolve`로 같이 쓴다. `resolveFinale(state, maxRounds = 20)`은 셔플·불변식 확인을 마지막 라운드 뒤에 한 번 한다. config `TIMEATTACK.finale` { maxRounds 20, bannerMs 800, text '타임 업!' }, 글자 크기 `FX.bannerScale` 1.3(칭찬 문구 모양, `THEME.title` 색). 씬은 `end()`가 경쟁이면 `playFinale`, 스토리면 `finish`. 점수 패널은 마지막 팡을 다 재생한 뒤 한 번에 오른다(팝업은 터질 때마다). `?seed=4&specials&time=5`: 1라운드 4연쇄 + 2라운드 무지개로 약 3.2초, 1,280점이 최고 점수에 저장. 일시정지·`?demo`·특수 블록 없음 확인
 
+### 6.15 경쟁 결과로 넘어가기 전 쉼, 기록 소리 (W4-22)
+
+2026-11-02 사용자 결정 (SPEC 3.3). 사용자가 직접 들어 보고 골랐다. 모두 CC0
+
+- **쉼**: 경쟁 모드는 마지막 팡(또는 특수 블록이 없을 때 "타임 업!" 글자)이 끝난 뒤 `TIMEATTACK.finale.endHoldMs`(1000) 동안 판을 그대로 보여 주고 결과 화면으로. 씬 시계로 기다려 일시정지에 같이 멈춘다. 스토리 모드는 그대로
+- **소리** (결과 화면, 경쟁만. 스토리 `clear`/`fail`은 그대로):
+  - `newBest` → `newbest`(짧은 축하 곡)와 `applause`(박수)를 **같이** 시작
+  - 못 깸 → `nobest`(아쉬움 곡)
+  - 최고 점수가 0인 첫 판(점수 > 0이면 newBest)은 축하 쪽. 점수 0으로 끝나 newBest가 아니면 아쉬움
+  - 효과음 끄기를 따른다. 결과 곡(`MUSIC`)이 나오면 곡 위에서 들리게 볼륨을 맞춘다 (config `SOUND.effects`)
+- **파일**: 메인이 준비해 둔 `newbest`·`applause`·`nobest`의 `.ogg`/`.m4a`를 `public/audio/`에 둔다
+  - `newbest` ← OpenGameArt "Win Jingle" `winfretless_0.ogg` (CC0, 3.8초, 손대지 않음)
+  - `applause` ← OpenGameArt "Applause in a large hall or church" `applause-clapping-church-crowd-immersive.wav` (CC0) 5.0~7.5초 구간, 앞 0.05초·뒤 0.8초 페이드, oggenc -q 4
+  - `nobest` ← Kenney "85 Short music jingles" (OpenGameArt `jingleSounds_Kenney.zip`, CC0) `jingles_STEEL07.ogg` (1.6초, 손대지 않음)
+  - `public/audio/CREDITS.md`에 위 출처를 적는다
+
 ## 7. 데이터 / 저장
 
 ### 7.1 스테이지
