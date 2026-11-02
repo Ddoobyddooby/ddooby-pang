@@ -88,18 +88,14 @@ git push origin HEAD:main
 ### 8.2 코드 리뷰
 
 - **언제**: 코딩 탭이 push한 태스크 커밋을 메인이 검토할 때(6절). `src/core`, `src/modes`, 큰 리팩터, 저장 데이터를 건드린 커밋은 꼭 돌린다. 문서·에셋만 바뀐 커밋은 건너뛴다
-- **어떻게**: 메인이 메인 폴더에서 돌린다. 쓰기를 막는다
+- **어떻게**: 8.5의 Codex 탭에 지시서를 보낸다. 지시서에 넣을 것: 커밋 해시와 태스크 ID, 기준(`AGENTS.md` 아키텍처 규칙, SPEC·`docs/PLAN.md`의 해당 절), 찾을 것(버그, 회귀, 엣지 케이스, 빠진 테스트), "파일은 고치지 마라", 결과 파일 경로(8.5), 지적마다 심각도(높음/중간/낮음)·파일:줄·근거·재현 조건, 문제가 없으면 없다고
+- Codex 탭을 못 쓸 때는 메인이 메인 폴더에서 직접 돌린다 (쓰기 막음):
 
   ```bash
-  codex exec -s read-only -o <결과.md> \
-    "커밋 <해시>(<태스크ID> <요약>)를 코드 리뷰해 줘. git show <해시>로 변경을 보고 필요한 주변 코드를 읽어라. \
-  기준: AGENTS.md 아키텍처 규칙, SPEC <절>, docs/PLAN.md <절>. 찾을 것: 버그, 회귀, 엣지 케이스, 빠진 테스트. \
-  파일은 고치지 마라. 한국어로, 지적마다 심각도(높음/중간/낮음)·파일:줄·근거·재현 조건. 문제가 없으면 없다고."
+  codex exec -s read-only -o <결과.md> "<위 지시서>"
   ```
 
-  `codex review --commit <해시>`는 지시문(PROMPT)을 같이 받지 못해서(CLI 0.165) 기준을 줄 수 있는 `codex exec`를 쓴다. 한 번에 몇 분 걸린다
-
-  사용자가 Codex 앱이나 터미널에서 직접 돌려 결과를 붙여 줘도 된다
+  `codex review --commit <해시>`는 지시문(PROMPT)을 같이 받지 못해서(CLI 0.165) `codex exec`를 쓴다. 한 번에 몇 분 걸린다
 - **거르기**: 메인이 지적마다 코드를 열어 확인한다
   - 맞고 바로 고칠 것 → 코딩 탭에 수정 지시 (`[fix] <태스크ID> ...`)
   - 맞지만 지금 안 고칠 것 → `docs/FEEDBACK.md` 2절에 `R<번호>`로 적고 근거에 "Codex 리뷰"
@@ -115,4 +111,20 @@ git push origin HEAD:main
 ### 8.4 쓰는 양
 
 - Plus 요금제 한도가 있다. 리뷰는 태스크 커밋 하나씩, 이미지는 한 번에 후보 2~4장으로 요청한다
+
+### 8.5 Codex 탭에 맡기기 (Orca)
+
+- 2026-11-02 사용자가 정한 Codex 탭: Orca `orcaTabId` **`747deb42-3770-4575-8f7c-2bc6d871c397`**, **`e8958cf0-b9ba-481c-bf07-50f300cbc905`**. 두 탭 모두 메인 폴더(`main`)에서 열려 있다. 하나가 일하는 중이면 다른 탭에 맡긴다. 탭이 바뀌면 사용자가 새 ID를 알려 준다
+- 메시지는 Orca CLI로 보낸다. 터미널 handle은 Orca를 다시 켜면 바뀌므로 맡길 때마다 `tabId`로 다시 찾는다:
+
+  ```bash
+  orca terminal list --json   # tabId가 위 ID인 줄의 handle
+  orca terminal read --terminal <handle> --screen --json        # 쉬는 중인지 먼저 본다
+  orca terminal send --terminal <handle> --text "<지시서>" --enter --wait-submit 10 --json
+  orca terminal wait --terminal <handle> --for tui-idle --timeout-ms 900000 --json
+  ```
+
+- Codex는 Claude 세션에 메시지를 보낼 수 없다. 그래서 **결과는 파일로** 받는다: `.codex-out/<태스크ID>-<review|image>.md` (gitignore). 이미지는 8.3대로 `assets/<용도>-src/`에 저장하고 파일 목록을 결과 파일에 적게 한다. 끝나면 메인이 결과 파일을 읽는다
+- 지시서 첫 줄은 한 문장 요약, 그다음 "AGENTS.md와 docs/WORKFLOW.md 8절을 따른다. 커밋·push 하지 않는다"를 넣는다
+- 코딩 탭(Claude)의 worktree·브랜치는 건드리지 않게 한다. 리뷰는 `git show <해시>`로 본다
 
