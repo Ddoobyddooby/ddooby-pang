@@ -410,6 +410,45 @@ describe('chainActivate', () => {
     expect(result.activations.map((a) => a.at)).toEqual([p(0, 0), p(0, 3)]);
   });
 
+  // PLAN 6.13: 화면이 차례대로 재생할 수 있게 깊이를 싣는다
+  it.each([
+    [
+      '줄 → 줄 → 폭탄: 휘말릴 때마다 1씩',
+      `
+        R  R R- B|
+        Y  G B  G
+        G  B Y  B
+        B  Y G  R*
+      `,
+      [p(0, 0), p(0, 1), p(0, 2)],
+      0,
+      [0, 1, 2],
+    ],
+    [
+      '시작 칸의 특수 블록끼리는 서로 범위에 있어도 같은 차례',
+      `
+        R- R| R
+        Y  G  B
+      `,
+      [p(0, 0), p(0, 1), p(0, 2)],
+      0,
+      [0, 0],
+    ],
+    [
+      'depth 인자: 시작 칸이 그 차례에서 발동',
+      `
+        R- Y G B|
+        Y  G B Y
+      `,
+      [p(0, 0)],
+      2,
+      [2, 3],
+    ],
+  ])('depth: %s', (_name, text, start, depth, expected) => {
+    const result = chainActivate(parseBoard(text), start, [], depth);
+    expect(result.activations.map((a) => a.depth)).toEqual(expected);
+  });
+
   it('activate 이벤트의 cleared는 그 블록의 발동 범위', () => {
     const board = parseBoard(`
       R* Y G
@@ -422,6 +461,7 @@ describe('chainActivate', () => {
       special: 'bomb',
       at: p(0, 0),
       cleared: blastArea('bomb', p(0, 0), board),
+      depth: 0,
     });
   });
 

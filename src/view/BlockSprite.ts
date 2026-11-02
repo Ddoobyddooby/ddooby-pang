@@ -101,4 +101,18 @@ export class BlockSprite extends Phaser.GameObjects.Container {
       ease: 'Sine.easeOut',
     });
   }
+
+  /**
+   * 연쇄로 휘말렸을 때: whiteMs 동안 하얗게 번쩍이고 duration 동안 scale배까지 부푼다 (PLAN 6.13).
+   * 이미 제거가 예약된 블록에 부르므로 removing을 보지 않는다. 기다리지 않는다
+   */
+  flash(scale: number, duration: number, whiteMs: number): void {
+    const images = this.list as Phaser.GameObjects.Image[];
+    images.forEach((image) => image.setTintFill(0xffffff));
+    this.scene.time.delayedCall(whiteMs, () => {
+      if (this.active) images.forEach((image) => image.clearTint());
+    });
+    this.scene.tweens.killTweensOf(this);
+    this.scene.tweens.add({ targets: this, scale, duration, ease: 'Back.easeOut' });
+  }
 }

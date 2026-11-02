@@ -2,11 +2,12 @@
 // 게임 상태를 직접 계산하지 않는다. 위치는 EventTracker로 이벤트만 따라간다.
 
 import Phaser from 'phaser';
-import { ANIM, VIEW } from '../config';
+import { ANIM, FX, VIEW } from '../config';
 import type { Block, Board, GameEvent, Pos, SpecialKind } from '../core/types';
 import { BlockSprite } from './BlockSprite';
 import { EventTracker } from './eventTracker';
 import { cellAt, cellCenter, type Layout } from './layout';
+import { activateDelay, flashDelay, removeDelays } from './fx/chainTimeline';
 import { cascadeToLevel } from './fx/fxLevels';
 import { removedFromMatch, type RemovedCell } from './fx/matchInfo';
 import { ensureTextures, type Face } from './theme/textures';
@@ -15,7 +16,7 @@ import { tween } from './tween';
 export interface BoardViewHooks {
   /** match 이벤트를 재생하기 시작할 때 동기로 부른다. 연출은 기다리지 않는다 */
   onMatch?(level: number, removed: readonly RemovedCell[]): void;
-  /** activate 이벤트(특수 블록 발동)를 재생하기 시작할 때 동기로 부른다 */
+  /** activate 이벤트(특수 블록 발동)의 차례가 되면 부른다 (차례 0은 재생 시작 때 동기로, PLAN 6.13) */
   onActivate?(special: SpecialKind, at: Pos, cleared: readonly Pos[]): void;
   /** score 이벤트(delta > 0)를 재생하기 시작할 때 동기로 부른다. 팝업은 기다리지 않는다 */
   onScore?(delta: number, level: number, at: Pos): void;
@@ -29,6 +30,8 @@ export class BoardView {
   private selectedId: number | null = null;
   /** 힌트로 깜빡이는 블록 id (없으면 빈 배열) */
   private hintIds: number[] = [];
+  /** 재생 중인 step의 블록 id → 제거를 시작할 ms (연쇄 차례, PLAN 6.13) */
+  private removeAt = new Map<number, number>();
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -59,6 +62,7 @@ export class BoardView {
   /** step을 순서대로 재생한다. 한 step 안의 이벤트는 동시에 재생한다 */
   async play(steps: readonly (readonly GameEvent[])[]): Promise<void> {
     for (const step of steps) {
+      this.removeAt = removeDelays(step, ANIM.chainStep);
       await Promise.all(step.map((event) => this.playEvent(event)));
     }
   }
@@ -131,9 +135,9 @@ export class BoardView {
         ]).then(() => undefined);
 
       case 'remove':
-        return Promise.all(event.blocks.map(({ id }) => this.removeSprite(id))).then(
-          () => undefined,
-        );
+        return Promise.all(
+          event.blocks.map(({ id }) => this.removeSprite(id, this.removeAt.get(id) ?? 0)),
+        ).then(() => undefined);
 
       case 'fall':
         return Promise.all(
@@ -161,9 +165,19 @@ export class BoardView {
         this.hooks.onMatch?.(cascadeToLevel(event.cascade), removedFromMatch(event.groups));
         return Promise.resolve();
 
-      case 'activate':
-        this.hooks.onActivate?.(event.special, event.at, event.cleared);
+      case 'activate': {
+        // 휘말린 특수 블록은 앞 차례에 번쩍·부풀고, 자기 차례에 발동한다. 블록 제거는 remove가 같은 시간표로 맞춘다
+        const flashAt = flashDelay(event, ANIM.chainStep);
+        const sprite = this.sprites.get(this.tracker.idAt(event.at) ?? -1);
+        if (flashAt !== null && sprite) {
+          const { scale, whiteMs } = FX.special.chainFlash;
+          this.later(flashAt, () => sprite.flash(scale, ANIM.chainStep, whiteMs));
+        }
+        this.later(activateDelay(event, ANIM.chainStep), () =>
+          this.hooks.onActivate?.(event.special, event.at, event.cleared),
+        );
         return Promise.resolve();
+      }
 
       case 'score':
         if (event.delta > 0)
@@ -211,11 +225,27 @@ export class BoardView {
     });
   }
 
-  private removeSprite(id: number): Promise<void> {
+  /** ms 뒤에 부른다. 0이면 바로 (씬이 멈추면 같이 멈춘다) */
+  private later(ms: number, fn: () => void): void {
+    if (ms > 0) this.scene.time.delayedCall(ms, fn);
+    else fn();
+  }
+
+  /** delay: 연쇄 차례를 기다렸다가 터진다 (그동안 그 칸에 그대로 보인다) */
+  private removeSprite(id: number, delay = 0): Promise<void> {
     const sprite = this.sprites.get(id);
     if (!sprite) return Promise.resolve();
     this.sprites.delete(id);
     sprite.removing = true;
+    if (delay > 0) {
+      return new Promise<void>((resolve) => this.scene.time.delayedCall(delay, resolve)).then(() =>
+        this.shrinkAway(sprite),
+      );
+    }
+    return this.shrinkAway(sprite);
+  }
+
+  private shrinkAway(sprite: BlockSprite): Promise<void> {
     this.scene.tweens.killTweensOf(sprite); // 착지 눌림·스왑 팝이 남아 있으면 끊고 이어서 줄어든다
     sprite.setFace('squint'); // 터지기 직전 `><`
     return tween(this.scene, {

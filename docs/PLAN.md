@@ -520,6 +520,7 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지�
 - **같은 단계에 새로 생긴 특수 블록**은 지금처럼 남는다 (`newSpecialInBlast: 'keep'`, 사용자에게 설명함. 만든 블록을 바로 잃지 않게)
 - 매치 그룹(일반 매치)의 제거·점수 팝업·칭찬 문구·목소리 시점은 지금 그대로. 연쇄가 큰 턴은 0.1~0.4초 길어진다 (재생 중엔 원래 입력이 막혀 있음)
 - 특수 블록 조합 효과(두 특수 블록 스왑)는 여전히 v0.2 백로그
+- 결과: core `activate` 이벤트에 `depth`(차례)를 더했다. `chainActivate(board, start, activated, depth)`가 BFS 큐에 깊이를 같이 넣어 휘말린 블록은 터뜨린 블록 + 1, 컬러 스왑 발동은 첫 발동 0·휘말린 블록 1부터, 'explode'로 걸린 새 블록은 그 칸을 덮은 가장 이른 차례 + 1. view 계산(cleared 포함 관계)은 매치 그룹 안의 특수 블록끼리 서로 범위에 있으면 차례를 잘못 매겨서 core 쪽이 단순했다. 시간표는 `src/view/fx/chainTimeline.ts`(`activateDelay`·`flashDelay`·`removeDelays`, 순수): 매치 칸 0, 휘말린 특수 블록은 자기 차례, 나머지는 그 칸을 덮은 가장 이른 차례. `ANIM.chainStep` 110ms, 번쩍임 `FX.special.chainFlash` { scale 1.3(chainStep 동안 Back.easeOut), whiteMs 70 }. 지연은 `scene.time.delayedCall`이라 일시정지·다시하기에 같이 멈추고 사라진다. `?seed=4&specials` (1,2)↔(2,2)의 4차례 연쇄(lineH → lineV → super → bomb)가 0.11초 간격으로 보이고 그 단계가 약 0.33초 길어졌다. 단일 발동은 지연 0이라 예전과 같은 코드 경로
 
 ## 7. 데이터 / 저장
 

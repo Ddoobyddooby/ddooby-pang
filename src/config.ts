@@ -62,6 +62,8 @@ export const ANIM = {
   swapPop: 1.1,
   /** remove 안에서 `><` 표정 유지 시간 (ms) */
   squintHold: 80,
+  /** 연쇄 발동 차례 사이 간격 (ms). 휘말린 특수 블록은 이만큼 뒤에 터진다 (PLAN 6.13) */
+  chainStep: 110,
 } as const;
 
 /** 화면 배치와 블록 모양 (설계: 2026-10-30-screen-layout-design.md) */
@@ -216,6 +218,8 @@ export const FX = {
     /** 무지개 발동 때 반짝임을 띄우는 칸 수 상한, 칸마다 별 개수 */
     maxSparkles: 24,
     starsPerSparkle: 2,
+    /** 연쇄로 휘말린 특수 블록: 하얗게 번쩍이고(whiteMs) 부풀었다가(scale, ANIM.chainStep 동안) 자기 차례에 터진다 (PLAN 6.13) */
+    chainFlash: { scale: 1.3, whiteMs: 70 },
   },
 } as const;
 

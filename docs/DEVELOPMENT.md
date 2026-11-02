@@ -327,38 +327,6 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - `npm run dev` → 평소처럼 게임이 시작된다 (스테이지·경쟁 설정을 시작할 때 읽는다)
 - `public/stages/story.json`의 `"target": 2000`을 `0`으로 바꾸고 새로고침 → 게임이 시작되지 않고 빨간 글씨로 "데이터를 불러오지 못했어요 / stages/story.json: story[0].goals[0].target: 1 이상의 정수여야 한다"가 뜬다. 되돌리면 정상
 
-### W4-15 칭찬 목소리
-- **표로 정하는 규칙**: "몇 단계에 어떤 목소리"를 `if`문 대신 `config.SOUND.voiceByLevel` 표에 두고, 순수 함수 `voiceFor(level)`가 표에서 찾아 없으면 `null`을 준다. 표만 고치면 규칙이 바뀌고, `it.each` 표 테스트로 1~7단계를 한 번에 확인한다 (`src/view/Sfx.ts`, `tests/view/sfx.test.ts`)
-- **타입으로 짝 맞추기**: `voiceByLevel`의 값 타입을 `'voice1' | … | 'voice4'`로 적어 두면, `SfxName`(효과음 이름들)에 없는 이름을 넣었을 때 `voiceFor`의 반환에서 타입 오류가 난다
-- **이벤트 하나 = 소리 하나**: core는 연쇄 한 단계마다 `match` 이벤트를 하나만 낸다(그룹이 여럿이어도 `groups` 배열 하나). 그래서 `hooks.onMatch`에서 부르면 목소리가 단계마다 정확히 한 번이다 (`src/core/engine.ts`, `src/scenes/GameScene.ts`)
-- **소리 크기 맞추기**: 파일을 다시 만들지 않고 재생 볼륨으로 맞춘다. 녹음은 효과음보다 훨씬 크게 들어 있어서(가장 큰 0.1초 구간 RMS 약 0.3, match 소리 약 0.06) 숫자로 먼저 비교하고 귀로 마무리한다
-- **녹음을 게임 소리로**: 앞뒤 빈 소리 자르기 → 끝 페이드아웃 → 무손실 WAV 보관 → 형식별 인코딩(`oggenc`, `afconvert`). 원본·편집본을 저장소에 같이 두어 다시 만들 수 있게 한다 (`assets/voice-src/`, `public/audio/CREDITS.md`)
-
-### W4-16 미션 안내 카드
-- **단계가 있는 연출 = 작은 상태 기계**: `appear → hold → fly → done`. `skip()`은 지금 단계를 보고 할 일을 정한다(나타나는 중·머무는 중이면 바로 날아가기, 날아가는 중이면 무시). 단계가 이름으로 있으면 확인 코드(`__ddooby.missionCard()`)도 쉬워진다 (`src/view/MissionCard.ts`)
-- **씬 시계를 쓰면 일시정지가 공짜**: 트윈과 `time.delayedCall`은 씬에 속해서 `scene.pause()`면 같이 멈추고 `resume`이면 이어진다. `setTimeout`을 쓰면 일시정지 중에도 흘러 버린다
-- **입력 막기를 한 곳에서**: 이미 있던 `setBusy`(재생 중 입력 막기)를 카드에도 쓴다. 보드 입력이 막히고, 힌트 타이머도 "준비 안 됨"이라 0에 머문다. 새 플래그를 늘리지 않는다 (`src/scenes/GameScene.ts`)
-- **누른 곳이 버튼인지**: 씬의 `pointerdown`은 두 번째 인자로 그 아래 대화형 객체 목록(`currentlyOver`)을 준다. 비어 있을 때만 카드를 넘겨서 ❚❚를 누르면 넘기지 않고 일시정지만 한다
-- **문구는 순수 함수로**: 스테이지 → 제목 / 미션 줄 / 이동 줄. 숫자 쉼표, 두 줄 조합을 표 테스트로 확인한다. 색 이름 대신 블록 그림(color)만 넘겨 글자를 못 읽어도 알게 한다 (`src/view/missionCardLines.ts`, `tests/view/missionCardLines.test.ts`)
-
-### W4-17 게임 화면 제목
-- **같은 말은 한 곳에서**: 화면 제목, 미션 카드 첫 줄, 메뉴 버튼 글자가 같은 말이다. `gameTitle`이 스토리 문구를 만들고 경쟁은 메뉴의 `MENU.timeattack.text`를 읽어서, 하나를 바꾸면 다 같이 바뀐다. 테스트도 "카드 첫 줄 = 화면 제목"을 확인한다 (`src/view/gameTitle.ts`, `tests/view/gameTitle.test.ts`)
-- **의존 방향 지키며 타입 맞추기**: `GameData`는 scenes에 있어 view가 가져오면 방향이 거꾸로다. view에 같은 모양의 `TitleMode`를 적어 두면, TypeScript는 모양만 보므로(구조적 타입) GameScene이 `GameData`를 그대로 넘길 수 있다
-
-### W4-18 스크롤 지도
-- **세계 좌표와 화면 좌표**: 노드 위치는 길 전체 기준(세계 좌표)으로 한 번 정하고, 화면에는 "세계 y + 묶음의 y"로 보인다. 스크롤은 묶음 y 하나만 바꾸는 일 (`src/view/mapLayout.ts`의 `contentY`)
-- **움직이는 것만 묶기**: 카메라를 움직이면 제목·버튼까지 같이 움직여서 따로 고정해야 한다. 대신 노드·길·언덕만 `Container`에 넣고 그 y를 옮겼다. 묶음 안 노드도 눌림 판정이 묶음 위치를 따라간다 (`src/scenes/StageMapScene.ts`)
-- **끌기와 누르기 구분**: 누른 뒤 12px(문턱)을 넘게 움직이면 끌기로 바꾸고, 그 손을 놓을 때 노드의 `pointerup`은 무시한다. 손가락 떨림 정도로는 누르기가 유지된다 (`isDrag`, `MAP.dragThreshold`)
-- **범위 막기와 처음 위치를 순수 함수로**: `clampScroll`(0 ~ 최대), `scrollToCenter`(그 노드를 가운데로, 끝이면 끝에서), `mapFocus`(어느 노드에서 시작해 어디로 옮길지)를 표 테스트로 확인한다 (`tests/view/mapLayout.test.ts`)
-- **"지금처럼"을 지키는 max**: 간격 = max(고정 간격, 화면을 나눈 값). 짧은 지도는 화면을 꽉 채우고, 긴 지도만 고정 간격으로 늘어난다. 기준 화면에서 10개 간격(87.8)보다 고정값(86)을 조금 작게 두어 10개는 늘 한 화면이다
-
-### W4-19 스테이지 11~20
-- **측정으로 숫자 정하기**: 감으로 "적당히 어렵게"를 정하지 않고, 봇으로 1000판씩 돌려 클리어율이 11 → 20으로 고르게 내려가도록 미션 숫자를 한 칸씩 고쳤다. 한 숫자(빨강 12 → 13)가 클리어율을 10%p 넘게 바꾸기도 해서, 두 미션의 숫자를 따로(12 + 13) 두어 중간값을 만든다 (PLAN 6.12 결과 표)
-- **같은 seed로 비교하기**: 모든 스테이지가 seed 1~1000을 같이 써서, 숫자 하나를 바꿨을 때 차이가 운이 아니라 그 숫자 때문임을 알 수 있다 (`scripts/sim/stageSim.ts`)
-- **순수한 core 덕분에 빠른 측정**: 게임 규칙(core)과 모드(StoryMode)가 Phaser 없이 돌아서, 브라우저 없이 2만 판(20스테이지 × 1000)을 12초쯤에 돌린다. 계층을 나눈 덕을 보는 곳
-- **도구도 테스트한다**: 같은 seed면 같은 결과, 분위수 계산을 표 테스트로 확인한다 (`tests/sim/stageSim.test.ts`). 측정 자체는 테스트가 아니라서 `npm test`에 넣지 않고 따로 설정(`scripts/sim/sim.config.ts`)으로 돌린다
-- **데이터 계약 테스트 넓히기**: "11~13은 5색 미션 하나, 14~17 두 미션, 18~20 6색 두 미션, 이동 18~25, 별은 오름차순"을 테스트로 적어 두면 나중에 숫자를 고쳐도 방향을 잃지 않는다 (`tests/data/stories.test.ts`)
-
 ### W3-03 스토리 스테이지 1~10
 - `public/stages/story.json`에 10개가 들어 있다 (표: `docs/superpowers/specs/2026-10-30-story-stages-design.md`). 화면에서 고르는 건 W3-09부터
 - 난이도를 바꾸고 싶으면 이 파일의 숫자만 고치면 된다. 잘못 쓰면 W3-02의 에러 화면이 알려준다
@@ -532,6 +500,13 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 2. `?unlock=20` → 스토리: 지도에 20개, 20번이 지금 할 곳. `?stage=11` … `?stage=20`으로 바로 해 볼 수 있다 (미션 카드에 미션이 보인다)
 3. `?result=3000&stage=20&stars=2&bonus=600` → 결과 화면에 "모든 스테이지 클리어!"
 4. 난이도 재기: `SIM_GAMES=1000 npm run stages:sim` → 스테이지별 클리어율 표 (PLAN 6.12 결과 줄의 표와 같은 값이 나온다). `story.json` 숫자를 바꾸고 다시 돌려 비교한다
+
+### W4-20 연쇄 발동 차례 재생
+1. `npm run dev` → `?seed=4&specials` 로 시작. 왼쪽 위 ↔ 블록 바로 오른쪽 칸(2행 3열)을 아래로 끌어 바꾼다
+2. 가로줄이 먼저 지나가고, 그 줄 끝의 ↕ 블록이 하얗게 번쩍·부풀었다가 세로줄을 쏜다 → 그 아래 ☆(슈퍼)가 번쩍인 뒤 터짐 → 같은 줄의 폭탄이 번쩍인 뒤 터짐. 차례마다 0.11초 간격, 특수 효과음도 차례마다
+3. 특수 블록 하나만 터지는 경우(예: `?seed=2&specials`에서 폭탄 옆 줄 맞추기)는 예전처럼 한 번에 터진다
+4. 큰 연쇄 중에 ❚❚ → 멈춘 그대로 → [계속]이면 이어서 끝까지. 경쟁에서 연쇄 중 시간이 끝나도 재생을 마친 뒤 결과 화면
+5. 개발 서버 콘솔에 `[game] view ≠ board`가 나오지 않는다
 
 ## 5. 문제 해결
 
@@ -878,6 +853,45 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **색 고르기**: 이미 뜻이 있는 색(칭찬 단계 색, 블록 색)과 겹치지 않는 색을 고르고 스크린샷으로 비교한다. `THEME.popupBase`처럼 이름을 붙여 한 곳에서 바꾼다
 - **Android 창 배경과 실행 순서**: 바 뒤에 보이는 것은 decorView 배경이다. Capacitor SystemBars가 시작할 때와 화면 설정이 바뀔 때 테마 색으로 다시 칠하므로, 그보다 나중에(같은 메인 큐에 `post`, `onConfigurationChanged`의 `super` 다음) 우리 그라데이션을 칠해야 이긴다. 테마의 `windowBackground`를 drawable로 바꾸면 플러그인이 그것을 색으로 읽어 검정이 된다 (`android/app/src/main/java/.../MainActivity.java`, `res/drawable/app_background.xml`)
 - **실패하면 시작하지 않기**: 데이터가 틀린 채로 게임이 돌면 원인을 찾기 어렵다. Boot에서 한 번 읽고, 틀리면 화면에 바로 보여준다 (`src/scenes/BootScene.ts`, `src/scenes/stageRegistry.ts`)
+
+### W4-15 칭찬 목소리
+- **표로 정하는 규칙**: "몇 단계에 어떤 목소리"를 `if`문 대신 `config.SOUND.voiceByLevel` 표에 두고, 순수 함수 `voiceFor(level)`가 표에서 찾아 없으면 `null`을 준다. 표만 고치면 규칙이 바뀌고, `it.each` 표 테스트로 1~7단계를 한 번에 확인한다 (`src/view/Sfx.ts`, `tests/view/sfx.test.ts`)
+- **타입으로 짝 맞추기**: `voiceByLevel`의 값 타입을 `'voice1' | … | 'voice4'`로 적어 두면, `SfxName`(효과음 이름들)에 없는 이름을 넣었을 때 `voiceFor`의 반환에서 타입 오류가 난다
+- **이벤트 하나 = 소리 하나**: core는 연쇄 한 단계마다 `match` 이벤트를 하나만 낸다(그룹이 여럿이어도 `groups` 배열 하나). 그래서 `hooks.onMatch`에서 부르면 목소리가 단계마다 정확히 한 번이다 (`src/core/engine.ts`, `src/scenes/GameScene.ts`)
+- **소리 크기 맞추기**: 파일을 다시 만들지 않고 재생 볼륨으로 맞춘다. 녹음은 효과음보다 훨씬 크게 들어 있어서(가장 큰 0.1초 구간 RMS 약 0.3, match 소리 약 0.06) 숫자로 먼저 비교하고 귀로 마무리한다
+- **녹음을 게임 소리로**: 앞뒤 빈 소리 자르기 → 끝 페이드아웃 → 무손실 WAV 보관 → 형식별 인코딩(`oggenc`, `afconvert`). 원본·편집본을 저장소에 같이 두어 다시 만들 수 있게 한다 (`assets/voice-src/`, `public/audio/CREDITS.md`)
+
+### W4-16 미션 안내 카드
+- **단계가 있는 연출 = 작은 상태 기계**: `appear → hold → fly → done`. `skip()`은 지금 단계를 보고 할 일을 정한다(나타나는 중·머무는 중이면 바로 날아가기, 날아가는 중이면 무시). 단계가 이름으로 있으면 확인 코드(`__ddooby.missionCard()`)도 쉬워진다 (`src/view/MissionCard.ts`)
+- **씬 시계를 쓰면 일시정지가 공짜**: 트윈과 `time.delayedCall`은 씬에 속해서 `scene.pause()`면 같이 멈추고 `resume`이면 이어진다. `setTimeout`을 쓰면 일시정지 중에도 흘러 버린다
+- **입력 막기를 한 곳에서**: 이미 있던 `setBusy`(재생 중 입력 막기)를 카드에도 쓴다. 보드 입력이 막히고, 힌트 타이머도 "준비 안 됨"이라 0에 머문다. 새 플래그를 늘리지 않는다 (`src/scenes/GameScene.ts`)
+- **누른 곳이 버튼인지**: 씬의 `pointerdown`은 두 번째 인자로 그 아래 대화형 객체 목록(`currentlyOver`)을 준다. 비어 있을 때만 카드를 넘겨서 ❚❚를 누르면 넘기지 않고 일시정지만 한다
+- **문구는 순수 함수로**: 스테이지 → 제목 / 미션 줄 / 이동 줄. 숫자 쉼표, 두 줄 조합을 표 테스트로 확인한다. 색 이름 대신 블록 그림(color)만 넘겨 글자를 못 읽어도 알게 한다 (`src/view/missionCardLines.ts`, `tests/view/missionCardLines.test.ts`)
+
+### W4-17 게임 화면 제목
+- **같은 말은 한 곳에서**: 화면 제목, 미션 카드 첫 줄, 메뉴 버튼 글자가 같은 말이다. `gameTitle`이 스토리 문구를 만들고 경쟁은 메뉴의 `MENU.timeattack.text`를 읽어서, 하나를 바꾸면 다 같이 바뀐다. 테스트도 "카드 첫 줄 = 화면 제목"을 확인한다 (`src/view/gameTitle.ts`, `tests/view/gameTitle.test.ts`)
+- **의존 방향 지키며 타입 맞추기**: `GameData`는 scenes에 있어 view가 가져오면 방향이 거꾸로다. view에 같은 모양의 `TitleMode`를 적어 두면, TypeScript는 모양만 보므로(구조적 타입) GameScene이 `GameData`를 그대로 넘길 수 있다
+
+### W4-18 스크롤 지도
+- **세계 좌표와 화면 좌표**: 노드 위치는 길 전체 기준(세계 좌표)으로 한 번 정하고, 화면에는 "세계 y + 묶음의 y"로 보인다. 스크롤은 묶음 y 하나만 바꾸는 일 (`src/view/mapLayout.ts`의 `contentY`)
+- **움직이는 것만 묶기**: 카메라를 움직이면 제목·버튼까지 같이 움직여서 따로 고정해야 한다. 대신 노드·길·언덕만 `Container`에 넣고 그 y를 옮겼다. 묶음 안 노드도 눌림 판정이 묶음 위치를 따라간다 (`src/scenes/StageMapScene.ts`)
+- **끌기와 누르기 구분**: 누른 뒤 12px(문턱)을 넘게 움직이면 끌기로 바꾸고, 그 손을 놓을 때 노드의 `pointerup`은 무시한다. 손가락 떨림 정도로는 누르기가 유지된다 (`isDrag`, `MAP.dragThreshold`)
+- **범위 막기와 처음 위치를 순수 함수로**: `clampScroll`(0 ~ 최대), `scrollToCenter`(그 노드를 가운데로, 끝이면 끝에서), `mapFocus`(어느 노드에서 시작해 어디로 옮길지)를 표 테스트로 확인한다 (`tests/view/mapLayout.test.ts`)
+- **"지금처럼"을 지키는 max**: 간격 = max(고정 간격, 화면을 나눈 값). 짧은 지도는 화면을 꽉 채우고, 긴 지도만 고정 간격으로 늘어난다. 기준 화면에서 10개 간격(87.8)보다 고정값(86)을 조금 작게 두어 10개는 늘 한 화면이다
+
+### W4-19 스테이지 11~20
+- **측정으로 숫자 정하기**: 감으로 "적당히 어렵게"를 정하지 않고, 봇으로 1000판씩 돌려 클리어율이 11 → 20으로 고르게 내려가도록 미션 숫자를 한 칸씩 고쳤다. 한 숫자(빨강 12 → 13)가 클리어율을 10%p 넘게 바꾸기도 해서, 두 미션의 숫자를 따로(12 + 13) 두어 중간값을 만든다 (PLAN 6.12 결과 표)
+- **같은 seed로 비교하기**: 모든 스테이지가 seed 1~1000을 같이 써서, 숫자 하나를 바꿨을 때 차이가 운이 아니라 그 숫자 때문임을 알 수 있다 (`scripts/sim/stageSim.ts`)
+- **순수한 core 덕분에 빠른 측정**: 게임 규칙(core)과 모드(StoryMode)가 Phaser 없이 돌아서, 브라우저 없이 2만 판(20스테이지 × 1000)을 12초쯤에 돌린다. 계층을 나눈 덕을 보는 곳
+- **도구도 테스트한다**: 같은 seed면 같은 결과, 분위수 계산을 표 테스트로 확인한다 (`tests/sim/stageSim.test.ts`). 측정 자체는 테스트가 아니라서 `npm test`에 넣지 않고 따로 설정(`scripts/sim/sim.config.ts`)으로 돌린다
+- **데이터 계약 테스트 넓히기**: "11~13은 5색 미션 하나, 14~17 두 미션, 18~20 6색 두 미션, 이동 18~25, 별은 오름차순"을 테스트로 적어 두면 나중에 숫자를 고쳐도 방향을 잃지 않는다 (`tests/data/stories.test.ts`)
+
+### W4-20 연쇄 발동 차례 재생
+- **규칙과 연출 나누기**: core는 원래 휘말린 특수 블록을 다 터뜨리고 있었다. 화면이 한 단계의 이벤트를 한꺼번에(`Promise.all`) 재생해서 안 보였을 뿐. 그래서 규칙은 그대로 두고 core 이벤트에 "몇 번째 차례인지(`depth`)"만 실어 주고, 언제 보여 줄지는 view가 정한다 (`src/core/specials.ts`의 `chainActivate`, `src/core/types.ts`)
+- **BFS 깊이**: 큐에 칸과 함께 깊이를 넣고, 어떤 발동 범위에서 새로 찾은 특수 블록은 "그 발동의 깊이 + 1". BFS는 가까운 것부터 꺼내므로 처음 찾은 깊이가 가장 짧은 경로다
+- **시간표를 순수 함수로**: "어느 블록이 몇 ms 뒤 지워지는지"를 Phaser 없이 계산해 표 테스트로 확인한다. 매치 칸은 0, 휘말린 특수 블록은 자기 차례, 나머지는 그 칸을 덮은 가장 이른 차례 (`src/view/fx/chainTimeline.ts`, `tests/view/chainTimeline.test.ts`)
+- **씬 시계로 기다리기**: 지연은 `setTimeout`이 아니라 `scene.time.delayedCall`. 일시정지(`scene.pause`)하면 트윈과 함께 멈췄다가 이어지고, 다시하기로 씬이 끝나면 같이 사라진다 (`BoardView.later`, `removeSprite`)
+- **틴트로 번쩍이기**: `setTintFill(0xffffff)`은 그림을 흰색으로 칠하고 `clearTint()`가 되돌린다. 텍스처를 새로 굽지 않아도 된다 (`BlockSprite.flash`)
 
 ### W3-03 스토리 스테이지 1~10
 - **데이터로 게임 조정하기**: 난이도 숫자가 코드가 아니라 JSON에 있어서 코드를 몰라도 바꿀 수 있다 (`public/stages/story.json`)

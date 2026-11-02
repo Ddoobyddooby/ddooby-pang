@@ -49,8 +49,8 @@ function assertInvariants(board: Board): void {
 function colorSwapBurst(board: Board, at: Pos, partner: Pos) {
   const other = getBlock(board, partner)!;
   const cleared = blastArea('color', at, board, other.color);
-  const chain = chainActivate(board, cleared, other.special === 'color' ? [at, partner] : [at]);
-  const first: GameEvent = { type: 'activate', special: 'color', at, cleared };
+  const chain = chainActivate(board, cleared, other.special === 'color' ? [at, partner] : [at], 1);
+  const first: GameEvent = { type: 'activate', special: 'color', at, cleared, depth: 0 };
   return { cleared: chain.cleared, activations: [first, ...chain.activations] };
 }
 
@@ -103,6 +103,15 @@ export function resolveSwap(
       const blasted = new Set(chain.activations.flatMap((e) => e.cleared).map(idx));
       const hit = created.filter((n) => blasted.has(idx(n.at)));
       if (hit.length > 0) {
+        // 걸린 새 블록은 그 칸을 덮은 발동 중 가장 이른 차례 다음에 터진다
+        const hitIdx = new Set(hit.map((n) => idx(n.at)));
+        const depth =
+          1 +
+          Math.min(
+            ...chain.activations
+              .filter((e) => e.cleared.some((p) => hitIdx.has(idx(p))))
+              .map((e) => e.depth),
+          );
         // 지워진 칸을 비우고 새 블록을 놓은 보드에서, 걸린 새 블록부터 다시 퍼뜨린다
         const placed = board.cells.slice();
         for (const at of cleared) placed[idx(at)] = null;
@@ -110,6 +119,8 @@ export function resolveSwap(
         const second = chainActivate(
           { ...board, cells: placed },
           hit.map((n) => n.at),
+          [],
+          depth,
         );
         activations.push(...second.activations);
         const gone = new Set(second.cleared.map(idx));

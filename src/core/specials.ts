@@ -84,33 +84,35 @@ function mostCommonColor(board: Board): Color | null {
 /**
  * start 칸들을 제거할 때 함께 발동하는 특수 블록을 BFS로 퍼뜨린다 (PLAN 4.5 연쇄 발동).
  * 블록마다 최대 한 번 발동. cleared는 start와 모든 발동 범위의 합집합 (행 우선 정렬).
- * activated: 이미 발동한 칸 (컬러 스왑 발동). 제거는 되지만 다시 발동하지 않는다
+ * activated: 이미 발동한 칸 (컬러 스왑 발동). 제거는 되지만 다시 발동하지 않는다.
+ * depth: start 칸에서 발동하는 블록의 차례. 휘말린 블록은 터뜨린 블록의 차례 + 1 (PLAN 6.13)
  */
 export function chainActivate(
   board: Board,
   start: readonly Pos[],
   activated: readonly Pos[] = [],
+  depth = 0,
 ): { cleared: Pos[]; activations: ActivateEvent[] } {
   const fired = new Set(activated.map((p) => indexOf(board, p)));
   const seen = new Set<number>();
-  const queue: Pos[] = [];
-  const add = (p: Pos) => {
+  const queue: { at: Pos; depth: number }[] = [];
+  const add = (p: Pos, d: number) => {
     const i = indexOf(board, p);
     if (seen.has(i)) return;
     seen.add(i);
-    if (getBlock(board, p)?.special && !fired.has(i)) queue.push(p);
+    if (getBlock(board, p)?.special && !fired.has(i)) queue.push({ at: p, depth: d });
   };
-  start.forEach(add);
+  start.forEach((p) => add(p, depth));
 
   const activations: ActivateEvent[] = [];
   for (let k = 0; k < queue.length; k++) {
-    const at = queue[k]!;
+    const { at, depth: d } = queue[k]!;
     const special = getBlock(board, at)!.special!;
     // 연쇄로 휘말린 컬러 블록은 스왑 상대가 없어 가장 많은 색을 지운다
     const target = special === 'color' ? mostCommonColor(board) : null;
     const cleared = blastArea(special, at, board, target);
-    activations.push({ type: 'activate', special, at, cleared });
-    cleared.forEach(add);
+    activations.push({ type: 'activate', special, at, cleared, depth: d });
+    cleared.forEach((p) => add(p, d + 1));
   }
 
   return {

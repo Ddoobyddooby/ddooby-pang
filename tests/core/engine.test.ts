@@ -174,6 +174,7 @@ describe('resolveSwap: 특수 블록', () => {
     return {
       types: step.map((e) => e.type),
       activate: of('activate').map((e) => `${e.special}@${e.at.r},${e.at.c}`),
+      depths: of('activate').map((e) => e.depth),
       create: of('create').map((e) => ({
         at: e.at,
         special: e.block.special,
@@ -231,6 +232,7 @@ describe('resolveSwap: 특수 블록', () => {
     const step = firstStep(resolveSwap(stateOf(FOUR_WITH_LINE, 5), p(0, 2), p(1, 2), 'explode'));
     expect(step.types).toEqual(['match', 'activate', 'activate', 'remove', 'score']);
     expect(step.activate).toEqual(['lineH@0,3', 'lineV@0,2']);
+    expect(step.depths).toEqual([0, 1]);
     expect(step.create).toEqual([]);
     // 새 세로줄이 2열을 지운다
     const extra = step.removed.filter((b) => b.bySpecial).map((b) => b.at);
@@ -293,6 +295,7 @@ describe('resolveSwap: 컬러 블록 스왑', () => {
       activate: step.flatMap((e) =>
         e.type === 'activate' ? [`${e.special}@${e.at.r},${e.at.c}`] : [],
       ),
+      depths: step.flatMap((e) => (e.type === 'activate' ? [e.depth] : [])),
       removed: step.flatMap((e) => (e.type === 'remove' ? e.blocks.map((b) => b.at) : [])),
       bySpecial: step.every((e) => e.type !== 'remove' || e.blocks.every((b) => b.bySpecial)),
     };
@@ -359,6 +362,7 @@ describe('resolveSwap: 컬러 블록 스왑', () => {
     );
     // Y- 는 (0,0)으로 옮겨졌다 → 0행 줄 제거
     expect(step.activate).toEqual(['color@0,1', 'lineH@0,0']);
+    expect(step.depths).toEqual([0, 1]);
     expect(step.removed).toEqual([p(0, 0), p(0, 1), p(0, 2), p(2, 0)]);
   });
 

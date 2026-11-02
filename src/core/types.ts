@@ -56,6 +56,8 @@ export type GameEvent =
       readonly special: SpecialKind;
       readonly at: Pos;
       readonly cleared: readonly Pos[];
+      /** 연쇄 차례 (PLAN 6.13). 0 = 매치·스왑으로 바로 발동, n = 차례 n-1의 범위에 휘말림 */
+      readonly depth: number;
     }
   | {
       readonly type: 'remove';
