@@ -508,6 +508,14 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 4. 큰 연쇄 중에 ❚❚ → 멈춘 그대로 → [계속]이면 이어서 끝까지. 경쟁에서 연쇄 중 시간이 끝나도 재생을 마친 뒤 결과 화면
 5. 개발 서버 콘솔에 `[game] view ≠ board`가 나오지 않는다
 
+### W4-21 경쟁 모드 마지막 팡
+1. `npm run dev` → `?time=5&specials` (경쟁, 특수 블록 5종을 깔고 5초). 아무것도 안 하고 기다린다
+2. 시간이 0이 되면 보드 가운데에 "타임 업!"이 톡 뜨고, 0.8초 뒤 남은 특수 블록이 왼쪽 위(행 우선)부터 하나씩 저절로 터진다. 휘말린 블록·새로 생긴 매치도 보통 연쇄처럼 터지고 점수 팝업·칭찬 문구가 나온다
+3. 다 터지면 아래 패널 점수가 한 번에 올라가고 결과 화면. 이 점수가 최고 점수에도 들어간다 (`?seed=4&specials&time=5`면 1,280점)
+4. 특수 블록이 없는 판(`?time=3`)은 "타임 업!"만 잠깐 보이고 결과 화면
+5. 마지막 팡 도중 ❚❚ → 그 자리에서 멈춤, [계속] → 이어서 끝까지. 보드는 눌러도 반응하지 않는다
+6. `?demo&specials&time=5`도 같은 흐름으로 끝난다. 스토리 모드는 예전처럼 이동이 끝나면 바로 결과
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -892,6 +900,13 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **시간표를 순수 함수로**: "어느 블록이 몇 ms 뒤 지워지는지"를 Phaser 없이 계산해 표 테스트로 확인한다. 매치 칸은 0, 휘말린 특수 블록은 자기 차례, 나머지는 그 칸을 덮은 가장 이른 차례 (`src/view/fx/chainTimeline.ts`, `tests/view/chainTimeline.test.ts`)
 - **씬 시계로 기다리기**: 지연은 `setTimeout`이 아니라 `scene.time.delayedCall`. 일시정지(`scene.pause`)하면 트윈과 함께 멈췄다가 이어지고, 다시하기로 씬이 끝나면 같이 사라진다 (`BoardView.later`, `removeSprite`)
 - **틴트로 번쩍이기**: `setTintFill(0xffffff)`은 그림을 흰색으로 칠하고 `clearTint()`가 되돌린다. 텍스처를 새로 굽지 않아도 된다 (`BlockSprite.flash`)
+
+### W4-21 경쟁 모드 마지막 팡
+- **반복 코드를 함수로 빼고 같은지 증명하기**: 스왑의 연쇄 루프를 "무엇이 첫 단계를 일으켰나(`Trigger`: 매치 / 컬러 스왑 / 특수 블록 하나)"를 받는 `runCascades`로 빼서 `resolveSwap`과 `resolveFinale`이 같이 쓴다. 뺀 뒤 예전 엔진 파일을 잠깐 복사해 두고 스왑 10만 개의 결과를 `toEqual`로 비교해 한 글자도 안 바뀐 것을 확인했다 (`src/core/engine.ts`)
+- **구별되는 유니온(discriminated union)**: `kind` 필드 하나로 `Trigger`가 어느 모양인지 TypeScript가 좁혀 준다. `first.kind === 'burst'`이면 `first.partner`를 쓸 수 있다
+- **멈추는 조건 두 개**: "특수 블록이 남지 않음"과 "라운드 상한(`TIMEATTACK.finale.maxRounds`)". 상한이 없으면 터질 때마다 새 특수 블록이 생기는 판에서 끝나지 않을 수 있다
+- **이벤트를 새로 만들지 않기**: 마지막 팡의 첫 단계도 `match`(빈 그룹) + `activate` + `remove` + `score`라서 BoardView·효과음·칭찬 문구가 그대로 재생한다. 새 타입이 없으니 view를 고칠 일이 없다
+- **async 흐름과 씬 시계**: `playFinale`은 글자 → `await` 씬 시계 대기 → `await view.play` → 점수 → 결과 순서로 읽힌다. 기다림을 `scene.time.delayedCall`로 만들어 일시정지하면 같이 멈춘다. `finale` 플래그로 `update`가 매 프레임 다시 부르지 않게 막는다 (`src/scenes/GameScene.ts`의 `end`, `playFinale`)
 
 ### W3-03 스토리 스테이지 1~10
 - **데이터로 게임 조정하기**: 난이도 숫자가 코드가 아니라 JSON에 있어서 코드를 몰라도 바꿀 수 있다 (`public/stages/story.json`)

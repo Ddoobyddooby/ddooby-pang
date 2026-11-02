@@ -255,6 +255,45 @@ export class FxDirector {
     });
   }
 
+  /**
+   * 보드 가운데에 큰 글자 (마지막 팡의 "타임 업!", PLAN 6.14). 칭찬 문구와 같은 모양으로 톡 커졌다가
+   * holdMs가 지나면 위로 떠오르며 사라진다. 기다리게 하지 않는다 (씬이 따로 기다린다)
+   */
+  showBanner(message: string, holdMs: number): void {
+    const { scene } = this;
+    const style = FX.praiseStyle;
+    const text = scene.add
+      .text(
+        this.layout.x + this.layout.width / 2,
+        this.layout.y + this.layout.height / 2,
+        message,
+        {
+          fontFamily: THEME.font,
+          fontSize: `${style.fontSize * FX.bannerScale}px`,
+          color: THEME.title.fill,
+          stroke: THEME.title.stroke,
+          strokeThickness: style.strokeThickness,
+        },
+      )
+      .setOrigin(0.5)
+      .setDepth(PRAISE_DEPTH)
+      .setScale(0);
+    scene.tweens.chain({
+      targets: text,
+      tweens: [
+        { scale: style.popScale, duration: style.popMs, ease: 'Quad.easeOut' },
+        { scale: 1, duration: style.settleMs },
+        {
+          y: text.y - style.rise,
+          alpha: 0,
+          delay: Math.max(0, holdMs - style.popMs - style.settleMs),
+          duration: style.riseMs,
+        },
+      ],
+      onComplete: () => text.destroy(),
+    });
+  }
+
   /** 개발용: 보드 가운데 행 3칸이 터진 것처럼 level 단계 연출만 재생한다. 블록 상태는 건드리지 않는다 */
   preview(level: number): void {
     const color = ((level - 1) % THEME.blocks.length) as Color; // 단계마다 다른 색 하트

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TIMEATTACK } from '../../src/config';
-import { resolveSwap } from '../../src/core/engine';
+import { resolveFinale, resolveSwap } from '../../src/core/engine';
 import { createRng } from '../../src/core/rng';
 import type { ResolveResult } from '../../src/core/types';
 import { TimeAttackMode } from '../../src/modes/TimeAttackMode';
@@ -81,6 +81,24 @@ describe('modes/TimeAttackMode (PLAN 5절)', () => {
     mode.onResolve(fake(45));
     expect(mode.score()).toBe(145);
     expect(mode.result().score).toBe(145);
+  });
+
+  it('시간 0 뒤 마지막 팡(resolveFinale) 점수도 onResolve로 더해져 최종 점수·newBest에 들어간다 (PLAN 6.14)', () => {
+    const mode = new TimeAttackMode({ bestScore: 30 });
+    mode.onResolve(realResult()); // 30점: 아직 최고 기록과 같다
+    mode.tick(60000);
+    expect(mode.isOver()).toBe(true);
+    const board = parseBoard(`
+      R Y  G B
+      G B- R Y
+      Y G  B R
+      B R  Y G
+    `);
+    const finale = resolveFinale({ board, rngState: createRng(1), colors: 4 });
+    expect(finale.scoreDelta).toBeGreaterThan(0);
+    mode.onResolve(finale);
+    expect(mode.score()).toBe(30 + finale.scoreDelta);
+    expect(mode.result()).toMatchObject({ score: 30 + finale.scoreDelta, newBest: true });
   });
 
   it('result: newBest는 점수가 bestScore보다 클 때만, bestScore는 생성자 값 그대로', () => {

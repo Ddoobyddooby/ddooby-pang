@@ -1,17 +1,18 @@
 // GameScene: 보드 표시 + 입력 + resolve + 애니메이션 재생 + 모드(타임어택 또는 스토리) + HUD.
 // 시작 데이터: { mode: 'timeattack' } | { mode: 'story', stageId } (없으면 타임어택).
 // 매 프레임 mode.tick, 스왑 전에 mode.canInput, 재생이 끝난 뒤 mode.isOver면 결과 화면('Result')으로 간다.
+// 경쟁 모드는 그 전에 "타임 업!"과 남은 특수 블록 자동 발동(마지막 팡, PLAN 6.14)을 보여 준다.
 // 화면 배치는 screenLayout(this.scale.height). 폭이 720보다 넓은 화면은 카메라로 가운데에 맞춘다.
 //
 // URL 옵션 (개발용)
 //   ?seed=1234  같은 시작 보드 재현 (패널 구석에 seed가 표시된다)
-//   ?demo       힌트 수를 자동으로 둔다 (시간이 끝나면 결과 화면으로)
+//   ?demo       힌트 수를 자동으로 둔다 (시간이 끝나면 마지막 팡 뒤 결과 화면으로)
 //   ?time=15    (개발 모드) 제한 시간을 15초로 줄인다 (없으면 stages/timeattack.json의 timeLimit)
 //   ?specials   (개발 모드) 시작 보드에 특수 블록 5종을 하나씩 놓는다
 
 import Phaser from 'phaser';
-import { GAME, HINT, HUD, MAP, MISSION_CARD, VIEW } from '../config';
-import { createInitialState, resolveSwap } from '../core/engine';
+import { GAME, HINT, HUD, MAP, MISSION_CARD, TIMEATTACK, VIEW } from '../config';
+import { createInitialState, resolveFinale, resolveSwap } from '../core/engine';
 import { findHint } from '../core/moves';
 import type { GameState, Pos, SpecialKind } from '../core/types';
 import { BoardView, type BoardViewHooks } from '../view/BoardView';
@@ -64,6 +65,7 @@ export class GameScene extends Phaser.Scene {
   private startData: GameData = { mode: 'timeattack' };
   private state!: GameState;
   private view!: BoardView;
+  private fx!: FxDirector;
   private sfx!: Sfx;
   private boardInput!: BoardInput;
   private hud!: Hud;
@@ -78,6 +80,8 @@ export class GameScene extends Phaser.Scene {
   private timeLimitMs = 0;
   /** 결과 화면으로 넘어갔는지 (한 번만) */
   private finished = false;
+  /** 경쟁 모드 마지막 팡(PLAN 6.14)을 재생하는 중. 끝나면 finish */
+  private finale = false;
   /** 무입력 힌트: 타이머(순수)와 지금 깜빡이는 중인지 */
   private hintTimer!: HintTimer;
   private hinting = false;
@@ -110,6 +114,7 @@ export class GameScene extends Phaser.Scene {
     this.moves = 0;
     this.busy = false;
     this.finished = false;
+    this.finale = false;
     this.missionCard = undefined; // 카드 중에 [다시하기]로 끝났으면 남아 있다
     if (stage) {
       this.storyMode = new StoryMode(stage); // 스토리는 시간 제한이 없다
@@ -142,6 +147,7 @@ export class GameScene extends Phaser.Scene {
     const hooks: BoardViewHooks = {}; // FxDirector가 BoardView를 필요로 해서 알림 연결은 나중에 채운다
     this.view = new BoardView(this, this.state.board, layout, hooks);
     const fx = new FxDirector(this, layout, this.view);
+    this.fx = fx;
     // 소리는 여기서 함께 부른다: FxDirector는 그림만, 어디서 무슨 소리가 나는지는 이 씬에서 한눈에
     this.sfx = new Sfx(this);
     hooks.onMatch = (level, removed) => {
@@ -273,7 +279,7 @@ export class GameScene extends Phaser.Scene {
     // 시간이 0이 되면 입력을 막는다 (재생 중이면 setBusy가 이미 막고 있고, 끝난 뒤 trySwap이 결과로 보낸다)
     if (!this.mode.canInput()) this.boardInput.enabled = false;
     this.updateHint(delta);
-    if (this.mode.isOver() && !this.busy) this.finish();
+    if (this.mode.isOver() && !this.busy) this.end();
   }
 
   /** 입력할 수 있는 상태로 idleMs가 지나면 가능한 수를 깜빡인다. 그렇지 않게 되면 끈다 */
@@ -335,7 +341,36 @@ export class GameScene extends Phaser.Scene {
     if (import.meta.env.DEV) this.checkViewMatchesBoard();
 
     this.setBusy(false);
-    if (this.mode.isOver()) this.finish();
+    if (this.mode.isOver()) this.end();
+  }
+
+  /** 끝났을 때: 경쟁은 마지막 팡을 보여 준 뒤, 스토리는 바로 결과로 */
+  private end(): void {
+    if (this.finished || this.finale) return;
+    if (this.mode instanceof TimeAttackMode) void this.playFinale();
+    else this.finish();
+  }
+
+  /**
+   * 경쟁 모드 마지막 팡 (SPEC 3.3, PLAN 6.14): "타임 업!" → 남은 특수 블록을 하나씩 자동 발동 → 점수 반영 → 결과.
+   * 그동안 입력은 막히고 일시정지는 된다 (기다림은 씬 시계라 같이 멈춘다)
+   */
+  private async playFinale(): Promise<void> {
+    this.finale = true;
+    this.clearHint();
+    this.setBusy(true);
+    const { bannerMs, text } = TIMEATTACK.finale;
+    this.fx.showBanner(text, bannerMs);
+    await new Promise<void>((resolve) => this.time.delayedCall(bannerMs, resolve));
+    const result = resolveFinale(this.state);
+    if (result.valid) {
+      await this.view.play(result.steps);
+      this.state = result.state;
+      this.mode.onResolve(result);
+      this.updateHud();
+      if (import.meta.env.DEV) this.checkViewMatchesBoard();
+    }
+    this.finish();
   }
 
   private setBusy(busy: boolean): void {

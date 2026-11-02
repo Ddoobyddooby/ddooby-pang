@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveSwap } from '../../src/core/engine';
+import { createInitialState, resolveFinale, resolveSwap } from '../../src/core/engine';
 import { findMatches } from '../../src/core/matcher';
 import { createPlayableBoard, findHint, hasAnyMove } from '../../src/core/moves';
 import { createRng } from '../../src/core/rng';
@@ -445,5 +445,98 @@ describe('resolveSwap: 점수', () => {
       cascade: 0,
       at: p(0, 1),
     });
+  });
+});
+
+// W4-21: 경쟁 모드 마지막 팡 (SPEC 3.3, PLAN 6.14)
+describe('resolveFinale', () => {
+  const p = (r: number, c: number) => ({ r, c });
+  /** 라운드 = 매치 그룹 없이 cascade 0으로 시작하는 단계 (특수 블록 하나 발동) */
+  const rounds = (steps: readonly (readonly GameEvent[])[]) =>
+    matchEvents(steps).filter((e) => e.cascade === 0 && e.groups.length === 0);
+  const specialsLeft = (state: GameState) => state.board.cells.filter((b) => b?.special).length;
+
+  /** seed 보드에 특수 블록을 흩뿌린 상태 (?specials처럼 색은 그대로) */
+  function withSpecials(seed: number): GameState {
+    const state = createInitialState({ rows: 8, cols: 8, colors: 5, seed });
+    const cells = state.board.cells.slice();
+    const kinds = ['lineH', 'lineV', 'bomb', 'super', 'color'] as const;
+    kinds.forEach((special, k) => {
+      const i = (seed * 11 + k * 17) % 64;
+      const block = cells[i]!;
+      cells[i] = { id: block.id, color: special === 'color' ? null : block.color, special };
+    });
+    return { ...state, board: { ...state.board, cells } };
+  }
+
+  it('특수 블록이 없으면 valid: false, steps 없음, 상태 그대로', () => {
+    const state = createInitialState({ rows: 8, cols: 8, colors: 5, seed: 3 });
+    const result = resolveFinale(state);
+    expect(result.valid).toBe(false);
+    expect(result.steps).toEqual([]);
+    expect(result.state).toBe(state);
+    expect(result.scoreDelta).toBe(0);
+  });
+
+  it('줄 블록 하나: 라운드 1번, 그 줄이 지워지고 첫 단계는 match(빈 그룹) + activate + remove + score', () => {
+    const state = stateOf(
+      `
+        R Y  G B
+        G B- R Y
+        Y G  B R
+        B R  Y G
+      `,
+      4,
+    );
+    const result = resolveFinale(state);
+    expect(result.valid).toBe(true);
+    expect(rounds(result.steps)).toHaveLength(1);
+    const first = result.steps[0]!;
+    expect(first.map((e) => e.type)).toEqual(['match', 'activate', 'remove', 'score']);
+    const remove = first.find((e) => e.type === 'remove') as Extract<GameEvent, { type: 'remove' }>;
+    expect(remove.blocks.map((b) => b.at)).toEqual([p(1, 0), p(1, 1), p(1, 2), p(1, 3)]);
+    const score = first.find((e) => e.type === 'score') as Extract<GameEvent, { type: 'score' }>;
+    expect(score.at).toEqual(p(1, 1));
+    expect(result.scoreDelta).toBeGreaterThan(0);
+    expect(specialsLeft(result.state)).toBe(0);
+  });
+
+  it.each([1, 2, 3, 4, 5, 6, 7, 8])(
+    'seed %i 특수 블록 판: 끝난 판은 불변식 성립, 점수 > 0, 특수 블록이 남지 않거나 maxRounds에서 멈춤',
+    (seed) => {
+      const result = resolveFinale(withSpecials(seed));
+      expect(result.valid).toBe(true);
+      expect(result.scoreDelta).toBeGreaterThan(0);
+      const { board } = result.state;
+      expect(board.cells.every((b) => b !== null)).toBe(true);
+      expect(findMatches(board)).toEqual([]);
+      expect(hasAnyMove(board)).toBe(true);
+      const n = rounds(result.steps).length;
+      expect(n).toBeLessThanOrEqual(20);
+      if (n < 20) expect(specialsLeft(result.state)).toBe(0);
+      // 라운드마다 cascade는 0부터 1씩
+      let expected = 0;
+      for (const e of matchEvents(result.steps)) {
+        if (e.cascade === 0) expected = 0;
+        expect(e.cascade).toBe(expected++);
+      }
+    },
+  );
+
+  it('같은 상태 → 같은 결과 (결정성)', () => {
+    expect(resolveFinale(withSpecials(4))).toEqual(resolveFinale(withSpecials(4)));
+  });
+
+  it('maxRounds를 넘지 않는다: 1이면 행 우선 첫 특수 블록 하나만', () => {
+    const state = withSpecials(5);
+    const firstIndex = state.board.cells.findIndex((b) => b?.special);
+    const result = resolveFinale(state, 1);
+    expect(rounds(result.steps)).toHaveLength(1);
+    const activate = result.steps[0]!.find((e) => e.type === 'activate') as Extract<
+      GameEvent,
+      { type: 'activate' }
+    >;
+    expect(activate.at).toEqual({ r: Math.floor(firstIndex / 8), c: firstIndex % 8 });
+    expect(activate.depth).toBe(0);
   });
 });

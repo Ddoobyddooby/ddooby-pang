@@ -534,6 +534,7 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지�
 - 소리·목소리·칭찬 문구·흔들림은 보통 연쇄와 같은 규칙으로 나온다
 - 테스트: 특수 블록 없음 → 그대로 / 있음 → 끝난 판에 불변식 성립, 같은 seed 같은 결과, 점수 > 0, `maxRounds` 넘지 않음. 줄 블록 하나 판에서 라운드 1회·그 줄 제거 확인. 타임어택 모드가 시간 0 뒤 `onResolve` 점수를 더하는 테스트
 - 확인: `?time=5&specials`로 시간 0 → "타임 업!" → 특수 블록이 하나씩 터지고 점수가 오른 뒤 결과 화면, 최고 점수에 들어감
+- 결과: `resolveSwap`의 연쇄 루프를 내부 `runCascades(board, state, trigger, …)`로 뺐다. `Trigger`는 `match`(스왑 매치, 스왑 칸) / `burst`(컬러 스왑) / `fire`(마지막 팡의 특수 블록 하나). 뺀 뒤 예전 engine.ts와 seed 150 × 색 4~6 × 특수 블록 6개 판의 모든 인접 스왑 × keep/explode(10만 800건, 유효 2만 584건)를 `toEqual`로 비교해 결과가 같았다(임시 비교, 커밋 안 함). 셔플·불변식은 `finishResolve`로 같이 쓴다. `resolveFinale(state, maxRounds = 20)`은 셔플·불변식 확인을 마지막 라운드 뒤에 한 번 한다. config `TIMEATTACK.finale` { maxRounds 20, bannerMs 800, text '타임 업!' }, 글자 크기 `FX.bannerScale` 1.3(칭찬 문구 모양, `THEME.title` 색). 씬은 `end()`가 경쟁이면 `playFinale`, 스토리면 `finish`. 점수 패널은 마지막 팡을 다 재생한 뒤 한 번에 오른다(팝업은 터질 때마다). `?seed=4&specials&time=5`: 1라운드 4연쇄 + 2라운드 무지개로 약 3.2초, 1,280점이 최고 점수에 저장. 일시정지·`?demo`·특수 블록 없음 확인
 
 ## 7. 데이터 / 저장
 

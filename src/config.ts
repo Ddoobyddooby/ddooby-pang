@@ -29,6 +29,8 @@ export const TIMEATTACK = {
   timeLimitMs: 60000,
   /** 남은 시간이 이 아래면 HUD 시간 강조 (W2-11) */
   warnMs: 10000,
+  /** 시간 0 뒤 마지막 팡 (SPEC 3.3, PLAN 6.14): 자동 발동 라운드 상한, 글자를 띄우고 기다리는 시간 (ms) */
+  finale: { maxRounds: 20, bannerMs: 800, text: '타임 업!' },
 } as const;
 
 export const SPECIAL = {
@@ -155,6 +157,8 @@ export const FX = {
     string
   >,
   praiseScale: { 2: 1, 3: 1.2, 4: 1.4, 5: 1.6 },
+  /** 마지막 팡 "타임 업!" 글자 크기 (praiseStyle.fontSize 대비) */
+  bannerScale: 1.3,
   /** index = 단계 - 1 */
   particlesPerBlock: [1, 2, 3, 3, 4],
   maxParticles: 60,
