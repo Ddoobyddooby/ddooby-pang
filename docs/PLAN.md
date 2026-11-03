@@ -561,6 +561,13 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지�
 - 그림을 못 읽으면 지금 코드 도형으로 그린다 (배경과 같은 방식)
 - 색은 `THEME.blocks`에 가깝게. 매치는 색으로 보므로 6색이 작은 화면에서 서로 헷갈리지 않아야 한다
 
+### 6.17 물결 웨이퍼 테두리, 제목 리본 (W4-24)
+
+- 2026-11-03 사용자: 시안(`assets/design-src/storybook-new-blocks-concept.png`)의 웨이퍼 테두리와 위쪽 리본도 넣는다
+- **테두리**: 지금 둥근 사각형 웨이퍼(`BoardFrame`, 대각선 격자)의 바깥 가장자리를 시안처럼 둥근 물결(가리비)로. 코드로 그린다. 물결 개수·깊이는 `DECOR.frame`에
+- **리본**: Codex 그림(`assets/ribbon-src/title-ribbon.png`, 크림 구름 명판 + 분홍 리본, 가운데 비움)을 게임 화면 제목 뒤에 깐다. 제목 글자는 지금처럼 코드로 쓴다. 일시정지 버튼과 겹치지 않게 크기를 정하고, 그림을 못 읽으면 지금처럼 제목만
+- 블록 그림(W4-23)과 같은 때 다른 탭이 작업한다. `config.ts`는 `DECOR.frame`과 새 `DECOR.ribbon`만 고치고, W4-23이 main에 먼저 들어간 뒤 rebase해서 반영한다
+
 ## 7. 데이터 / 저장
 
 ### 7.1 스테이지
