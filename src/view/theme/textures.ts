@@ -1,6 +1,7 @@
 // 블록·특수 표시·파티클 텍스처를 시작할 때 한 번 그려 둔다 (스펙 4.2).
 // 모양과 얼굴 좌표는 시안(docs/superpowers/specs/mocks/block-style.html B안, cascade-fx.html)을 옮긴 것이다.
 // 시안 좌표(-50~50)를 텍스처(0~TEX_SIZE)로 맞춰 그리고, 화면에서는 칸 크기로 줄여 쓴다.
+// 몸통은 BootScene이 읽은 그림(W4-23, PLAN 6.16)을 쓰고, 그림을 못 읽은 색만 아래 SHAPES 도형으로 그린다.
 
 import type Phaser from 'phaser';
 import { THEME } from '../../config';
@@ -47,6 +48,30 @@ const FACE_PLACE: readonly { dy: number; scale: number }[] = [
   { dy: 14, scale: 0.85 },
   { dy: 0, scale: 1 },
   { dy: 4, scale: 0.72 },
+];
+
+/** 몸통 그림 텍스처 키. BootScene이 DECOR.blockArt[index]를 이 키로 읽는다 */
+export function blockArtKey(index: number): string {
+  return `block-art-${index}`;
+}
+
+/** 색 → 몸통 그림 번호 (DECOR.blockArt 순서). 무지개(컬러 블록)는 마지막 6번 */
+export function blockArtIndex(color: Color | null): number {
+  return color ?? 6;
+}
+
+/**
+ * 몸통 그림 배치 (시안 좌표, 순서는 blockArtIndex). 그림마다 모양의 실제 크기가 달라(마름모·삼각형이 작다)
+ * scale로 키워 칸을 고르게 채운다. 얼굴은 모양의 무게중심 쪽으로 faceDy만큼 내리고 faceScale로 줄인다
+ */
+export const ART_PLACE: readonly { scale: number; faceDy: number; faceScale: number }[] = [
+  { scale: 1, faceDy: 0, faceScale: 0.9 },
+  { scale: 0.96, faceDy: 0, faceScale: 0.9 },
+  { scale: 1.1, faceDy: 0, faceScale: 0.85 },
+  { scale: 1.08, faceDy: 9, faceScale: 0.8 },
+  { scale: 1, faceDy: 0, faceScale: 0.9 },
+  { scale: 1.04, faceDy: 4, faceScale: 0.72 },
+  { scale: 1, faceDy: 0, faceScale: 0.9 },
 ];
 
 const css = (hex: number): string => `#${hex.toString(16).padStart(6, '0')}`;
@@ -138,7 +163,24 @@ function paperFinish(ctx: Ctx, shape: Path2D): void {
 
 const PAPER_DOTS = 260;
 
-function drawBlock(ctx: Ctx, color: Color | null, face: Face): void {
+/** 그림 몸통 + 얼굴. 그림은 시안 좌표 100칸(-50~50)에 맞춰 ART_PLACE.scale만큼 키워 그린다 */
+function drawArtBlock(ctx: Ctx, art: CanvasImageSource, color: Color | null, face: Face): void {
+  const place = ART_PLACE[blockArtIndex(color)]!;
+  const half = 50 * place.scale;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(art, -half, -half, half * 2, half * 2);
+  ctx.save();
+  ctx.translate(0, place.faceDy);
+  ctx.scale(place.faceScale, place.faceScale);
+  drawFace(ctx, face);
+  ctx.restore();
+}
+
+function drawBlock(ctx: Ctx, color: Color | null, face: Face, art?: CanvasImageSource): void {
+  if (art) {
+    drawArtBlock(ctx, art, color, face);
+    return;
+  }
   ctx.lineWidth = 5;
   ctx.lineJoin = 'round';
 
@@ -185,7 +227,10 @@ function drawBlock(ctx: Ctx, color: Color | null, face: Face): void {
   ctx.restore();
 }
 
-/** 블록 하나를 size×size 캔버스 가운데에 그린다 (Phaser 없이). 앱 아이콘(dev/appIcon.ts)이 같은 그림을 쓰도록 */
+/**
+ * 블록 하나를 size×size 캔버스 가운데에 그린다 (Phaser 없이). 앱 아이콘(dev/appIcon.ts)이 쓴다.
+ * 몸통 그림을 읽지 않는 흐름이라 코드 도형으로 그린다
+ */
 export function drawBlockOnCanvas(ctx: Ctx, size: number, color: Color | null, face: Face): void {
   withMockSpace(ctx, size, () => drawBlock(ctx, color, face));
 }
@@ -246,11 +291,19 @@ function bake(scene: Phaser.Scene, key: string, size: number, draw: (ctx: Ctx) =
   tex.refresh();
 }
 
+/** BootScene이 읽은 몸통 그림. 로드에 실패해 텍스처가 없으면 undefined (코드 도형으로 굽는다) */
+function artImage(scene: Phaser.Scene, color: Color | null): CanvasImageSource | undefined {
+  const key = blockArtKey(blockArtIndex(color));
+  if (!scene.textures.exists(key)) return undefined;
+  return scene.textures.get(key).getSourceImage() as HTMLImageElement;
+}
+
 export function ensureTextures(scene: Phaser.Scene): void {
   const colors: (Color | null)[] = [0, 1, 2, 3, 4, 5, null];
   for (const color of colors) {
+    const art = artImage(scene, color);
     for (const face of FACES) {
-      bake(scene, blockKey(color, face), TEX_SIZE, (ctx) => drawBlock(ctx, color, face));
+      bake(scene, blockKey(color, face), TEX_SIZE, (ctx) => drawBlock(ctx, color, face, art));
     }
   }
   for (const kind of SPECIALS) {

@@ -539,6 +539,14 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 4. 브라우저 개발자 도구에서 기기 크기를 바꿔 본다. 휴대폰(360×640, 390×844)은 구름과 바닥 장식이 모두 보이고 가운데 분홍 띠만 늘어난다. 태블릿(768×1024)도 잘리지 않는다. 가로로 넓은 PC 화면은 폭에 맞추느라 위쪽 하늘이 잘리고 바닥 장식이 크게 보인다 (의도)
 5. 메뉴·지도·결과 화면 배경은 예전 그대로다 (블록 질감만 같이 바뀐다)
 
+### W4-23 블록 몸통 그림
+1. `npm run dev` → `?seed=4&time=600`: 블록이 도톰한 펠트 그림(빨강 원, 노랑 둥근 사각형, 초록 마름모, 파랑 삼각형, 보라 육각형, 주황 별)이다. 모양마다 칸을 비슷하게 채우고(마름모·삼각형이 작아 보이지 않는다), 얼굴은 모양 가운데(삼각형은 조금 아래)에 있다
+2. 블록을 맞춰 터뜨린다: 끌 때 squint(><), 터질 때 happy(^^) 표정이 몸통 위에 그대로 나온다
+3. `?specials`: 무지개 원(컬러 블록)과 오른쪽 위 배지 4종(↔ ↕ 폭탄 별)이 보인다
+4. 개발자 도구에서 390×844, 360×640으로 바꿔 본다. 칸이 작아도 색과 모양이 구분된다
+5. 그림을 못 읽을 때: 개발자 도구 Network에서 `blocks/` 요청을 막고(Request blocking에 `*/blocks/*`) 새로 고침 → 예전 코드 도형 블록으로 게임이 그대로 돈다. 콘솔에는 `[boot] 파일 로드 실패, 없이 진행 block-art-N` 경고만 나온다
+6. 스토리 미션 카드·패널의 색 블록 아이콘, 메뉴의 블록도 새 그림으로 바뀐다. 앱 아이콘(`?icon`)은 예전 도형 그대로
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -1017,3 +1025,9 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **플랫폼에 따라 구현 고르기**: 저장 규칙(`SaveStorage` 인터페이스)은 하나, 구현은 둘. `Capacitor.isNativePlatform()`이 참이면 Preferences, 아니면 localStorage. 다른 씬은 어느 쪽인지 모른다 (`src/scenes/BootScene.ts`)
 - **비동기 저장 순서 보장**: `pending = pending.then(write)` 사슬로 앞 쓰기가 끝난 뒤 다음 쓰기를 시작한다. 각 쓰기에 `catch`를 달아 한 번 실패해도 사슬이 끊기지 않는다. 그래서 결과 저장 직후 음소거를 눌러도 나중 값이 남는다
 - **의존성 주입으로 테스트**: storage는 Capacitor를 import하지 않고 `PreferencesLike`·`KeyValueStore` 모양만 받는다. 진짜는 BootScene이 넣고, 테스트는 Map으로 만든 가짜와 늦게 끝나는 가짜를 넣어 순서와 실패를 재현한다 (`src/storage/progress.ts`, `tests/storage/preferencesStorage.test.ts`)
+
+### W4-23 블록 몸통 그림
+- **이미지 로드 → 캔버스 합성 → 텍스처**: BootScene `preload`가 PNG 7장을 `this.load.image`로 읽어 두면, `ensureTextures`가 `scene.textures.get(key).getSourceImage()`로 원본 `<img>`를 꺼내 캔버스 텍스처에 `drawImage`로 몸통을 그리고 그 위에 얼굴을 코드로 그린다. 블록 21장(7색 × 3표정)은 시작할 때 한 번만 구워 스프라이트가 공유한다 (`src/scenes/BootScene.ts`, `src/view/theme/textures.ts`)
+- **폴백**: 로드에 실패한 파일은 Phaser 텍스처 목록에 생기지 않는다. 그래서 `textures.exists(key)`가 거짓이면 예전 코드 도형으로 굽는다. 그림책 배경(`StorybookBackground.ts`)과 같은 방식이다
+- **그림마다 다른 실제 크기 맞추기**: 같은 512px 캔버스여도 마름모·삼각형은 차지하는 면적이 작다. 알파(투명도)로 모양 범위를 재 보고 색마다 몸통 배율·얼굴 위치를 표(`ART_PLACE`)로 둔다. 숫자를 코드 곳곳에 흩지 않고 한 표에서 고친다 (`tests/view/blockArt.test.ts`)
+- **이미지 줄여 넣기**: 원본(512px)은 `assets/block-src/`에 두고, 게임에는 `sips -Z 256`으로 줄인 사본만 `public/blocks/`에 넣는다. 텍스처가 160px이라 그보다 조금 큰 크기면 충분하고 내려받는 양이 준다 (`public/blocks/CREDITS.md`)

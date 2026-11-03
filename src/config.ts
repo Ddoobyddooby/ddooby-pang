@@ -266,6 +266,19 @@ export const DECOR = {
    * 가운데 띠의 y 범위. 화면이 원본보다 길면 이 띠만 세로로 늘려 위 구름·아래 언덕이 잘리지 않는다
    */
   storybook: { url: 'backgrounds/storybook.jpg', band: { top: 540, bottom: 780 } },
+  /**
+   * 블록 몸통 그림 (W4-23, public/blocks/CREDITS.md). 순서: 색 0~5, 마지막이 무지개(컬러 블록).
+   * 못 읽은 그림은 textures.ts가 코드 도형으로 대신 그린다
+   */
+  blockArt: [
+    'blocks/block-0.png',
+    'blocks/block-1.png',
+    'blocks/block-2.png',
+    'blocks/block-3.png',
+    'blocks/block-4.png',
+    'blocks/block-5.png',
+    'blocks/block-6.png',
+  ],
 } as const;
 
 /** HUD 배치와 글자 크기 (px). 정보 패널 안쪽 위치는 패널 왼쪽 위 기준 */
