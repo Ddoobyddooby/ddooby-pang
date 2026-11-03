@@ -4,12 +4,12 @@ import { parseStory, parseTimeAttack } from '../../src/data/stageSchema';
 import storyRaw from '../../public/stages/story.json?raw';
 import timeattackRaw from '../../public/stages/timeattack.json?raw';
 
-describe('public/stages/story.json (W3-03, W4-19)', () => {
+describe('public/stages/story.json (W3-03, W4-19, W4-27)', () => {
   const story = parseStory(JSON.parse(storyRaw)); // 검증에 실패하면 여기서 던진다
 
-  it('스테이지 20개, id는 1~20 (W4-19)', () => {
-    expect(story).toHaveLength(20);
-    expect(story.map((s) => s.id)).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
+  it('스테이지 30개, id는 1~30 (W4-27)', () => {
+    expect(story).toHaveLength(30);
+    expect(story.map((s) => s.id)).toEqual(Array.from({ length: 30 }, (_, i) => i + 1));
   });
 
   it('1~10: 색 수는 4 → 6으로 줄지 않는다', () => {
@@ -19,11 +19,16 @@ describe('public/stages/story.json (W3-03, W4-19)', () => {
     colors.slice(1).forEach((c, i) => expect(c).toBeGreaterThanOrEqual(colors[i]!));
   });
 
-  // PLAN 6.12: 11~13 쉬어 가는 판(5색, 미션 하나), 14~17 두 미션, 18~20 6색 + 두 미션, 이동 18~25
+  // PLAN 6.12: 11~13 쉬어 가는 판(5색, 미션 하나), 14~17 두 미션, 18~20 6색 + 두 미션
+  // PLAN 6.19: 21~30은 6색 + 두 미션, 22·26만 쉬어 가는 판(5색, 미션 하나)
   it.each([
     [11, 13, 5, 1],
     [14, 17, 5, 2],
-    [18, 20, 6, 2],
+    [18, 21, 6, 2],
+    [22, 22, 5, 1],
+    [23, 25, 6, 2],
+    [26, 26, 5, 1],
+    [27, 30, 6, 2],
   ])('%i~%i: %i색, 미션 %i개', (first, last, colors, goals) => {
     for (const s of story.slice(first - 1, last)) {
       expect(s.colors, `${s.id}번`).toBe(colors);
@@ -31,10 +36,11 @@ describe('public/stages/story.json (W3-03, W4-19)', () => {
     }
   });
 
-  it('11~20: 이동 18~25', () => {
-    for (const s of story.slice(10)) {
-      expect(s.moves).toBeGreaterThanOrEqual(18);
-      expect(s.moves).toBeLessThanOrEqual(25);
+  // PLAN 6.19: 한 판 약 1.5배 (예전 18~25 → 27~38)
+  it('이동 27~38 (W4-27)', () => {
+    for (const s of story) {
+      expect(s.moves, `${s.id}번`).toBeGreaterThanOrEqual(27);
+      expect(s.moves, `${s.id}번`).toBeLessThanOrEqual(38);
     }
   });
 

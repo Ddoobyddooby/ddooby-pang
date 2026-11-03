@@ -132,6 +132,20 @@ export function applyModeResult(save: SaveData, result: ModeResult, stageCount: 
   };
 }
 
+/**
+ * 해금 이어가기 (W4-27, PLAN 6.19): 별이 있는 가장 높은 번호 + 1까지 연다 (stageCount 이하).
+ * 마지막 스테이지를 깬 옛 저장은 unlocked가 그 번호에 머물러 있어서, 스테이지가 늘면 다음 판이 열리지 않는다.
+ * 이미 더 높은 unlocked는 유지. 바뀔 것이 없으면 원본을 그대로 돌려준다
+ */
+export function continueUnlock(save: SaveData, stageCount: number): SaveData {
+  const cleared = Object.entries(save.story.bestStars)
+    .filter(([, stars]) => stars >= 1)
+    .map(([id]) => +id);
+  const next = Math.min(Math.max(0, ...cleared) + 1, stageCount);
+  if (next <= save.story.unlocked) return save;
+  return { ...save, story: { ...save.story, unlocked: next } };
+}
+
 /** localStorage(모양이 같은 객체) 하나의 키에 JSON 통째로 저장한다. 실패해도 게임은 멈추지 않는다 */
 export class LocalStorageAdapter implements SaveStorage {
   constructor(

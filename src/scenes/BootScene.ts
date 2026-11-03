@@ -6,6 +6,7 @@ import { Preferences } from '@capacitor/preferences';
 import {
   CapacitorPreferencesStorage,
   LocalStorageAdapter,
+  continueUnlock,
   type SaveStorage,
 } from '../storage/progress';
 import { Music, musicKey, musicUrls } from '../view/Music';
@@ -62,6 +63,10 @@ export class BootScene extends Phaser.Scene {
         return;
       }
       putStages(this.registry, result);
+      // 스테이지가 늘었으면 마지막까지 깬 옛 저장도 다음 판을 연다 (W4-27)
+      const loaded = getSave(this.registry);
+      const continued = continueUnlock(loaded, result.story.length);
+      if (continued !== loaded) commitSave(this.registry, continued);
       // DEV ?unlock=N: 열린 스테이지를 N으로 바꿔 저장한다 (지도 확인용, 되돌리려면 ?unlock=1)
       const unlock = devUnlock(window.location.search, import.meta.env.DEV);
       if (unlock !== null) {

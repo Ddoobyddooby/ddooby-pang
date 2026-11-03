@@ -3,6 +3,7 @@ import type { ModeResult } from '../../src/modes/GameMode';
 import {
   LocalStorageAdapter,
   applyModeResult,
+  continueUnlock,
   defaultSave,
   parseSave,
   recordStory,
@@ -240,5 +241,46 @@ describe('applyModeResult', () => {
     const snapshot = JSON.stringify(base);
     applyModeResult(base, story(1, true, 3, 1), 10);
     expect(JSON.stringify(base)).toBe(snapshot);
+  });
+});
+
+describe('continueUnlock (W4-27)', () => {
+  const withStars = (unlocked: number, stars: Record<number, 0 | 1 | 2 | 3>): SaveData => {
+    const s = defaultSave();
+    return { ...s, story: { ...s.story, unlocked, bestStars: stars } };
+  };
+  const cleared20 = () =>
+    withStars(20, Object.fromEntries(Array.from({ length: 20 }, (_, i) => [i + 1, 2 as const])));
+
+  it('20번까지 깬 옛 저장 + 스테이지 30개 → 21번이 열린다', () => {
+    expect(continueUnlock(cleared20(), 30).story.unlocked).toBe(21);
+  });
+
+  it('스테이지가 20개 그대로면 20에 머문다 (상한)', () => {
+    const save = cleared20();
+    expect(continueUnlock(save, 20)).toBe(save);
+  });
+
+  it('중간까지 한 저장은 그대로 (원본을 돌려준다)', () => {
+    const save = withStars(6, { 1: 3, 2: 1, 3: 2, 4: 1, 5: 1 });
+    expect(continueUnlock(save, 30)).toBe(save);
+  });
+
+  it('이미 더 높은 unlocked는 낮추지 않는다', () => {
+    const save = withStars(25, { 1: 1 });
+    expect(continueUnlock(save, 30).story.unlocked).toBe(25);
+  });
+
+  it('별 0개(실패만 한) 기록은 클리어로 보지 않는다', () => {
+    const save = withStars(3, { 1: 1, 2: 1, 3: 0 });
+    expect(continueUnlock(save, 30).story.unlocked).toBe(3);
+  });
+
+  it('빈 저장 → 1, 원본은 바뀌지 않는다', () => {
+    expect(continueUnlock(defaultSave(), 30).story.unlocked).toBe(1);
+    const save = cleared20();
+    const snapshot = JSON.stringify(save);
+    continueUnlock(save, 30);
+    expect(JSON.stringify(save)).toBe(snapshot);
   });
 });
