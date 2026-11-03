@@ -139,6 +139,14 @@ describe('view/mapLayout: mapFocus', () => {
   it('다 깼으면(unlocked = 개수 + 1) 마지막 노드, 튀어나옴 없음', () => {
     expect(mapFocus(21, 20, 20)).toEqual({ from: 19, to: 19, fresh: false });
   });
+
+  it('마지막을 깨고 돌아오면(seen 19, unlocked = 개수, 마지막 별 있음) 마지막 노드, 튀어나옴 없음', () => {
+    expect(mapFocus(20, 19, 20, { 19: 2, 20: 1 })).toEqual({ from: 19, to: 19, fresh: false });
+  });
+
+  it('마지막이 별 없이 방금 열렸으면 그대로 튀어나온다', () => {
+    expect(mapFocus(20, 19, 20, { 19: 2 })).toEqual({ from: 18, to: 19, fresh: true });
+  });
 });
 
 describe('view/mapLayout: nodeStates', () => {

@@ -78,14 +78,17 @@ export function isDrag(dx: number, dy: number, threshold: number): boolean {
  * 지도에 들어왔을 때 가운데 둘 노드(0부터). 지금 할 곳, 다 깼으면 마지막.
  * 방금 열린 스테이지(fresh)가 있으면 from(직전에 할 곳)에서 시작해 to(새로 열린 곳)로 옮겨 간 뒤 튀어나온다.
  * seen = 이 세션에서 지도를 마지막으로 봤을 때의 unlocked (처음이면 undefined)
+ * 새로 열린 곳이 이미 별이 있으면(마지막 스테이지를 깬 저장) nodeStates에서 'current'가 아니므로 튀어나오지 않는다
  */
 export function mapFocus(
   unlocked: number,
   seen: number | undefined,
   count: number,
+  bestStars: Record<number, number> = {},
 ): { from: number; to: number; fresh: boolean } {
   const at = (n: number) => Math.min(Math.max(1, n), count) - 1;
   const to = at(unlocked);
-  const fresh = seen !== undefined && unlocked > seen && unlocked <= count;
+  const fresh =
+    seen !== undefined && unlocked > seen && unlocked <= count && (bestStars[unlocked] ?? 0) < 1;
   return { from: fresh ? at(seen) : to, to, fresh };
 }

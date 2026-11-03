@@ -73,7 +73,7 @@ export class StageMapScene extends Phaser.Scene {
     // 처음 위치: 지금 할 곳이 화면 가운데 근처. 방금 열린 스테이지(이 세션에서 지도를 본 뒤 더 열림)가 있으면
     // 직전에 할 곳에서 시작해 그곳으로 부드럽게 옮겨 간 뒤 튀어나온다
     const seen = this.registry.get(SEEN_KEY) as number | undefined;
-    const focus = mapFocus(save.story.unlocked, seen, stages.length);
+    const focus = mapFocus(save.story.unlocked, seen, stages.length, save.story.bestStars);
     this.registry.set(SEEN_KEY, save.story.unlocked);
     this.setScroll(scrollToCenter(nodes[focus.from]?.y ?? 0, worldHeight, height));
     const fresh = views[focus.to];
