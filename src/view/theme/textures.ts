@@ -112,6 +112,32 @@ function drawFace(ctx: Ctx, face: Face): void {
   }
 }
 
+/**
+ * 종이 그림책 느낌 (A안): 아래쪽 음영으로 두께를, 작은 점으로 종이 결을 낸다. 모양 안에만 칠한다.
+ * 점 위치는 고정 수열이라 매번 같은 텍스처가 나온다
+ */
+function paperFinish(ctx: Ctx, shape: Path2D): void {
+  ctx.save();
+  ctx.clip(shape);
+  const shade = ctx.createLinearGradient(0, -44, 0, 44);
+  shade.addColorStop(0, 'rgba(255,255,255,0.18)');
+  shade.addColorStop(0.5, 'rgba(255,255,255,0)');
+  shade.addColorStop(1, 'rgba(90,40,70,0.16)');
+  ctx.fillStyle = shade;
+  ctx.fillRect(-50, -50, 100, 100);
+  let seed = 7;
+  const rand = (): number => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < PAPER_DOTS; i++) {
+    ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.22)' : 'rgba(90,40,70,0.1)';
+    ctx.beginPath();
+    ctx.arc(rand() * 96 - 48, rand() * 96 - 48, 0.5 + rand() * 0.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+const PAPER_DOTS = 260;
+
 function drawBlock(ctx: Ctx, color: Color | null, face: Face): void {
   ctx.lineWidth = 5;
   ctx.lineJoin = 'round';
@@ -126,6 +152,7 @@ function drawBlock(ctx: Ctx, color: Color | null, face: Face): void {
       ctx.closePath();
       ctx.fill();
     });
+    paperFinish(ctx, new Path2D(SHAPES[0]));
     ctx.strokeStyle = css(THEME.blocks[4].stroke);
     ctx.beginPath();
     ctx.arc(0, 0, 40, 0, Math.PI * 2);
@@ -138,6 +165,7 @@ function drawBlock(ctx: Ctx, color: Color | null, face: Face): void {
   ctx.fillStyle = css(THEME.blocks[color].fill);
   ctx.strokeStyle = css(THEME.blocks[color].stroke);
   ctx.fill(shape);
+  paperFinish(ctx, shape);
   ctx.stroke(shape);
 
   const hl = HIGHLIGHTS[color];

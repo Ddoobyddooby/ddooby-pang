@@ -41,7 +41,22 @@ export class BoardView {
   ) {
     ensureTextures(scene);
     const { x, y, width, height } = layout;
-    scene.add.rectangle(x, y, width, height, VIEW.boardBackground).setOrigin(0);
+    // 크림 바탕 + 한 칸 걸러 진한 칸 + 칸 경계선 (A안 그림책)
+    const cells = scene.add
+      .graphics()
+      .fillStyle(VIEW.boardBackground)
+      .fillRect(x, y, width, height);
+    cells.fillStyle(VIEW.cellAlt);
+    for (let r = 0; r < layout.rows; r++) {
+      for (let c = (r + 1) % 2; c < layout.cols; c += 2) {
+        cells.fillRect(x + c * layout.cell, y + r * layout.cell, layout.cell, layout.cell);
+      }
+    }
+    cells.lineStyle(2, VIEW.cellLine.color, VIEW.cellLine.alpha);
+    for (let i = 1; i < layout.cols; i++)
+      cells.lineBetween(x + i * layout.cell, y, x + i * layout.cell, y + height);
+    for (let i = 1; i < layout.rows; i++)
+      cells.lineBetween(x, y + i * layout.cell, x + width, y + i * layout.cell);
 
     // 보드 밖(위쪽)에서 떨어지는 리필 블록이 HUD 위에 보이지 않게 가린다
     this.layer = scene.add.container(0, 0);
