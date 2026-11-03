@@ -33,11 +33,18 @@ export function mapNodes(count: number, screenHeight: number): MapLayout {
   };
 }
 
-/** unlocked = 저장 데이터의 열린 번호. 열린 것 중 가장 높은 번호가 지금 할 곳 (전부 클리어면 없음) */
-export function nodeStates(unlocked: number, count: number): NodeState[] {
+/**
+ * unlocked = 저장 데이터의 열린 번호. 별이 있거나 열린 번호보다 아래면 완료, 열렸는데 별이 없는 번호가 지금 할 곳 (전부 클리어면 없음).
+ * unlocked는 스테이지 수를 넘지 않아 마지막 스테이지는 깨도 번호가 그대로라서, 마지막은 별(bestStars)로 완료를 본다
+ */
+export function nodeStates(
+  unlocked: number,
+  count: number,
+  bestStars: Record<number, number> = {},
+): NodeState[] {
   return Array.from({ length: count }, (_, i) => {
     const id = i + 1;
-    if (id < unlocked) return 'done';
+    if (id < unlocked || (bestStars[id] ?? 0) >= 1) return 'done';
     return id === unlocked ? 'current' : 'locked';
   });
 }

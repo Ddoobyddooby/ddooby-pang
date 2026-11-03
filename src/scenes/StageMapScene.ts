@@ -58,7 +58,7 @@ export class StageMapScene extends Phaser.Scene {
     const stages = getStages(this.registry).story;
     const save = getSave(this.registry);
     const { nodes, worldHeight } = mapNodes(stages.length, height);
-    const states = nodeStates(save.story.unlocked, stages.length);
+    const states = nodeStates(save.story.unlocked, stages.length, save.story.bestStars);
     this.worldHeight = worldHeight;
     this.dragged = false;
     // 언덕(바닥 장식과 같은 깊이) 위에 길, 그 위에 노드. 묶음 안에서는 넣은 순서가 앞뒤

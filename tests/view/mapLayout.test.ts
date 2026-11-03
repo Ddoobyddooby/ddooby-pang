@@ -163,4 +163,24 @@ describe('view/mapLayout: nodeStates', () => {
   it('10번까지 클리어(unlocked 11): 전부 완료', () => {
     expect(nodeStates(11, 10).every((s) => s === 'done')).toBe(true);
   });
+
+  it('마지막을 깬 저장(unlocked가 count에 머묾, 마지막 별 있음): 전부 완료, 지금 할 곳 없음', () => {
+    const states = nodeStates(10, 10, { 9: 2, 10: 3 });
+    expect(states.every((s) => s === 'done')).toBe(true);
+  });
+
+  it('중간까지 깬 저장: 별 정보가 있어도 별 없는 열린 번호가 지금 할 곳 (별 없이 넘긴 1번 포함)', () => {
+    expect(nodeStates(3, 10, { 2: 3 })).toEqual([
+      'done',
+      'done',
+      'current',
+      ...Array<string>(7).fill('locked'),
+    ]);
+  });
+
+  it('별 없이 열린 마지막 번호: 지금 할 곳', () => {
+    const states = nodeStates(10, 10, { 9: 1 });
+    expect(states[8]).toBe('done');
+    expect(states[9]).toBe('current');
+  });
 });
