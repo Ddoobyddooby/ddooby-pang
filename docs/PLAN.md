@@ -579,6 +579,7 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지�
 - **view**: `transform`을 받으면 바뀌는 블록이 반짝이며 특수 표시가 붙는 연출(`ANIM`/`FX`에 시간, 약 0.4초) 뒤 발동을 차례로 재생한다. DEV view↔board 대조(`eventTracker`)도 `transform`을 안다
 - 그대로 둔 것: 컬러 + 컬러(보드 전체), 컬러 + 일반 블록, 휘말린 컬러 블록(가장 많은 색), 경쟁 모드 마지막 팡
 - 스토리 난이도가 쉬워질 수 있다. `npm run stages:sim`으로 1~20 클리어율 변화를 재서 여기에 적고, 숫자 조정은 시범 플레이(W4-11) 뒤에 한다
+- 결과: `colorSwapBurst`가 상대가 줄·폭탄·슈퍼면 같은 색 일반 블록을 바꾼 보드에서 `chainActivate`를 부른다. 시작 칸은 컬러 블록 범위(행 우선)이고 차례는 컬러 칸 0, 나머지 1, 2, 3 …. `chainActivate`의 `depth`는 숫자 또는 시작 칸별 배열이고, 큐에서 차례가 가장 이른 블록부터(같으면 먼저 들어온 것) 꺼낸다. 시작 칸 차례가 모두 같으면 예전 BFS 순서와 같아서 조합이 아닌 스왑 8만 640건(유효 1만 6,992건)·`resolveFinale` 720건이 예전 엔진과 `toEqual`로 같았다(임시 비교, 커밋 안 함). 시작 칸은 앞 차례 범위에 들어도 자기 차례에 발동한다. `transform`은 `match` 바로 뒤. view는 `ANIM.transform` 400ms 동안 `FX.special.transformFlash` { scale 1.25(왕복), whiteMs 120 }로 번쩍이며 표시를 붙이고, 그 step의 발동·제거 시각을 모두 400ms 늦춘다(`chainTimeline.transformDelay`). 소리는 변신 때 `star` 한 번. 확인용 DEV `?specials=combo`(무지개 + ↔·폭탄·슈퍼 세 쌍). `stages:sim`(300판) 1~20 클리어율은 전과 같다(바뀐 칸은 13번 클리어 판 80% 점수 4,470 → 4,520 하나). 봇이 첫 힌트 수만 두어 10만 1,811수 중 컬러 스왑 217번, 조합 1번뿐이라 시뮬로는 효과가 거의 안 잡힌다. 난이도 영향은 시범 플레이(W4-11)로 본다
 
 ### 6.19 마지막 스테이지 별, 30스테이지, 한 판 1.5배 (W4-26, W4-27)
 

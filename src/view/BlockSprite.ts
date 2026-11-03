@@ -3,7 +3,7 @@
 
 import Phaser from 'phaser';
 import { ANIM, HINT, VIEW } from '../config';
-import type { Block } from '../core/types';
+import type { Block, SpecialKind } from '../core/types';
 import { blockKey, specialKey, type Face } from './theme/textures';
 
 export class BlockSprite extends Phaser.GameObjects.Container {
@@ -15,12 +15,15 @@ export class BlockSprite extends Phaser.GameObjects.Container {
   private readonly blockColor: Block['color'];
   /** 선택 표시는 몸통 이미지만 키운다. 컨테이너 scale을 쓰는 squish·pop과 겹치지 않게 */
   private readonly baseScale: number;
+  /** 몸통·특수 표시 이미지 크기 (px) */
+  private readonly size: number;
 
   constructor(scene: Phaser.Scene, x: number, y: number, block: Block, cellSize: number) {
     super(scene, x, y);
     this.blockId = block.id;
     this.blockColor = block.special === 'color' ? null : block.color;
     const size = cellSize * VIEW.blockScale;
+    this.size = size;
 
     this.faceImage = scene.add
       .image(0, 0, blockKey(this.blockColor, 'normal'))
@@ -99,6 +102,31 @@ export class BlockSprite extends Phaser.GameObjects.Container {
       duration: duration / 2,
       yoyo: true,
       ease: 'Sine.easeOut',
+    });
+  }
+
+  /**
+   * 컬러 + 특수 블록 조합으로 특수 블록이 될 때 (PLAN 6.18): 하얗게 번쩍이며 특수 표시가 붙고,
+   * duration 동안 scale배까지 부풀었다 돌아온다. 위치는 그대로, 기다리지 않는다
+   */
+  transformTo(special: SpecialKind, duration: number, scale: number, whiteMs: number): void {
+    if (special !== 'color') {
+      this.add(
+        this.scene.add.image(0, 0, specialKey(special)).setDisplaySize(this.size, this.size),
+      );
+    }
+    const images = this.list as Phaser.GameObjects.Image[];
+    images.forEach((image) => image.setTintFill(0xffffff));
+    this.scene.time.delayedCall(whiteMs, () => {
+      if (this.active) images.forEach((image) => image.clearTint());
+    });
+    this.scene.tweens.killTweensOf(this);
+    this.scene.tweens.add({
+      targets: this,
+      scale,
+      duration: duration / 2,
+      yoyo: true,
+      ease: 'Back.easeOut',
     });
   }
 

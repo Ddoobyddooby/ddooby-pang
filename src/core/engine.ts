@@ -8,7 +8,16 @@ import { createPlayableBoard, hasAnyMove, shuffle } from './moves';
 import { createRng } from './rng';
 import { stepScore } from './scoring';
 import { blastArea, chainActivate, decideSpecial, specialPosition } from './specials';
-import type { Board, GameEvent, GameState, MatchGroup, Pos, ResolveResult } from './types';
+import type {
+  Block,
+  Board,
+  GameEvent,
+  GameState,
+  MatchGroup,
+  Pos,
+  ResolveResult,
+  SpecialKind,
+} from './types';
 
 const COLOR_COUNT = 6;
 
@@ -45,14 +54,48 @@ function assertInvariants(board: Board): void {
   if (!hasAnyMove(board)) throw new Error('resolve 후 가능한 수가 없다');
 }
 
-/** 컬러 블록 스왑 발동: at의 컬러 블록이 partner 블록의 색을 지운다. 둘 다 컬러면 보드 전체 (PLAN 4.3) */
+type ActivateEvent = Extract<GameEvent, { type: 'activate' }>;
+type TransformEvent = Extract<GameEvent, { type: 'transform' }>;
+
+/**
+ * 컬러 블록 스왑 발동: at의 컬러 블록이 partner 블록의 색을 지운다. 둘 다 컬러면 보드 전체 (PLAN 4.3).
+ * partner가 줄·폭탄·슈퍼면 그 색의 일반 블록이 그 특수 블록으로 바뀌고, 같은 색 칸이
+ * 행 우선으로 한 차례씩(1, 2, 3 …) 발동한다 (PLAN 6.18)
+ */
 function colorSwapBurst(board: Board, at: Pos, partner: Pos) {
   const other = getBlock(board, partner)!;
   const cleared = blastArea('color', at, board, other.color);
-  const chain = chainActivate(board, cleared, other.special === 'color' ? [at, partner] : [at], 1);
-  const first: GameEvent = { type: 'activate', special: 'color', at, cleared, depth: 0 };
-  return { cleared: chain.cleared, activations: [first, ...chain.activations] };
+  const first: ActivateEvent = { type: 'activate', special: 'color', at, cleared, depth: 0 };
+  if (!other.special || other.special === 'color') {
+    const chain = chainActivate(
+      board,
+      cleared,
+      other.special === 'color' ? [at, partner] : [at],
+      1,
+    );
+    return { cleared: chain.cleared, activations: [first, ...chain.activations] };
+  }
+
+  // 줄은 칸 위치로 가로·세로를 번갈아 (RNG 없이 결정적)
+  const kind = other.special;
+  const changes: { at: Pos; block: Block }[] = [];
+  const cells = board.cells.slice();
+  for (const p of cleared) {
+    const block = getBlock(board, p)!;
+    if (block.special) continue;
+    const special = kind === 'lineH' || kind === 'lineV' ? lineAt(p) : kind;
+    const changed = { ...block, special };
+    changes.push({ at: p, block: changed });
+    cells[indexOf(board, p)] = changed;
+  }
+  let turn = 0;
+  const depths = cleared.map((p) => (samePos(p, at) ? 0 : ++turn));
+  const chain = chainActivate({ ...board, cells }, cleared, [at], depths);
+  const transform: TransformEvent = { type: 'transform', changes };
+  return { cleared: chain.cleared, activations: [first, ...chain.activations], transform };
 }
+
+const lineAt = (p: Pos): SpecialKind => ((p.r + p.c) % 2 === 0 ? 'lineH' : 'lineV');
 
 export function resolveSwap(
   state: GameState,
@@ -160,7 +203,7 @@ function runCascades(
       return [{ at: specialPosition(group, swapped), block: { id: nextId++, color, special } }];
     });
     const matched = groups.flatMap((g) => g.cells);
-    const chain =
+    const chain: { cleared: Pos[]; activations: ActivateEvent[]; transform?: TransformEvent } =
       first?.kind === 'burst'
         ? colorSwapBurst(board, first.at, first.partner)
         : chainActivate(board, first?.kind === 'fire' ? [first.at] : matched);
@@ -223,6 +266,7 @@ function runCascades(
 
     steps.push([
       { type: 'match', groups, cascade },
+      ...(chain.transform ? [chain.transform] : []),
       ...activations,
       { type: 'remove', blocks: removed },
       ...created.map((n): GameEvent => ({ type: 'create', block: n.block, at: n.at })),

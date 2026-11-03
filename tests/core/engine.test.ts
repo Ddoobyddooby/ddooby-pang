@@ -345,7 +345,7 @@ describe('resolveSwap: 컬러 블록 스왑', () => {
     expect(step.removed).toEqual([p(0, 0), p(0, 1), p(2, 0)]);
   });
 
-  it('컬러 ↔ 특수 블록: 그 블록의 색을 지우고, 상대 특수 블록은 연쇄 발동', () => {
+  it('컬러 ↔ 줄 블록: 같은 색 블록이 줄 블록이 되어 하나씩 발동 (PLAN 6.18)', () => {
     const step = firstStep(
       resolveSwap(
         stateOf(
@@ -360,10 +360,10 @@ describe('resolveSwap: 컬러 블록 스왑', () => {
         p(0, 1),
       ),
     );
-    // Y- 는 (0,0)으로 옮겨졌다 → 0행 줄 제거
-    expect(step.activate).toEqual(['color@0,1', 'lineH@0,0']);
-    expect(step.depths).toEqual([0, 1]);
-    expect(step.removed).toEqual([p(0, 0), p(0, 1), p(0, 2), p(2, 0)]);
+    // Y- 는 (0,0)으로 옮겨졌다. (2,0) Y는 (2+0)%2 = 0 → lineH
+    expect(step.activate).toEqual(['color@0,1', 'lineH@0,0', 'lineH@2,0']);
+    expect(step.depths).toEqual([0, 1, 2]);
+    expect(step.removed).toEqual([p(0, 0), p(0, 1), p(0, 2), p(2, 0), p(2, 1), p(2, 2)]);
   });
 
   it('컬러 ↔ 컬러: 보드 전체, 발동은 하나', () => {
@@ -538,5 +538,151 @@ describe('resolveFinale', () => {
     >;
     expect(activate.at).toEqual({ r: Math.floor(firstIndex / 8), c: firstIndex % 8 });
     expect(activate.depth).toBe(0);
+  });
+});
+
+// W4-25: 컬러 블록 + 특수 블록 조합 (SPEC 4.5, PLAN 6.18)
+describe('resolveSwap: 컬러 + 특수 블록 조합', () => {
+  const p = (r: number, c: number) => ({ r, c });
+  const C0 = { a: p(0, 0), b: p(0, 1) }; // (0,0) 컬러 ↔ (0,1) 특수 블록. 컬러가 (0,1)로 간다
+
+  function firstStep(result: ReturnType<typeof resolveSwap>) {
+    const step = result.steps[1]!;
+    const activations = step.filter(
+      (e): e is Extract<GameEvent, { type: 'activate' }> => e.type === 'activate',
+    );
+    const transform = step.find(
+      (e): e is Extract<GameEvent, { type: 'transform' }> => e.type === 'transform',
+    );
+    return {
+      step,
+      types: [...new Set(step.map((e) => e.type))],
+      activate: activations.map((e) => `${e.special}@${e.at.r},${e.at.c}#${e.depth}`),
+      changes: transform?.changes.map((ch) => `${ch.block.special}@${ch.at.r},${ch.at.c}`),
+      transform,
+    };
+  }
+
+  // Y 블록: (0,0) Y- (스왑 후), (1,2), (1,4), (2,0), (3,1) Y* (기존 폭탄), (3,3), (4,2). (2,2) G| 는 다른 색
+  const LINE = `
+    C  Y- R  G  B
+    G  R  Y  B  Y
+    Y  B  G| R  G
+    R  Y* B  Y  P
+    B  G  Y  P  R
+  `;
+
+  it('컬러 + 줄: 같은 색 일반 블록만 바뀌고, 줄 방향은 (r + c) % 2', () => {
+    const { changes } = firstStep(resolveSwap(stateOf(LINE, 5), C0.a, C0.b));
+    // 상대 블록 (0,0)과 기존 폭탄 (3,1), 다른 색 (2,2)는 바뀌지 않는다
+    expect(changes).toEqual(['lineV@1,2', 'lineV@1,4', 'lineH@2,0', 'lineH@3,3', 'lineH@4,2']);
+  });
+
+  it('transform은 activate들보다 앞에, 블록 id·색은 그대로', () => {
+    const state = stateOf(LINE, 5);
+    const { step, types, transform } = firstStep(resolveSwap(state, C0.a, C0.b));
+    expect(types).toEqual(['match', 'transform', 'activate', 'remove', 'score']);
+    expect(step.findIndex((e) => e.type === 'transform')).toBe(1);
+    for (const { at, block } of transform!.changes) {
+      const before = state.board.cells[at.r * 5 + at.c]!;
+      expect(block).toEqual({ ...before, special: block.special });
+      expect(before.special).toBeUndefined();
+    }
+  });
+
+  it('컬러 → 같은 색 칸이 행 우선으로 한 차례씩, 휘말린 다른 특수 블록은 그다음 차례', () => {
+    const { activate } = firstStep(resolveSwap(stateOf(LINE, 5), C0.a, C0.b));
+    expect(activate).toEqual([
+      'color@0,1#0',
+      'lineH@0,0#1',
+      'lineV@1,2#2',
+      'lineV@1,4#3',
+      'lineV@2,2#3', // (1,2) 세로줄에 휘말림 → 2 + 1
+      'lineH@2,0#4',
+      'bomb@3,1#5', // 기존 폭탄은 바뀌지 않고 자기 차례에 자기 효과
+      'lineH@3,3#6',
+      'lineH@4,2#7',
+    ]);
+  });
+
+  // R: (0,0) R* (스왑 후), (1,2), (2,0) → 모두 폭탄. 12칸이 모두 지워진다
+  const BOMB = `
+    C  R* G  B
+    G  B  R  Y
+    R  Y  B  G
+  `;
+
+  it('컬러 + 폭탄: 모두 폭탄이 되어 차례로 발동, 점수는 효과 제거 20점씩', () => {
+    const result = resolveSwap(stateOf(BOMB, 4, 2), C0.a, C0.b);
+    const { changes, activate, step } = firstStep(result);
+    expect(changes).toEqual(['bomb@1,2', 'bomb@2,0']);
+    expect(activate).toEqual(['color@0,1#0', 'bomb@0,0#1', 'bomb@1,2#2', 'bomb@2,0#3']);
+    const removed = step.find((e) => e.type === 'remove')!;
+    expect(removed.type === 'remove' && removed.blocks).toHaveLength(12);
+    // 손 계산: 그룹 없음, 12블록 × 20 × 배율 1 = 240. seed 2에서는 리필 후 연쇄가 없다
+    expect(step.find((e) => e.type === 'score')).toMatchObject({ delta: 240, cascade: 0 });
+    expect(result.scoreDelta).toBe(240);
+    expect(result.removedByColor).toEqual([3, 2, 3, 3, 0, 0]); // 컬러 블록은 색이 없다
+  });
+
+  // G: (0,0) G+ (스왑 후), (1,2), (2,3), (3,0) → 모두 슈퍼
+  const SUPER = `
+    C  G+ R  B
+    R  B  G  Y
+    B  Y  R  G
+    G  R  B  Y
+  `;
+
+  it('컬러 + 슈퍼: 모두 슈퍼가 되어 차례로 발동', () => {
+    const { changes, activate } = firstStep(resolveSwap(stateOf(SUPER, 4), C0.a, C0.b));
+    expect(changes).toEqual(['super@1,2', 'super@2,3', 'super@3,0']);
+    expect(activate).toEqual([
+      'color@0,1#0',
+      'super@0,0#1',
+      'super@1,2#2',
+      'super@2,3#3',
+      'super@3,0#4',
+    ]);
+  });
+
+  it('특수 블록 쪽에서 컬러로 끌어와도 같다 (컬러가 (0,0)으로 간다)', () => {
+    const { activate } = firstStep(
+      resolveSwap(
+        stateOf(
+          `
+            Y- C  R
+            G  R  B
+            Y  B  G
+          `,
+          5,
+        ),
+        p(0, 0),
+        p(0, 1),
+      ),
+    );
+    expect(activate).toEqual(['color@0,0#0', 'lineH@0,1#1', 'lineH@2,0#2']);
+  });
+
+  it('같은 상태 → 같은 결과, 끝난 보드는 불변식 성립', () => {
+    for (const [text, colors] of [
+      [LINE, 5],
+      [BOMB, 4],
+      [SUPER, 4],
+    ] as const) {
+      const one = resolveSwap(stateOf(text, colors), C0.a, C0.b);
+      const two = resolveSwap(stateOf(text, colors), C0.a, C0.b);
+      expect(one).toEqual(two);
+      const board = one.state.board;
+      expect(board.cells.every((b) => b !== null)).toBe(true);
+      expect(findMatches(board)).toEqual([]);
+      expect(hasAnyMove(board)).toBe(true);
+    }
+  });
+
+  it('컬러 + 일반 블록, 컬러 + 컬러에는 transform이 없다', () => {
+    for (const text of ['C Y R\nG R B\nY B G', 'C C R\nG R B\nY B G']) {
+      const result = resolveSwap(stateOf(text, 5), p(0, 0), p(0, 1));
+      expect(result.steps.flat().some((e) => e.type === 'transform')).toBe(false);
+    }
   });
 });

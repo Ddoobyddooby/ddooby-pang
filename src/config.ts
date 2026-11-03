@@ -66,6 +66,8 @@ export const ANIM = {
   squintHold: 80,
   /** 연쇄 발동 차례 사이 간격 (ms). 휘말린 특수 블록은 이만큼 뒤에 터진다 (PLAN 6.13) */
   chainStep: 110,
+  /** 컬러 + 특수 블록 조합: 같은 색 블록이 특수 블록으로 바뀌는 연출 길이 (ms). 발동은 이 뒤에 시작한다 (PLAN 6.18) */
+  transform: 400,
 } as const;
 
 /** 화면 배치와 블록 모양 (설계: 2026-10-30-screen-layout-design.md) */
@@ -227,6 +229,8 @@ export const FX = {
     starsPerSparkle: 2,
     /** 연쇄로 휘말린 특수 블록: 하얗게 번쩍이고(whiteMs) 부풀었다가(scale, ANIM.chainStep 동안) 자기 차례에 터진다 (PLAN 6.13) */
     chainFlash: { scale: 1.3, whiteMs: 70 },
+    /** 특수 블록으로 바뀔 때: 하얗게 번쩍이고(whiteMs) scale배까지 부풀었다 돌아오며(ANIM.transform 동안) 표시가 붙는다 (PLAN 6.18) */
+    transformFlash: { scale: 1.25, whiteMs: 120 },
   },
 } as const;
 

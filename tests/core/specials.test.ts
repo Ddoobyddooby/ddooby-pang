@@ -317,6 +317,22 @@ describe('chainActivate', () => {
     };
   }
 
+  it('시작 칸별 차례(배열): 차례가 이른 블록부터, 휘말린 블록은 터뜨린 블록 + 1 (PLAN 6.18)', () => {
+    const board = parseBoard(`
+      R- Y  G
+      B  R| B
+      R- G  Y
+    `);
+    // 목록 순서와 달리 차례 순서로 발동한다. 시작 칸은 앞 차례 범위에 들어도 자기 차례 그대로
+    const result = chainActivate(board, [p(0, 0), p(2, 0), p(1, 1)], [], [1, 3, 2]);
+    expect(result.activations.map((a) => `${a.special}@${a.at.r},${a.at.c}#${a.depth}`)).toEqual([
+      'lineH@0,0#1',
+      'lineV@1,1#2',
+      'lineH@2,0#3',
+    ]);
+    expect(result.cleared).toHaveLength(7);
+  });
+
   it('특수 블록이 없으면 시작 칸만 (발동 없음)', () => {
     expect(
       chain(

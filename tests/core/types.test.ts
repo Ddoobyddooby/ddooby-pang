@@ -41,6 +41,7 @@ describe('core/types', () => {
       | 'swapBack'
       | 'match'
       | 'activate'
+      | 'transform'
       | 'remove'
       | 'create'
       | 'fall'

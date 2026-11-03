@@ -58,6 +58,13 @@ export class EventTracker {
       case 'create':
         this.place(event.at, event.block.id, 'create');
         break;
+      case 'transform':
+        // 자리는 그대로, 같은 블록이 특수 블록이 될 뿐이다
+        for (const { at, block } of event.changes) {
+          if (this.idAt(at) !== block.id)
+            throw new Error(`transform: ${key(at)}에 ${block.id}가 없다`);
+        }
+        break;
       case 'match':
       case 'activate':
       case 'score':

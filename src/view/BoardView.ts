@@ -7,7 +7,7 @@ import type { Block, Board, GameEvent, Pos, SpecialKind } from '../core/types';
 import { BlockSprite } from './BlockSprite';
 import { EventTracker } from './eventTracker';
 import { cellAt, cellCenter, type Layout } from './layout';
-import { activateDelay, flashDelay, removeDelays } from './fx/chainTimeline';
+import { activateDelay, flashDelay, removeDelays, transformDelay } from './fx/chainTimeline';
 import { cascadeToLevel } from './fx/fxLevels';
 import { removedFromMatch, type RemovedCell } from './fx/matchInfo';
 import { ensureTextures, type Face } from './theme/textures';
@@ -16,8 +16,10 @@ import { tween } from './tween';
 export interface BoardViewHooks {
   /** match 이벤트를 재생하기 시작할 때 동기로 부른다. 연출은 기다리지 않는다 */
   onMatch?(level: number, removed: readonly RemovedCell[]): void;
-  /** activate 이벤트(특수 블록 발동)의 차례가 되면 부른다 (차례 0은 재생 시작 때 동기로, PLAN 6.13) */
+  /** activate 이벤트(특수 블록 발동)의 차례가 되면 부른다 (차례 0은 재생 시작 때 동기로, PLAN 6.13. 변신이 있으면 변신 뒤, 6.18) */
   onActivate?(special: SpecialKind, at: Pos, cleared: readonly Pos[]): void;
+  /** transform 이벤트(같은 색 블록이 특수 블록이 됨)를 재생하기 시작할 때 동기로 부른다 (PLAN 6.18) */
+  onTransform?(count: number): void;
   /** score 이벤트(delta > 0)를 재생하기 시작할 때 동기로 부른다. 팝업은 기다리지 않는다 */
   onScore?(delta: number, level: number, at: Pos): void;
 }
@@ -32,6 +34,8 @@ export class BoardView {
   private hintIds: number[] = [];
   /** 재생 중인 step의 블록 id → 제거를 시작할 ms (연쇄 차례, PLAN 6.13) */
   private removeAt = new Map<number, number>();
+  /** 재생 중인 step의 발동이 기다릴 ms (변신 연출, PLAN 6.18) */
+  private activateOffset = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -77,7 +81,8 @@ export class BoardView {
   /** step을 순서대로 재생한다. 한 step 안의 이벤트는 동시에 재생한다 */
   async play(steps: readonly (readonly GameEvent[])[]): Promise<void> {
     for (const step of steps) {
-      this.removeAt = removeDelays(step, ANIM.chainStep);
+      this.removeAt = removeDelays(step, ANIM.chainStep, ANIM.transform);
+      this.activateOffset = transformDelay(step, ANIM.transform);
       await Promise.all(step.map((event) => this.playEvent(event)));
     }
   }
@@ -182,15 +187,24 @@ export class BoardView {
 
       case 'activate': {
         // 휘말린 특수 블록은 앞 차례에 번쩍·부풀고, 자기 차례에 발동한다. 블록 제거는 remove가 같은 시간표로 맞춘다
-        const flashAt = flashDelay(event, ANIM.chainStep);
+        const flashAt = flashDelay(event, ANIM.chainStep, this.activateOffset);
         const sprite = this.sprites.get(this.tracker.idAt(event.at) ?? -1);
         if (flashAt !== null && sprite) {
           const { scale, whiteMs } = FX.special.chainFlash;
           this.later(flashAt, () => sprite.flash(scale, ANIM.chainStep, whiteMs));
         }
-        this.later(activateDelay(event, ANIM.chainStep), () =>
+        this.later(activateDelay(event, ANIM.chainStep, this.activateOffset), () =>
           this.hooks.onActivate?.(event.special, event.at, event.cleared),
         );
+        return Promise.resolve();
+      }
+
+      case 'transform': {
+        const { scale, whiteMs } = FX.special.transformFlash;
+        for (const { block } of event.changes) {
+          this.sprites.get(block.id)?.transformTo(block.special!, ANIM.transform, scale, whiteMs);
+        }
+        this.hooks.onTransform?.(event.changes.length);
         return Promise.resolve();
       }
 

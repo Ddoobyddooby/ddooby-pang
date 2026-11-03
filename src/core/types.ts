@@ -60,6 +60,11 @@ export type GameEvent =
       readonly depth: number;
     }
   | {
+      /** 컬러 + 특수 블록 스왑으로 같은 색 블록이 특수 블록이 된다 (PLAN 6.18). id는 그대로, special만 바뀐다 */
+      readonly type: 'transform';
+      readonly changes: readonly { at: Pos; block: Block }[];
+    }
+  | {
       readonly type: 'remove';
       readonly blocks: readonly { id: number; at: Pos; bySpecial: boolean }[];
     }

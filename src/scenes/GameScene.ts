@@ -9,6 +9,7 @@
 //   ?demo       힌트 수를 자동으로 둔다 (시간이 끝나면 마지막 팡 뒤 결과 화면으로)
 //   ?time=15    (개발 모드) 제한 시간을 15초로 줄인다 (없으면 stages/timeattack.json의 timeLimit)
 //   ?specials   (개발 모드) 시작 보드에 특수 블록 5종을 하나씩 놓는다
+//   ?specials=combo (개발 모드) 무지개 블록 옆에 줄·폭탄·슈퍼를 하나씩 놓는다 (조합 확인, PLAN 6.18)
 
 import Phaser from 'phaser';
 import { GAME, HINT, HUD, MAP, MISSION_CARD, TIMEATTACK, VIEW } from '../config';
@@ -60,6 +61,16 @@ const SPECIAL_SAMPLES: [Pos, SpecialKind][] = [
   [{ r: 6, c: 1 }, 'bomb'],
   [{ r: 6, c: 6 }, 'super'],
   [{ r: 3, c: 3 }, 'color'],
+];
+
+/** ?specials=combo: 무지개 블록과 그 오른쪽 특수 블록 세 쌍 (PLAN 6.18) */
+const COMBO_SAMPLES: [Pos, SpecialKind][] = [
+  [{ r: 1, c: 1 }, 'color'],
+  [{ r: 1, c: 2 }, 'lineH'],
+  [{ r: 4, c: 4 }, 'color'],
+  [{ r: 4, c: 5 }, 'bomb'],
+  [{ r: 6, c: 1 }, 'color'],
+  [{ r: 6, c: 2 }, 'super'],
 ];
 
 export class GameScene extends Phaser.Scene {
@@ -137,7 +148,11 @@ export class GameScene extends Phaser.Scene {
       colors: setting.colors,
       seed: this.seed,
     });
-    if (import.meta.env.DEV && params.has('specials')) this.placeSpecialSamples();
+    if (import.meta.env.DEV && params.has('specials')) {
+      this.placeSpecialSamples(
+        params.get('specials') === 'combo' ? COMBO_SAMPLES : SPECIAL_SAMPLES,
+      );
+    }
     const { width, height } = this.scale;
     this.cameras.main.setScroll(-(width - GAME.width) / 2, 0); // 넓은 화면에서 가운데 맞춤
     const screen = screenLayout(height);
@@ -164,6 +179,8 @@ export class GameScene extends Phaser.Scene {
       fx.playActivate(special, at, cleared);
       this.sfx.play('special');
     };
+    // 같은 색 블록이 특수 블록으로 바뀔 때 반짝 소리 한 번 (PLAN 6.18)
+    hooks.onTransform = () => this.sfx.play('star');
     hooks.onScore = (delta, level, at) => fx.playScore(delta, level, at);
 
     this.hud = new Hud(this, gameTitle(this.startData), screen);
@@ -264,10 +281,10 @@ export class GameScene extends Phaser.Scene {
    * 개발용: 시작 보드의 몇 칸을 같은 색의 특수 블록으로 바꾼다 (무지개는 색 없음).
    * 색이 같거나 없어지기만 하므로 시작 매치 0은 유지되고, 무지개 블록이 있어 가능한 수도 있다
    */
-  private placeSpecialSamples(): void {
+  private placeSpecialSamples(samples: readonly [Pos, SpecialKind][]): void {
     const { board } = this.state;
     const cells = board.cells.slice();
-    for (const [{ r, c }, special] of SPECIAL_SAMPLES) {
+    for (const [{ r, c }, special] of samples) {
       const i = r * board.cols + c;
       const block = cells[i]!;
       cells[i] = { id: block.id, color: special === 'color' ? null : block.color, special };

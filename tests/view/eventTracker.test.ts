@@ -40,4 +40,19 @@ describe('view/EventTracker', () => {
       t.apply({ type: 'fall', moves: [{ id: 1, from: { r: 0, c: 0 }, to: { r: 1, c: 1 } }] }),
     ).toThrow('비어 있지 않다');
   });
+
+  it('transform → 자리는 그대로, 다른 id면 에러', () => {
+    const t = new EventTracker(board);
+    t.apply({
+      type: 'transform',
+      changes: [{ at: { r: 1, c: 0 }, block: { id: 3, color: 2, special: 'bomb' } }],
+    });
+    expect(t.idAt({ r: 1, c: 0 })).toBe(3);
+    expect(() =>
+      t.apply({
+        type: 'transform',
+        changes: [{ at: { r: 1, c: 0 }, block: { id: 4, color: 2, special: 'bomb' } }],
+      }),
+    ).toThrow('transform');
+  });
 });

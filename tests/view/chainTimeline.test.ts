@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { GameEvent, Pos, SpecialKind } from '../../src/core/types';
-import { activateDelay, flashDelay, removeDelays } from '../../src/view/fx/chainTimeline';
+import {
+  activateDelay,
+  flashDelay,
+  removeDelays,
+  transformDelay,
+} from '../../src/view/fx/chainTimeline';
 
 const p = (r: number, c: number): Pos => ({ r, c });
 const row = (r: number, cols = 4) => Array.from({ length: cols }, (_, c) => p(r, c));
@@ -24,9 +29,12 @@ function remove(cells: Pos[]): GameEvent {
   };
 }
 /** id → ms 를 "r,c:ms" 로 (보기 쉽게) */
-function summary(step: GameEvent[], chainStep = 100) {
+function summary(step: GameEvent[], chainStep = 100, transformMs = 0) {
   return Object.fromEntries(
-    [...removeDelays(step, chainStep)].map(([id, ms]) => [`${Math.floor(id / 10)},${id % 10}`, ms]),
+    [...removeDelays(step, chainStep, transformMs)].map(([id, ms]) => [
+      `${Math.floor(id / 10)},${id % 10}`,
+      ms,
+    ]),
   );
 }
 
@@ -115,5 +123,42 @@ describe('removeDelays', () => {
       remove([p(0, 0), p(0, 1), p(0, 2), p(2, 0)]),
     ];
     expect(summary(step)).toEqual({ '0,0': 100, '0,1': 0, '0,2': 100, '2,0': 0 });
+  });
+
+  it('컬러 + 특수 조합: 변신 시간만큼 모두 늦고, 바뀐 블록은 자기 차례 (PLAN 6.18)', () => {
+    const transform: GameEvent = {
+      type: 'transform',
+      changes: [{ at: p(2, 0), block: { id: 20, color: 1, special: 'lineH' } }],
+    };
+    const step = [
+      match([]),
+      transform,
+      activate('color', p(0, 1), [p(0, 0), p(0, 1), p(2, 0)], 0),
+      activate('lineH', p(0, 0), row(0, 3), 1),
+      activate('lineH', p(2, 0), row(2, 3), 2),
+      remove([...row(0, 3), ...row(2, 3)]),
+    ];
+    expect(summary(step, 100, 400)).toEqual({
+      '0,0': 500,
+      '0,1': 400,
+      '0,2': 500,
+      '2,0': 600,
+      '2,1': 600,
+      '2,2': 600,
+    });
+    // transformMs를 안 주면 예전 시간표
+    expect(summary(step)['2,0']).toBe(200);
+  });
+});
+
+describe('transformDelay', () => {
+  it('transform이 있는 step만 변신 시간을 기다린다', () => {
+    const transform: GameEvent = { type: 'transform', changes: [] };
+    expect(transformDelay([transform], 400)).toBe(400);
+    expect(transformDelay([match([p(0, 0)])], 400)).toBe(0);
+    const e = activate('lineH', p(0, 0), [], 2);
+    expect(activateDelay(e, 100, 400)).toBe(600);
+    expect(flashDelay(e, 100, 400)).toBe(500);
+    expect(flashDelay(activate('color', p(0, 0), [], 0), 100, 400)).toBeNull();
   });
 });
