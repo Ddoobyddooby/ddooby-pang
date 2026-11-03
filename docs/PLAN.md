@@ -21,7 +21,7 @@ SPEC 11절의 오픈 이슈는 아래 기본값으로 진행하고, 플레이 �
 |---|---|---|---|
 | 1 | 특수 블록: 개수 vs 모양 | **SPEC 4.5 혼합안 그대로** (4I / 5L·T / 5I / 6+) | 캔디크러시와 가장 비슷하고, 판정 함수 하나로 분리돼 교체가 쉽다 |
 | 2 | 스왑 입력 | **스와이프 + 탭-탭 둘 다** | 조카(어린 사용자)는 탭이 더 쉬울 수 있다. 구현 비용 차이가 작다 |
-| 3 | 블록 그래픽 | **코드로 그린 '말랑 친구들'** (색 + 모양 + 얼굴 3표정), 달콤 디저트 테마 — [설계](./superpowers/specs/2026-10-29-theme-and-fx-design.md) | 캔디크러시와 구분되는 개성, 에셋·라이선스 관리 없음, 텍스처로 구워 성능 확보 |
+| 3 | 블록 그래픽 | **'말랑 친구들'** (색 + 모양 + 얼굴 3표정), 달콤 디저트 테마. 2026-11-03부터 몸통은 Codex 생성 그림(그림책 A안, 6.16), 얼굴·특수 배지는 코드로 그린다 — [설계](./superpowers/specs/2026-10-29-theme-and-fx-design.md) | 캔디크러시와 구분되는 개성, 에셋·라이선스 관리 없음, 텍스처로 구워 성능 확보 |
 | 4 | 경쟁 모드 시간 추가 | **없음** (SPEC대로) | v0.2 |
 
 ## 3. 프로젝트 구조
@@ -552,6 +552,14 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지�
   - `nobest` ← Kenney "85 Short music jingles" (OpenGameArt `jingleSounds_Kenney.zip`, CC0) `jingles_STEEL07.ogg` (1.6초, 손대지 않음)
   - `public/audio/CREDITS.md`에 위 출처를 적는다
 - 결과: config `TIMEATTACK.finale.endHoldMs` 1000. `playFinale`이 마지막 팡 재생(또는 "타임 업!" 대기) 뒤 같은 씬 시계 대기로 1초 더 기다리고 `finish()`. 소리 고르기는 순수 함수 `resultSounds(result)`(`scenes/resultText.ts`, 스토리 `clear`/`fail`, 경쟁 `newBest` → `newbest`+`applause`, 아니면 `nobest`), ResultScene은 돌려받은 이름을 차례로 `sfx.play`. 볼륨 `SOUND.effects` newbest 0.9(원본 RMS 약 -19dB로 조용함) · applause 0.7 · nobest 0.55. `clear.ogg`는 스토리 클리어 전용이 됐다. 브라우저(390×844): 특수 블록 없는 `?time=3`은 시간 0부터 결과 소리까지 약 1.8초(글자 0.8 + 쉼 1.0), `?seed=4&specials&time=5`는 마지막 팡 점수 반영(약 3.2초) 약 1초 뒤 결과. 첫 판 30점 → `newbest`+`applause` 같은 시각, 최고 99,999 → `nobest`, 점수 0 첫 판 → `nobest`. 쉼 도중 ❚❚ 2.5초 동안 결과로 안 넘어가고 [계속] 뒤 남은 약 0.7초 후 결과. 효과음 끔이면 결과 소리 없음, 스토리 미리보기는 `clear`/`fail` 그대로
+
+### 6.16 블록 몸통 그림 (W4-23)
+
+- 2026-11-03 사용자: 그림책 배경을 넣은 뒤에도 "캐릭터는 안 바뀐 것 같다". 시안(`assets/design-src/storybook-gameplay-concept.png`)의 도톰한 펠트 블록과 지금 코드 블록(납작한 도형 + 종이 결)의 차이가 크다. 사용자가 Codex 그림으로 교체를 골랐다
+- **그림으로 받는 것**: 몸통 7장 (빨강 원, 노랑 둥근 사각형, 초록 마름모, 파랑 둥근 삼각형, 보라 육각형, 주황 별, 무지개 원). 투명 PNG 512×512, 모양이 가운데에 꽉 차게(여백 약 6%), 얼굴 없음. 원본은 `assets/block-src/`
+- **코드로 그리는 것**: 얼굴 3표정(normal·squint·happy)과 특수 배지. 지금 `textures.ts`가 몸통을 그리는 자리만 그림으로 바꾸고, 얼굴은 색마다 `FACE_PLACE`대로 그 위에 그린다. 표정이 바뀌는 연출·앱 아이콘(`drawBlockOnCanvas`)이 그대로 돈다
+- 그림을 못 읽으면 지금 코드 도형으로 그린다 (배경과 같은 방식)
+- 색은 `THEME.blocks`에 가깝게. 매치는 색으로 보므로 6색이 작은 화면에서 서로 헷갈리지 않아야 한다
 
 ## 7. 데이터 / 저장
 
