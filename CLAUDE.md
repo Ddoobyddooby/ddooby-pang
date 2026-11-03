@@ -10,7 +10,7 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 MVP 개발 중).
 - `docs/PLAN.md`: 어떻게. 구조, core 타입·이벤트, 오픈 이슈 잠정 결정
 - `docs/TASKS.md`: 작업 체크리스트 (ID `W<주차>-<번호>`)
 - `docs/DEVELOPMENT.md`: VSCode에서 실행·확인하는 방법 (사용자용)
-- `docs/WORKFLOW.md`: Claude 세션 운영. 메인(설계) 세션 + 코딩 탭으로 나눠 일할 때는 이 문서를 따른다. 코드 리뷰와 이미지 생성은 Codex에 맡긴다 (8절). Codex는 읽기 전용 리뷰·이미지 원본만 하고 코드·문서를 고치거나 커밋하지 않는다
+- `docs/WORKFLOW.md`: Claude 세션 운영. 메인(설계) 세션 + 코딩 탭으로 나눠 일할 때는 이 문서를 따른다. 분석·코드 리뷰와 이미지 생성은 Codex에 맡긴다 (8절). 수정·코딩은 Claude Code 메인 탭을 거쳐 코딩 탭에 위임한다
 - `docs/FEEDBACK.md`: 시범 플레이 반응과 리뷰 의견. 고칠 것으로 정하면 TASKS로 옮긴다
 
 ## 작업 방식
@@ -21,6 +21,13 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 MVP 개발 중).
 - 태스크를 마치면 `docs/DEVELOPMENT.md` 4절 "작업별 확인 방법"에 사용자가 직접 확인할 절차를, 6절 "Study for App"에 그 태스크에서 공부할 개념(쓰인 파일 포함)을 추가한다. 새 명령이 생기면 2절도 갱신한다.
 - 태스크 하나 = 커밋 하나 (`[feat] W1-xx 설명`). 커밋 전에 `npm run lint && npm test && npm run build`가 통과해야 한다.
 - `AGENTS.md`는 `CLAUDE.md`와 첫 줄 제목만 다른 사본이다. `CLAUDE.md`를 고치면 같이 맞춘다.
+
+## Codex 작업 지침
+
+- 분석·코드 리뷰는 주로 현재 Codex 탭에서 수행한다. 결과와 재현 근거는 `.codex-out/`에 남긴다.
+- 수정·코딩 작업은 Claude Code 메인 탭(`orcaTabId: 4a9577ee-35be-4caa-a649-435751a666e8`)으로 위임한다. 이 탭은 분석·설계를 담당하며, 실제 구현은 메인이 Claude Code 코딩 탭에 다시 위임한다.
+- Codex는 첫 미완료 태스크를 임의로 구현하지 않는다. 구현 요청을 받으면 분석 결과·수정 범위·완료 기준·검증 방법을 정리해 위 메인 탭으로 전달한다 (`docs/WORKFLOW.md` 8.6절).
+- 기본적으로 Codex는 제품 코드·문서를 직접 수정하거나 커밋·push하지 않는다. 사용자가 Codex에 작업 지침 등 특정 파일의 직접 수정을 명시적으로 요청하면 그 범위는 예외다.
 
 ## 아키텍처 규칙 (어기지 않는다)
 

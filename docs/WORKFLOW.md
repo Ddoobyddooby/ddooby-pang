@@ -72,13 +72,13 @@ git push origin HEAD:main
 
 ## 8. Codex 함께 쓰기
 
-2026-11-02 사용자 결정 (Codex Plus 구독). **코드 리뷰와 이미지 생성은 Codex에 맡긴다.** 설계·문서는 메인(Claude), 코드는 코딩 탭(Claude)이 그대로 한다.
+2026-11-02 사용자 결정 (Codex Plus 구독). **분석·코드 리뷰와 이미지 생성은 Codex에 맡긴다.** 설계·문서는 메인(Claude), 코드는 코딩 탭(Claude)이 그대로 한다.
 
 ### 8.1 역할
 
 | 누구 | 하는 일 | 하지 않는 일 |
 |---|---|---|
-| **Codex** | 커밋 리뷰 (읽기 전용), 게임에 쓸 이미지 원본 생성 | 코드·문서 수정, 커밋, push |
+| **Codex** | 현재 탭에서 분석·코드 리뷰, 게임에 쓸 이미지 원본 생성, 수정·코딩 요청을 Claude 메인에 전달 | 기본적으로 코드·문서 수정, 커밋, push (사용자가 특정 파일의 직접 수정을 명시한 범위는 예외) |
 | **메인 (Claude)** | Codex에 리뷰·이미지 요청을 만들고, 결과를 검증해서 고를 것을 정한다 | Codex 지적을 확인 없이 그대로 고치게 하기 |
 | **코딩 탭 (Claude)** | 메인이 고른 리뷰 지적을 고친다. 사용자가 고른 이미지를 `public/`에 넣고 코드에 연결한다 | |
 
@@ -124,7 +124,18 @@ git push origin HEAD:main
   orca terminal wait --terminal <handle> --for tui-idle --timeout-ms 900000 --json
   ```
 
-- Codex는 Claude 세션에 메시지를 보낼 수 없다. 그래서 **결과는 파일로** 받는다: `.codex-out/<태스크ID>-<review|image>.md` (gitignore). 이미지는 8.3대로 `assets/<용도>-src/`에 저장하고 파일 목록을 결과 파일에 적게 한다. 끝나면 메인이 결과 파일을 읽는다
+- 분석·리뷰 **결과는 파일로** 받는다: `.codex-out/<태스크ID>-<review|image>.md` (gitignore). 이미지는 8.3대로 `assets/<용도>-src/`에 저장하고 파일 목록을 결과 파일에 적게 한다. 끝나면 메인이 결과 파일을 읽는다
 - 지시서 첫 줄은 한 문장 요약, 그다음 "AGENTS.md와 docs/WORKFLOW.md 8절을 따른다. 커밋·push 하지 않는다"를 넣는다
 - 코딩 탭(Claude)의 worktree·브랜치는 건드리지 않게 한다. 리뷰는 `git show <해시>`로 본다
 
+### 8.6 Codex에서 Claude Code로 수정·코딩 위임
+
+2026-11-03 사용자 결정. 분석은 주로 현재 Codex 탭에서 하고, 수정·코딩은 다음 순서로 위임한다.
+
+1. **Codex**: 분석 결과·파일 위치·재현 근거를 `.codex-out/`에 정리한다. 수정·코딩 요청을 받으면 작업 범위, 완료 기준, 검증 방법과 결과 파일 경로를 Claude Code 메인에 전달한다. 분석·리뷰만 요청받은 경우에는 결과를 보고하고 임의로 구현을 시작시키지 않는다.
+2. **Claude Code 메인**: Orca `orcaTabId` **`4a9577ee-35be-4caa-a649-435751a666e8`**. 분석·설계를 담당한다. Codex의 근거를 검토하고 수정 방향과 작업 지시서를 정한 뒤 Claude Code 코딩 탭에 다시 위임한다.
+3. **Claude Code 코딩 탭**: 메인의 지시대로 코드·테스트를 수정하고 결과를 보고한다. 메인은 기존 6절에 따라 검토·문서 반영을 담당한다.
+
+- 전달할 때는 `orca-cli` 스킬을 읽고 8.5처럼 `orca terminal list --json`으로 위 tabId의 현재 handle을 찾은 뒤 상태를 확인한다. Claude 전용 `SendMessage` 대신 Orca 터미널 전달 경로를 사용한다.
+- 탭을 찾지 못하면 임의의 다른 탭에 보내지 않고, 결과 파일 경로와 전달 실패를 사용자에게 알린다.
+- Codex는 코딩 탭에 직접 구현을 지시하지 않고 반드시 위 메인 탭을 거친다. 사용자에게서 새 메인 tabId를 받으면 이 절과 `AGENTS.md`·`CLAUDE.md`를 함께 갱신한다.
