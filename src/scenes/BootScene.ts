@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SOUND, THEME } from '../config';
+import { DECOR, SOUND, THEME } from '../config';
 import { loadStages, type StageData } from '../data/stageLoader';
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
@@ -10,6 +10,7 @@ import {
 } from '../storage/progress';
 import { Music, musicKey, musicUrls } from '../view/Music';
 import { Sfx, sfxKey, type SfxName } from '../view/Sfx';
+import { STORYBOOK_KEY } from '../view/theme/StorybookBackground';
 import { registerBackButton } from './backButton';
 import { bootRoute, devUnlock } from './bootRoute';
 import { commitSave, getSave, putSave } from './saveRegistry';
@@ -25,13 +26,15 @@ export class BootScene extends Phaser.Scene {
   }
 
   /**
-   * 효과음과 메뉴 곡을 미리 읽는다. 게임 곡 둘은 메뉴가 뜬 뒤 뒤에서 읽는다 (첫 화면이 늦어지지 않게).
+   * 효과음, 메뉴 곡, 게임 배경을 미리 읽는다. 게임 곡 둘은 메뉴가 뜬 뒤 뒤에서 읽는다 (첫 화면이 늦어지지 않게).
    * 실패한 파일은 캐시에 없을 뿐이고 Sfx·Music이 조용히 넘어간다
    */
   preload(): void {
     this.load.on('loaderror', (file: Phaser.Loader.File) =>
-      console.warn('[boot] 효과음 로드 실패, 소리 없이 진행', file.key),
+      console.warn('[boot] 파일 로드 실패, 없이 진행', file.key),
     );
+    // 게임 화면 그림책 배경. 실패하면 GameScene이 코드로 그리는 하늘 장식으로 대신한다
+    this.load.image(STORYBOOK_KEY, DECOR.storybook.url);
     for (const [name, { file }] of Object.entries(SOUND.effects)) {
       // [ogg, m4a]: Phaser가 이 브라우저가 재생할 수 있는 첫 형식을 고른다
       this.load.audio(
