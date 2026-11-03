@@ -4,6 +4,7 @@
 import Phaser from 'phaser';
 import { DECOR, GAME, HUD, THEME } from '../config';
 import type { ScreenLayout } from './layout';
+import { titleStyle } from './titleStyle';
 import { drawPanelFrame } from './theme/BoardFrame';
 
 export const RIBBON_KEY = 'title-ribbon';
@@ -20,13 +21,14 @@ export class Hud {
       const img = scene.add.image(GAME.width / 2, screen.titleY, RIBBON_KEY);
       img.setScale(ribbon.width / img.width).setOrigin(0.5, ribbon.plateY);
     }
+    const style = titleStyle(ribbon !== null);
     scene.add
       .text(GAME.width / 2, screen.titleY, title, {
         fontFamily: THEME.font,
-        fontSize: `${ribbon ? ribbon.fontSize : HUD.title.fontSize}px`,
+        fontSize: `${style.fontSize}px`,
         color: THEME.title.fill,
         stroke: THEME.title.stroke,
-        strokeThickness: ribbon ? ribbon.stroke : HUD.title.strokeThickness,
+        strokeThickness: style.strokeThickness,
       })
       .setOrigin(0.5);
     drawPanelFrame(scene, screen.panel);

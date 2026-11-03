@@ -304,13 +304,14 @@ export const HUD = {
     padX: 36,
     /** 오른쪽 열 폭. 스토리는 남은 이동 배지, 타임어택은 비워 둔다 (일시정지 W4-04) */
     rightReserve: 170,
-    label: { y: 12, fontSize: 24 },
-    score: { y: 28, fontSize: 56 },
-    time: { y: 112, fontSize: 24 },
-    bar: { y: 132, height: 18, border: 3 },
+    // 세로 위치: 안쪽 바탕은 DECOR.frame.pad부터 시작한다 (tests/view/panelFit.test.ts가 안에 드는지 확인)
+    label: { y: 20, fontSize: 24 },
+    score: { y: 36, fontSize: 56 },
+    time: { y: 110, fontSize: 24 },
+    bar: { y: 130, height: 18, border: 3 },
     /** 마지막 10초에 1초마다 통통 튀는 시간 글자 */
     pulse: { scale: 1.25, ms: 140 },
-    seed: { fontSize: 18, inset: 12 },
+    seed: { fontSize: 18, inset: 22 },
   },
   /** 스토리 패널 (설계 5절). 위치는 패널 왼쪽 위 기준 (px), 시간은 ms */
   story: {
