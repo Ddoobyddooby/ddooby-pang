@@ -260,7 +260,16 @@ export const DECOR = {
   twinkleAlpha: { min: 0.3, max: 1 },
   /** 보드판: 칸 영역보다 사방으로 이만큼 크다 */
   /** 웨이퍼 격자: 대각선 간격(px), 선 두께, 투명도 (A안 그림책) */
-  frame: { pad: 10, radius: 18, border: 4, lattice: 9, latticeWidth: 2, latticeAlpha: 0.75 },
+  frame: {
+    pad: 18,
+    radius: 18,
+    border: 4,
+    lattice: 9,
+    latticeWidth: 2,
+    latticeAlpha: 0.75,
+    /** 보드 바깥 물결(가리비): 혹 깊이, 혹 하나의 목표 폭(px), 모서리 둥글기 (W4-24) */
+    wave: { depth: 9, bump: 44, corner: 28 },
+  },
   /**
    * 게임 화면 그림책 배경 (A안, public/backgrounds/CREDITS.md). band = 원본(1086x1448)에서 장식이 없는
    * 가운데 띠의 y 범위. 화면이 원본보다 길면 이 띠만 세로로 늘려 위 구름·아래 언덕이 잘리지 않는다
@@ -281,6 +290,11 @@ export const DECOR = {
     { url: 'blocks/block-5.png', scale: 1.04, faceDy: 4, faceScale: 0.72 },
     { url: 'blocks/block-6.png', scale: 1, faceDy: 0, faceScale: 0.9 },
   ],
+  /**
+   * 게임 화면 제목 리본 (W4-24, public/decor/CREDITS.md). width = 화면에 보이는 폭(px, 일시정지 버튼과 안 겹치게),
+   * plateY = 명판 가운데의 그림 높이 대비 위치(0~1). 제목 글자는 명판 가운데에 코드로 쓰고 크기만 줄인다
+   */
+  ribbon: { url: 'decor/title-ribbon.png', width: 480, plateY: 0.54, fontSize: 44, stroke: 8 },
 } as const;
 
 /** HUD 배치와 글자 크기 (px). 정보 패널 안쪽 위치는 패널 왼쪽 위 기준 */

@@ -568,6 +568,7 @@ ResultScene → [다시하기] GameScene / [다음] GameScene(stageId+1) / [지�
 - **테두리**: 지금 둥근 사각형 웨이퍼(`BoardFrame`, 대각선 격자)의 바깥 가장자리를 시안처럼 둥근 물결(가리비)로. 코드로 그린다. 물결 개수·깊이는 `DECOR.frame`에
 - **리본**: Codex 그림(`assets/ribbon-src/title-ribbon.png`, 크림 구름 명판 + 분홍 리본, 가운데 비움)을 게임 화면 제목 뒤에 깐다. 제목 글자는 지금처럼 코드로 쓴다. 일시정지 버튼과 겹치지 않게 크기를 정하고, 그림을 못 읽으면 지금처럼 제목만
 - 블록 그림(W4-23)과 같은 때 다른 탭이 작업한다. `config.ts`는 `DECOR.frame`과 새 `DECOR.ribbon`만 고치고, W4-23이 main에 먼저 들어간 뒤 rebase해서 반영한다
+- 결과: 보드 테두리는 `scallop.ts`의 물결 윤곽(깊이 9, 혹 폭 44, `pad` 10→18), 아래 정보 패널은 그대로 둥근 사각. 리본은 `public/decor/title-ribbon.png`(720폭)를 폭 480으로 제목 뒤에 깔고 글자는 44px (`DECOR.ribbon`). 못 읽으면 제목만
 
 ### 6.18 컬러 블록 + 특수 블록 조합 (W4-25)
 

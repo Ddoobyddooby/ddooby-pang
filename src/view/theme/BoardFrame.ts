@@ -4,10 +4,18 @@
 import type Phaser from 'phaser';
 import { DECOR, THEME, VIEW } from '../../config';
 import type { Layout } from '../layout';
+import { scallopOutline } from './scallop';
 
 export function drawBoardFrame(scene: Phaser.Scene, layout: Layout): void {
   const { pad } = DECOR.frame;
-  drawWafer(scene, layout.x - pad, layout.y - pad, layout.width + pad * 2, layout.height + pad * 2);
+  drawWafer(
+    scene,
+    layout.x - pad,
+    layout.y - pad,
+    layout.width + pad * 2,
+    layout.height + pad * 2,
+    true,
+  );
 }
 
 /** 정보 패널: 웨이퍼 테두리 + 안쪽 크림 바탕 */
@@ -26,23 +34,34 @@ export function drawPanelFrame(
 const css = (hex: number): string => `#${hex.toString(16).padStart(6, '0')}`;
 
 /** 웨이퍼 판: 둥근 사각형 + 대각선 격자(A안 그림책). 크기마다 캔버스 텍스처로 한 번 굽는다 */
-function drawWafer(scene: Phaser.Scene, x: number, y: number, w: number, h: number): void {
+function drawWafer(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  wavy = false,
+): void {
   const tw = Math.ceil(w);
   const th = Math.ceil(h);
-  const key = `wafer-${tw}x${th}`;
+  const key = `wafer-${wavy ? 'wave-' : ''}${tw}x${th}`;
   if (!scene.textures.exists(key)) {
     const tex = scene.textures.createCanvas(key, tw, th);
     if (!tex) throw new Error(`텍스처 ${key}를 만들지 못했다`);
-    bakeWafer(tex.getContext(), tw, th);
+    bakeWafer(tex.getContext(), tw, th, wavy);
     tex.refresh();
   }
   scene.add.image(x, y, key).setOrigin(0);
 }
 
-function bakeWafer(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+function bakeWafer(ctx: CanvasRenderingContext2D, w: number, h: number, wavy: boolean): void {
   const { radius, border, lattice, latticeWidth, latticeAlpha } = DECOR.frame;
   const half = border / 2; // 테두리 선이 캔버스 밖으로 잘리지 않게 안쪽으로
-  roundRectPath(ctx, half, half, w - border, h - border, radius);
+  const shape = (): void =>
+    wavy
+      ? wavePath(ctx, w, h, half)
+      : roundRectPath(ctx, half, half, w - border, h - border, radius);
+  shape();
   ctx.fillStyle = css(THEME.wafer.fill);
   ctx.fill();
 
@@ -64,8 +83,18 @@ function bakeWafer(ctx: CanvasRenderingContext2D, w: number, h: number): void {
 
   ctx.lineWidth = border;
   ctx.strokeStyle = css(THEME.wafer.stroke);
-  roundRectPath(ctx, half, half, w - border, h - border, radius);
+  shape();
   ctx.stroke();
+}
+
+/** 물결 윤곽(scallop.ts)을 캔버스 경로로 */
+function wavePath(ctx: CanvasRenderingContext2D, w: number, h: number, inset: number): void {
+  ctx.beginPath();
+  for (const c of scallopOutline(w, h, { ...DECOR.frame.wave, inset })) {
+    if (c.op === 'M') ctx.moveTo(c.x, c.y);
+    else ctx.quadraticCurveTo(c.cx, c.cy, c.x, c.y);
+  }
+  ctx.closePath();
 }
 
 function roundRectPath(

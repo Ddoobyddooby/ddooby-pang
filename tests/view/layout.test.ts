@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DECOR } from '../../src/config';
 import { cellAt, cellCenter, createLayout, screenLayout } from '../../src/view/layout';
 
 const AREA = { x: 20, y: 200, size: 680 };
@@ -44,7 +45,7 @@ describe('screenLayout', () => {
     expect(screenLayout(1280)).toEqual({
       titleY: 90,
       board: { x: 20, y: 170, size: 680 },
-      panel: { x: 10, y: 870, w: 700, h: 170 },
+      panel: { x: 20 - DECOR.frame.pad, y: 870, w: 680 + DECOR.frame.pad * 2, h: 170 },
       decorY: 1060,
     });
   });

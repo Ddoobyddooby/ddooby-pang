@@ -10,6 +10,7 @@ import {
 } from '../storage/progress';
 import { Music, musicKey, musicUrls } from '../view/Music';
 import { Sfx, sfxKey, type SfxName } from '../view/Sfx';
+import { RIBBON_KEY } from '../view/Hud';
 import { STORYBOOK_KEY } from '../view/theme/StorybookBackground';
 import { blockArtKey } from '../view/theme/textures';
 import { registerBackButton } from './backButton';
@@ -38,6 +39,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image(STORYBOOK_KEY, DECOR.storybook.url);
     // 블록 몸통 그림 7장. 실패한 색은 textures.ts가 코드 도형으로 굽는다
     DECOR.blockArt.forEach(({ url }, i) => this.load.image(blockArtKey(i), url));
+    this.load.image(RIBBON_KEY, DECOR.ribbon.url); // 제목 리본. 실패하면 제목만
     for (const [name, { file }] of Object.entries(SOUND.effects)) {
       // [ogg, m4a]: Phaser가 이 브라우저가 재생할 수 있는 첫 형식을 고른다
       this.load.audio(
