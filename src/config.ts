@@ -268,16 +268,18 @@ export const DECOR = {
   storybook: { url: 'backgrounds/storybook.jpg', band: { top: 540, bottom: 780 } },
   /**
    * 블록 몸통 그림 (W4-23, public/blocks/CREDITS.md). 순서: 색 0~5, 마지막이 무지개(컬러 블록).
-   * 못 읽은 그림은 textures.ts가 코드 도형으로 대신 그린다
+   * 못 읽은 그림은 textures.ts가 코드 도형으로 대신 그린다.
+   * 그림마다 모양의 실제 크기가 달라(마름모·삼각형이 작다) scale로 키워 칸을 고르게 채운다 (시안 좌표 100칸 기준).
+   * 얼굴은 모양의 무게중심 쪽으로 faceDy만큼 내리고 faceScale로 줄인다
    */
   blockArt: [
-    'blocks/block-0.png',
-    'blocks/block-1.png',
-    'blocks/block-2.png',
-    'blocks/block-3.png',
-    'blocks/block-4.png',
-    'blocks/block-5.png',
-    'blocks/block-6.png',
+    { url: 'blocks/block-0.png', scale: 1, faceDy: 0, faceScale: 0.9 },
+    { url: 'blocks/block-1.png', scale: 0.96, faceDy: 0, faceScale: 0.9 },
+    { url: 'blocks/block-2.png', scale: 1.1, faceDy: 0, faceScale: 0.85 },
+    { url: 'blocks/block-3.png', scale: 1.08, faceDy: 9, faceScale: 0.8 },
+    { url: 'blocks/block-4.png', scale: 1, faceDy: 0, faceScale: 0.9 },
+    { url: 'blocks/block-5.png', scale: 1.04, faceDy: 4, faceScale: 0.72 },
+    { url: 'blocks/block-6.png', scale: 1, faceDy: 0, faceScale: 0.9 },
   ],
 } as const;
 

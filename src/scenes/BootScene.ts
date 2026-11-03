@@ -37,7 +37,7 @@ export class BootScene extends Phaser.Scene {
     // 게임 화면 그림책 배경. 실패하면 GameScene이 코드로 그리는 하늘 장식으로 대신한다
     this.load.image(STORYBOOK_KEY, DECOR.storybook.url);
     // 블록 몸통 그림 7장. 실패한 색은 textures.ts가 코드 도형으로 굽는다
-    DECOR.blockArt.forEach((url, i) => this.load.image(blockArtKey(i), url));
+    DECOR.blockArt.forEach(({ url }, i) => this.load.image(blockArtKey(i), url));
     for (const [name, { file }] of Object.entries(SOUND.effects)) {
       // [ogg, m4a]: Phaser가 이 브라우저가 재생할 수 있는 첫 형식을 고른다
       this.load.audio(

@@ -1029,5 +1029,5 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 ### W4-23 블록 몸통 그림
 - **이미지 로드 → 캔버스 합성 → 텍스처**: BootScene `preload`가 PNG 7장을 `this.load.image`로 읽어 두면, `ensureTextures`가 `scene.textures.get(key).getSourceImage()`로 원본 `<img>`를 꺼내 캔버스 텍스처에 `drawImage`로 몸통을 그리고 그 위에 얼굴을 코드로 그린다. 블록 21장(7색 × 3표정)은 시작할 때 한 번만 구워 스프라이트가 공유한다 (`src/scenes/BootScene.ts`, `src/view/theme/textures.ts`)
 - **폴백**: 로드에 실패한 파일은 Phaser 텍스처 목록에 생기지 않는다. 그래서 `textures.exists(key)`가 거짓이면 예전 코드 도형으로 굽는다. 그림책 배경(`StorybookBackground.ts`)과 같은 방식이다
-- **그림마다 다른 실제 크기 맞추기**: 같은 512px 캔버스여도 마름모·삼각형은 차지하는 면적이 작다. 알파(투명도)로 모양 범위를 재 보고 색마다 몸통 배율·얼굴 위치를 표(`ART_PLACE`)로 둔다. 숫자를 코드 곳곳에 흩지 않고 한 표에서 고친다 (`tests/view/blockArt.test.ts`)
+- **그림마다 다른 실제 크기 맞추기**: 같은 512px 캔버스여도 마름모·삼각형은 차지하는 면적이 작다. 알파(투명도)로 모양 범위를 재 보고 색마다 몸통 배율·얼굴 위치를 그림 경로 옆(`DECOR.blockArt`, `src/config.ts`)에 둔다. 숫자를 코드 곳곳에 흩지 않고 한 곳에서 고친다. 폴백 분기는 가짜 scene·캔버스로 테스트한다 (`tests/view/blockArt.test.ts`)
 - **이미지 줄여 넣기**: 원본(512px)은 `assets/block-src/`에 두고, 게임에는 `sips -Z 256`으로 줄인 사본만 `public/blocks/`에 넣는다. 텍스처가 160px이라 그보다 조금 큰 크기면 충분하고 내려받는 양이 준다 (`public/blocks/CREDITS.md`)

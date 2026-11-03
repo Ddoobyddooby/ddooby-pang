@@ -4,7 +4,7 @@
 // 몸통은 BootScene이 읽은 그림(W4-23, PLAN 6.16)을 쓰고, 그림을 못 읽은 색만 아래 SHAPES 도형으로 그린다.
 
 import type Phaser from 'phaser';
-import { THEME } from '../../config';
+import { DECOR, THEME } from '../../config';
 import type { Color, SpecialKind } from '../../core/types';
 
 export type Face = 'normal' | 'squint' | 'happy';
@@ -59,20 +59,6 @@ export function blockArtKey(index: number): string {
 export function blockArtIndex(color: Color | null): number {
   return color ?? 6;
 }
-
-/**
- * 몸통 그림 배치 (시안 좌표, 순서는 blockArtIndex). 그림마다 모양의 실제 크기가 달라(마름모·삼각형이 작다)
- * scale로 키워 칸을 고르게 채운다. 얼굴은 모양의 무게중심 쪽으로 faceDy만큼 내리고 faceScale로 줄인다
- */
-export const ART_PLACE: readonly { scale: number; faceDy: number; faceScale: number }[] = [
-  { scale: 1, faceDy: 0, faceScale: 0.9 },
-  { scale: 0.96, faceDy: 0, faceScale: 0.9 },
-  { scale: 1.1, faceDy: 0, faceScale: 0.85 },
-  { scale: 1.08, faceDy: 9, faceScale: 0.8 },
-  { scale: 1, faceDy: 0, faceScale: 0.9 },
-  { scale: 1.04, faceDy: 4, faceScale: 0.72 },
-  { scale: 1, faceDy: 0, faceScale: 0.9 },
-];
 
 const css = (hex: number): string => `#${hex.toString(16).padStart(6, '0')}`;
 
@@ -163,9 +149,9 @@ function paperFinish(ctx: Ctx, shape: Path2D): void {
 
 const PAPER_DOTS = 260;
 
-/** 그림 몸통 + 얼굴. 그림은 시안 좌표 100칸(-50~50)에 맞춰 ART_PLACE.scale만큼 키워 그린다 */
+/** 그림 몸통 + 얼굴. 그림은 시안 좌표 100칸(-50~50)에 맞춰 DECOR.blockArt[n].scale만큼 키워 그린다 */
 function drawArtBlock(ctx: Ctx, art: CanvasImageSource, color: Color | null, face: Face): void {
-  const place = ART_PLACE[blockArtIndex(color)]!;
+  const place = DECOR.blockArt[blockArtIndex(color)]!;
   const half = 50 * place.scale;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(art, -half, -half, half * 2, half * 2);
