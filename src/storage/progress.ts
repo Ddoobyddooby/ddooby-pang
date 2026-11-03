@@ -44,6 +44,12 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 const nonNegative = (v: unknown): v is number =>
   typeof v === 'number' && Number.isFinite(v) && v >= 0;
 
+/** 스테이지 번호 키: "1" 이상 정수만 ("bad", "1.5", "0", "-1"은 버린다) */
+const stageKey = (key: string): number | null => {
+  const id = Number(key);
+  return Number.isInteger(id) && id >= 1 && String(id) === key ? id : null;
+};
+
 /** 없음·깨진 JSON·버전 다름 → 기본값. 빠지거나 잘못된 필드는 그 부분만 기본값으로 채운다 */
 export function parseSave(json: string | null): SaveData {
   if (json === null) return defaultSave();
@@ -61,14 +67,16 @@ export function parseSave(json: string | null): SaveData {
     save.story.unlocked = story.unlocked as number;
   }
   if (isRecord(story.bestStars)) {
-    for (const [id, stars] of Object.entries(story.bestStars)) {
-      if (stars === 0 || stars === 1 || stars === 2 || stars === 3)
-        save.story.bestStars[+id] = stars;
+    for (const [key, stars] of Object.entries(story.bestStars)) {
+      const id = stageKey(key);
+      if (id !== null && (stars === 0 || stars === 1 || stars === 2 || stars === 3))
+        save.story.bestStars[id] = stars;
     }
   }
   if (isRecord(story.bestScore)) {
-    for (const [id, score] of Object.entries(story.bestScore)) {
-      if (nonNegative(score)) save.story.bestScore[+id] = score;
+    for (const [key, score] of Object.entries(story.bestScore)) {
+      const id = stageKey(key);
+      if (id !== null && nonNegative(score)) save.story.bestScore[id] = score;
     }
   }
   const timeattack = isRecord(raw.timeattack) ? raw.timeattack : {};
@@ -135,12 +143,14 @@ export function applyModeResult(save: SaveData, result: ModeResult, stageCount: 
 /**
  * 해금 이어가기 (W4-27, PLAN 6.19): 별이 있는 가장 높은 번호 + 1까지 연다 (stageCount 이하).
  * 마지막 스테이지를 깬 옛 저장은 unlocked가 그 번호에 머물러 있어서, 스테이지가 늘면 다음 판이 열리지 않는다.
- * 이미 더 높은 unlocked는 유지. 바뀔 것이 없으면 원본을 그대로 돌려준다
+ * 이미 더 높은 unlocked는 유지. 바뀔 것이 없으면 원본을 그대로 돌려준다.
+ * 1~stageCount 정수 번호만 본다 (parseSave를 거치지 않은 값이 와도 NaN·범위 밖 번호로 해금이 깨지지 않게)
  */
 export function continueUnlock(save: SaveData, stageCount: number): SaveData {
   const cleared = Object.entries(save.story.bestStars)
     .filter(([, stars]) => stars >= 1)
-    .map(([id]) => +id);
+    .map(([key]) => Number(key))
+    .filter((id) => Number.isInteger(id) && id >= 1 && id <= stageCount);
   const next = Math.min(Math.max(0, ...cleared) + 1, stageCount);
   if (next <= save.story.unlocked) return save;
   return { ...save, story: { ...save.story, unlocked: next } };

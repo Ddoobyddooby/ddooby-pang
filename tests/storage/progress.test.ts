@@ -276,6 +276,34 @@ describe('continueUnlock (W4-27)', () => {
     expect(continueUnlock(save, 30).story.unlocked).toBe(3);
   });
 
+  it('비정상 키 + 유효한 20번 기록: parseSave가 키를 버리고 21번이 열린다 (저장해도 숫자)', () => {
+    const stars = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [String(i + 1), 2]));
+    const json = JSON.stringify({
+      version: 1,
+      story: {
+        unlocked: 20,
+        bestStars: { ...stars, bad: 1, '1.5': 3, '0': 1, '-1': 1, '99': 3 },
+        bestScore: { '20': 900, bad: 500 },
+      },
+    });
+    const save = parseSave(json);
+    expect(Object.keys(save.story.bestStars)).not.toContain('bad');
+    expect(Object.keys(save.story.bestScore)).toEqual(['20']);
+    const next = continueUnlock(save, 30);
+    expect(next.story.unlocked).toBe(21);
+    expect(parseSave(JSON.stringify(next)).story.unlocked).toBe(21); // 다시 켜도 그대로
+  });
+
+  it('parseSave를 거치지 않은 비정상 키·범위 밖 번호도 무시한다 (NaN이 되지 않는다)', () => {
+    const save = withStars(20, { 20: 2 });
+    const raw = {
+      ...save,
+      story: { ...save.story, bestStars: { ...save.story.bestStars, bad: 1, 40: 3 } },
+    };
+    const next = continueUnlock(raw as SaveData, 30);
+    expect(next.story.unlocked).toBe(21);
+  });
+
   it('빈 저장 → 1, 원본은 바뀌지 않는다', () => {
     expect(continueUnlock(defaultSave(), 30).story.unlocked).toBe(1);
     const save = cleared20();

@@ -650,7 +650,7 @@ interface SaveData {
 
 - 인터페이스 이름은 DOM의 `Storage`와 겹치지 않게 **`SaveStorage`**: `load(): Promise<SaveData>`, `save(data: SaveData): Promise<void>` (Capacitor Preferences가 비동기라서)
 - 구현 두 개: `CapacitorPreferencesStorage`(W4-08), `LocalStorageAdapter`(W3-07). `LocalStorageAdapter`는 `getItem`/`setItem`을 가진 객체를 받아서 테스트에서 가짜를 넣는다
-- 순수 함수: `defaultSave()`(unlocked 1), `parseSave(json: string | null): SaveData`(없음·깨진 JSON·버전 다름 → 기본값, 빠진 필드는 기본값으로 채움), `recordTimeAttack(save, score)`, `recordStory(save, stageId, { cleared, stars, score })`(클리어면 `unlocked = max(unlocked, stageId + 1)`, 별·점수는 큰 값만 남김). 원본은 바꾸지 않고 새 객체를 돌려준다
+- 순수 함수: `defaultSave()`(unlocked 1), `parseSave(json: string | null): SaveData`(없음·깨진 JSON·버전 다름 → 기본값, 빠진 필드는 기본값으로 채움, `bestStars`·`bestScore`는 1 이상 정수 키만 남김(W4-27)), `recordTimeAttack(save, score)`, `recordStory(save, stageId, { cleared, stars, score })`(클리어면 `unlocked = max(unlocked, stageId + 1)`, 별·점수는 큰 값만 남김), `continueUnlock(save, stageCount)`(W4-27, 별이 있는 1~stageCount 번호 중 가장 높은 것 + 1까지 열기). 원본은 바꾸지 않고 새 객체를 돌려준다
 - 저장 실패(용량·시크릿 모드)는 게임을 멈추지 않는다. 경고만 찍고 진행
 - `Capacitor.isNativePlatform()`으로 선택 (BootScene). 웹·`npm run dev`는 지금처럼 `LocalStorageAdapter`
 - **`CapacitorPreferencesStorage` (W4-08)**: `@capacitor/preferences`의 `get({ key })`·`set({ key, value })` 모양 객체를 생성자로 받는다(테스트에서 가짜). 같은 키·같은 `parseSave`를 쓴다. 실패는 경고만 찍고 진행
