@@ -621,6 +621,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 3. `&demo`를 붙여 여러 수를 둬도 얼음벽 칸은 빈 채로 남고, 블록이 그 위에서 멈춘다. 콘솔 오류 없음
 4. 잠금 칸 블록을 밀면 움직이지 않고 "삑" 소리 (잠금이 풀리는 규칙은 V2-W2-02)
 
+### V2-W2-02 잠금
+1. `npm test` → `tests/core/lock.test.ts` 포함 전체 통과
+2. `npm run dev` → `?obstacles&demo`. 콘솔에 `view ≠ board`가 없고, 콘솔에서 `__ddooby.state().board.layers.filter(l=>l?.lock).length`가 수를 둘수록 줄어든다 (잠금 그림은 V2-W2-05)
+3. 잠긴 블록은 떨어지지 않고, 그 아래 칸은 잠긴 블록 바로 밑에서 새 블록이 채워진다 (지금은 위에서 떨어지는 연출, 바른 연출은 V2-W2-05)
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -1145,3 +1150,9 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **고정 칸으로 나뉜 구간 처리**: 얼음벽이 있는 열은 구간마다 떨어뜨리고 채운다 (`src/core/gravity.ts`)
 - **입구에서 막기**: 힌트(`isValidSwap`)와 실제 스왑(`resolveSwap`)이 같은 조건(`isMovable`)을 써야 어긋나지 않는다 (`moves.ts`, `engine.ts`)
 - **DEV 전용 코드를 배포에서 빼기**: `import.meta.env.DEV` 분기 안의 동적 `import()`는 배포 번들에 들어가지 않는다 (`BootScene.ts`, `src/dev/obstacleStage.ts`)
+
+### V2-W2-02 잠금
+- **고정 칸으로 나눈 열 구간과 생성 지점**: 잠긴 블록·얼음벽 아래 구간은 위에서 블록을 받을 수 없어 구간 맨 위가 새 블록 생성 지점(`spawnTop`) (`src/core/gravity.ts`)
+- **제거하지 않는 피해를 이벤트로**: 잠금 해제는 블록을 지우지 않고 칸 상태만 바꾸므로 `remove`가 아니라 `obstacle` 이벤트로 알린다 (`src/core/engine.ts`, `types.ts`)
+- **RNG 소비 순서 지키기**: 구간 처리를 넣어도 리필이 RNG를 쓰는 칸 순서를 그대로 두어 장애물 없는 판은 v0.1과 결과가 같다 (`gravity.ts` refill)
+- **특수 생성 칸 다시 고르기**: 생성 칸이 잠겼으면 잠기지 않은 칸 중에서 고른다 (`src/core/specials.ts` `unlockedSpecialPosition`)
