@@ -220,16 +220,18 @@ describe('resolveSwap: 특수 블록 조합 (색이 달라도, 매치가 없어�
     }
   });
 
-  it('superAny + 세로·가로 줄: 상대 방향은 줄 블록 자기 종류 (끄는 방향과 무관)', () => {
-    // 세로로 붙은 슈퍼 (2,3)와 가로줄 (3,3). 어느 쪽을 끌어도 가로줄은 가로 그대로 (at 행 전체)
+  it('superAny 범위 = 슈퍼 범위 (상대 줄·폭탄 효과는 슈퍼 범위에 이미 포함됨)', () => {
+    // 상대 효과도 at 기준이라 줄(행·열 전체)·폭탄(3×3)은 슈퍼 범위(5×5 + 행·열 전체) 안에 든다.
+    // 그래서 이 결과로는 상대 줄의 방향을 구분할 수 없다. 여기서는 범위가 슈퍼 범위와 같은지만 본다
     const board = parseBoard(boardText(7, 7, { '2,3': 'R+', '3,3': 'Y-' }));
-    const line = board.cells[3 * 7 + 3]!;
     for (const at of [p(3, 3), p(2, 3)]) {
-      const area = comboArea('superAny', at, board, line);
-      const row = keys(blastArea('lineH', at, board));
-      expect(keys(area)).toEqual(expect.arrayContaining(row));
-      expect(keys(area)).toEqual(keys(blastArea('super', at, board)));
+      const superArea = keys(blastArea('super', at, board));
+      for (const partner of ['lineH', 'lineV', 'bomb', 'super'] as const) {
+        const block = { id: 99, color: 1 as const, special: partner };
+        expect(keys(comboArea('superAny', at, board, block)), partner).toEqual(superArea);
+      }
     }
+    // 세로로 붙은 슈퍼 (2,3) + 가로줄 (3,3): 어느 쪽을 끌어도 at(b) 기준 슈퍼 범위
     const down = comboOf(
       resolveSwap(stateOf(boardText(7, 7, { '2,3': 'R+', '3,3': 'Y-' })), p(2, 3), p(3, 3)),
     );
@@ -352,6 +354,107 @@ describe('회귀: 조합이 아닌 스왑은 v0.1 그대로', () => {
     const result = resolveSwap(stateOf(boardText(7, 7, { '3,2': 'C' })), p(3, 2), p(3, 3));
     expect(result.steps.flat().some((e) => e.type === 'combo')).toBe(false);
   });
+});
+
+describe('조합만 가능한 수인 보드 (moves)', () => {
+  // 일반 매치가 하나도 안 생기는 4색 격자 (moves.test.ts NO_MOVE)에 (3,3) Y- · (3,4) G| 만 붙여 놓는다
+  const ONLY_COMBO = `
+    R Y G B R Y G B
+    G B R Y G B R Y
+    R Y G B R Y G B
+    G B R Y- G| B R Y
+    R Y G B R Y G B
+    G B R Y G B R Y
+    R Y G B R Y G B
+    G B R Y G B R Y
+  `;
+  const PLAIN = ONLY_COMBO.replace('Y- G|', 'Y G');
+
+  it('특수 블록을 빼면 수가 없고, 두 칸이 붙어 있으면 그 쌍이 유일한 힌트다', () => {
+    expect(hasAnyMove(parseBoard(PLAIN))).toBe(false);
+    const board = parseBoard(ONLY_COMBO);
+    expect(findMatches(board)).toEqual([]);
+    expect(hasAnyMove(board)).toBe(true);
+    expect(findHint(board)).toEqual({ a: p(3, 3), b: p(3, 4) });
+  });
+
+  it('그 스왑은 valid이고 조합으로 처리되며, 시작 전에 셔플하지 않는다. 같은 seed면 같은 결과', () => {
+    const state: GameState = { board: parseBoard(ONLY_COMBO), rngState: createRng(3), colors: 4 };
+    const result = resolveSwap(state, p(3, 3), p(3, 4));
+    expect(result.valid).toBe(true);
+    expect(result.steps[0]!.map((e) => e.type)).toEqual(['swap']);
+    expect(comboOf(result).combo).toBe('lineLine');
+    // 셔플은 resolve가 끝난 뒤 가능한 수가 없을 때만 (마지막 step). 첫 세 step에는 없다
+    expect(
+      result.steps
+        .slice(0, 3)
+        .flat()
+        .some((e) => e.type === 'shuffle'),
+    ).toBe(false);
+    expectFinished(result);
+    expect(resolveSwap(state, p(3, 3), p(3, 4))).toEqual(result);
+  });
+});
+
+describe('조합의 색별 제거 수 (removedByColor)', () => {
+  /** remove 이벤트 블록의 색을 직접 센다. id → 색은 시작 보드·create·refill·shuffle에서 */
+  function countRemoved(before: Board, result: ResolveResult): number[] {
+    const colorOf = new Map<number, number | null>();
+    for (const b of before.cells) if (b) colorOf.set(b.id, b.color);
+    const counts = [0, 0, 0, 0, 0, 0];
+    for (const e of result.steps.flat()) {
+      if (e.type === 'create') colorOf.set(e.block.id, e.block.color);
+      if (e.type === 'refill') for (const x of e.blocks) colorOf.set(x.block.id, x.block.color);
+      if (e.type === 'shuffle') for (const x of e.mapping) colorOf.set(x.block.id, x.block.color);
+      if (e.type === 'remove')
+        for (const x of e.blocks) {
+          const color = colorOf.get(x.id);
+          if (color != null) counts[color]!++;
+        }
+    }
+    return counts;
+  }
+
+  // 서로 다른 색 줄 + 줄, 폭탄 + 폭탄. 연쇄(remove step 2개 이상)가 나는 첫 seed를 쓴다
+  it.each([
+    ['R-', 'Y|'],
+    ['R*', 'Y*'],
+  ])(
+    '%s + %s: removedByColor = remove 이벤트 색별 합계 (후속 연쇄 포함), StoryMode 수집 반영',
+    (l, r) => {
+      const text = boardText(7, 7, { '3,2': l, '3,3': r });
+      let found = false;
+      for (let seed = 1; seed <= 200 && !found; seed++) {
+        const state = stateOf(text, seed);
+        const result = resolveSwap(state, p(3, 2), p(3, 3));
+        const removeSteps = result.steps.filter((s) => s.some((e) => e.type === 'remove'));
+        if (removeSteps.length < 2) continue;
+        found = true;
+
+        const counts = countRemoved(state.board, result);
+        expect(result.removedByColor).toEqual(counts);
+        expect(counts.filter((n) => n > 0).length).toBeGreaterThanOrEqual(3); // 여러 색
+
+        const stage: StageDef = {
+          id: 7,
+          rows: 7,
+          cols: 7,
+          colors: 5,
+          moves: 5,
+          goals: [0, 1, 2, 3, 4].map((color) => ({
+            type: 'collect' as const,
+            color: color as 0 | 1 | 2 | 3 | 4,
+            count: 1000,
+          })),
+          stars: [100000, 200000, 300000],
+        };
+        const mode = new StoryMode(stage);
+        mode.onResolve(result);
+        expect(mode.goalProgress().map((g) => g.current)).toEqual(counts.slice(0, 5));
+      }
+      expect(found).toBe(true);
+    },
+  );
 });
 
 describe('조합과 모드·결정성', () => {
