@@ -6,6 +6,7 @@ import {
   obstacleActions,
   obstacleDelay,
   refillStart,
+  shakeTween,
 } from '../../src/view/obstacleState';
 
 const board = (layers: Board['layers']): Board => ({
@@ -66,27 +67,104 @@ describe('obstacleActions', () => {
 });
 
 describe('obstacleDelay', () => {
-  const step: GameEvent[] = [
-    {
-      type: 'remove',
-      blocks: [
-        { id: 1, at: { r: 0, c: 0 }, bySpecial: false },
-        { id: 2, at: { r: 0, c: 1 }, bySpecial: false },
-      ],
-    },
-  ];
-  const removeAt = new Map([
-    [1, 110],
-    [2, 0],
-  ]);
+  const CHAIN = 110;
+  const activateAt = (e: { depth: number }) => e.depth * CHAIN;
+  const OFFSET = 60;
+  const group = (cells: { r: number; c: number }[]) => ({
+    color: 0 as const,
+    cells,
+    maxRunH: 3,
+    maxRunV: 0,
+    hasIntersection: false,
+  });
+  const remove = (
+    blocks: { id: number; r: number; c: number; bySpecial: boolean }[],
+  ): GameEvent => ({
+    type: 'remove',
+    blocks: blocks.map(({ id, r, c, bySpecial }) => ({ id, at: { r, c }, bySpecial })),
+  });
+  const activate = (depth: number, cleared: { r: number; c: number }[]): GameEvent => ({
+    type: 'activate',
+    special: 'lineH',
+    at: { r: 0, c: 0 },
+    cleared,
+    depth,
+  });
+  const delay = (
+    step: GameEvent[],
+    kind: 'lock' | 'frost' | 'jelly',
+    at: { r: number; c: number },
+    removeAt = new Map<number, number>(),
+  ) => obstacleDelay(step, { at, kind }, removeAt, activateAt, OFFSET);
 
-  it('젤리는 그 칸 블록이 지워지는 시각, 그 외는 가장 이른 시각, offset을 더한다', () => {
-    expect(obstacleDelay(step, { at: { r: 0, c: 0 }, kind: 'jelly' }, removeAt, 60)).toBe(170);
-    expect(obstacleDelay(step, { at: { r: 5, c: 5 }, kind: 'frost' }, removeAt, 60)).toBe(60);
+  it('젤리는 그 칸 블록이 지워지는 시각', () => {
+    const step = [
+      remove([
+        { id: 1, r: 0, c: 0, bySpecial: false },
+        { id: 2, r: 0, c: 1, bySpecial: true },
+      ]),
+    ];
+    const removeAt = new Map([
+      [1, 0],
+      [2, 220],
+    ]);
+    expect(delay(step, 'jelly', { r: 0, c: 1 }, removeAt)).toBe(220 + OFFSET);
+    expect(delay(step, 'jelly', { r: 0, c: 0 }, removeAt)).toBe(OFFSET);
   });
 
-  it('제거가 없으면 offset만', () => {
-    expect(obstacleDelay([], { at: { r: 0, c: 0 }, kind: 'lock' }, new Map(), 60)).toBe(60);
+  it('얼음: 매치로 지워진 이웃의 시각 (특수로 지워진 이웃은 원인이 아니다)', () => {
+    const step = [
+      remove([
+        { id: 1, r: 0, c: 0, bySpecial: false },
+        { id: 2, r: 2, c: 1, bySpecial: true },
+      ]),
+    ];
+    const removeAt = new Map([
+      [1, 0],
+      [2, 220],
+    ]);
+    expect(delay(step, 'frost', { r: 1, c: 0 }, removeAt)).toBe(OFFSET); // 이웃 (0,0) 매치
+    // (2,1)은 특수로 지워져 원인이 아니다: 원인 없음 → offset만
+    expect(delay(step, 'frost', { r: 1, c: 1 }, removeAt)).toBe(OFFSET);
+  });
+
+  it('얼음: 연쇄 depth 2 발동 범위면 그 발동 시각, 매치 이웃도 있으면 더 이른 쪽', () => {
+    const far = { r: 5, c: 5 };
+    const step = [remove([{ id: 1, r: 0, c: 0, bySpecial: false }]), activate(2, [far])];
+    const removeAt = new Map([[1, 0]]);
+    expect(delay(step, 'frost', far, removeAt)).toBe(2 * CHAIN + OFFSET);
+    const both = [...step, activate(1, [{ r: 0, c: 1 }])];
+    expect(delay(both, 'frost', { r: 0, c: 1 }, removeAt)).toBe(0 + OFFSET); // 이웃 (0,0) 매치가 더 이르다
+  });
+
+  it('잠금: 매치에 낀 칸은 0, 발동 범위만이면 가장 이른 발동', () => {
+    const at = { r: 3, c: 3 };
+    const match: GameEvent = {
+      type: 'match',
+      groups: [group([{ r: 3, c: 2 }, at, { r: 3, c: 4 }])],
+      cascade: 1,
+    };
+    expect(delay([match], 'lock', at)).toBe(OFFSET);
+    const step = [activate(3, [at]), activate(1, [at])];
+    expect(delay(step, 'lock', at)).toBe(CHAIN + OFFSET);
+  });
+
+  it('제거 없는 발동만 있어도 발동 시각을 따른다', () => {
+    const at = { r: 3, c: 3 };
+    expect(delay([activate(2, [at])], 'lock', at)).toBe(2 * CHAIN + OFFSET);
+  });
+
+  it('원인을 못 찾으면 offset만', () => {
+    expect(delay([], 'lock', { r: 0, c: 0 })).toBe(OFFSET);
+  });
+});
+
+describe('shakeTween', () => {
+  it('칸 중심 x가 기준이라 몇 번을 불러도 같은 값 (재입력 때 밀리지 않는다)', () => {
+    const a = shakeTween(100, 50);
+    expect(shakeTween(100, 50)).toEqual(a);
+    expect(a.x).toBeGreaterThan(100);
+    expect(a.yoyo).toBe(true);
   });
 });
 

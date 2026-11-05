@@ -6,7 +6,13 @@ import { ANIM, FX, OBSTACLE, VIEW } from '../config';
 import type { Block, Board, GameEvent, Pos, SpecialKind } from '../core/types';
 import { BlockSprite } from './BlockSprite';
 import { ObstacleView } from './ObstacleView';
-import { obstacleActions, obstacleDelay, refillStart, type ObstacleMap } from './obstacleState';
+import {
+  obstacleActions,
+  obstacleDelay,
+  refillStart,
+  shakeTween,
+  type ObstacleMap,
+} from './obstacleState';
 import { EventTracker } from './eventTracker';
 import { cellAt, cellCenter, type Layout } from './layout';
 import { activateDelay, flashDelay, removeDelays, transformDelay } from './fx/chainTimeline';
@@ -149,15 +155,13 @@ export class BoardView {
     this.obstacles.shakeLock(pos);
     const sprite = this.sprites.get(this.tracker.idAt(pos) ?? -1);
     if (!sprite) return;
-    const { dx, ms, repeat } = OBSTACLE.lockShake;
-    const x = sprite.x;
+    // 이전 흔들림 중 다시 불려도 칸 중심을 기준으로 흔들고 돌아온다
+    const x = cellCenter(this.layout, pos).x;
     this.scene.tweens.killTweensOf(sprite);
+    sprite.setX(x);
     this.scene.tweens.add({
       targets: sprite,
-      x: x + dx * this.layout.cell,
-      duration: ms,
-      yoyo: true,
-      repeat,
+      ...shakeTween(x, this.layout.cell),
       onComplete: () => sprite.setX(x),
     });
   }
@@ -263,7 +267,13 @@ export class BoardView {
       case 'obstacle':
         return Promise.all(
           obstacleActions(event).map((action) => {
-            const delay = obstacleDelay(this.step, action, this.removeAt, OBSTACLE.hitOffset);
+            const delay = obstacleDelay(
+              this.step,
+              action,
+              this.removeAt,
+              (e) => activateDelay(e, ANIM.chainStep, this.activateOffset),
+              OBSTACLE.hitOffset,
+            );
             if (action.op === 'release') {
               const sprite = this.sprites.get(this.tracker.idAt(action.at) ?? -1);
               this.later(delay, () =>

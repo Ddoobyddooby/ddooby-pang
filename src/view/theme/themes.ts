@@ -64,7 +64,7 @@ export const THEMES: readonly Theme[] = [
  */
 export const OBSTACLE_COLORS: Record<ThemeId, { jelly: string; jellyEdge: string }> = {
   storybook: { jelly: '#ff6fb5', jellyEdge: '#c93c86' },
-  candy: { jelly: '#9a6bff', jellyEdge: '#5f33c9' },
+  candy: { jelly: '#5fe0c4', jellyEdge: '#1f9e86' },
   space: { jelly: '#ff6fb5', jellyEdge: '#b02f78' },
   ocean: { jelly: '#ff8a5c', jellyEdge: '#c4502a' },
 };

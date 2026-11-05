@@ -5,7 +5,7 @@
 import Phaser from 'phaser';
 import { OBSTACLE } from '../config';
 import type { Board, Pos } from '../core/types';
-import { posKey, type ObstacleAction, type ObstacleMap } from './obstacleState';
+import { posKey, shakeTween, type ObstacleAction, type ObstacleMap } from './obstacleState';
 import { cellCenter, type Layout } from './layout';
 import {
   ensureObstacleTextures,
@@ -74,16 +74,12 @@ export class ObstacleView {
   shakeLock(pos: Pos): void {
     const img = this.locks.get(posKey(pos));
     if (!img) return;
-    const { dx, ms, repeat } = OBSTACLE.lockShake;
     this.scene.tweens.killTweensOf(img);
     const x = cellCenter(this.layout, pos).x;
     img.setX(x);
     this.scene.tweens.add({
       targets: img,
-      x: x + dx * this.layout.cell,
-      duration: ms,
-      yoyo: true,
-      repeat,
+      ...shakeTween(x, this.layout.cell),
       onComplete: () => img.setX(x),
     });
   }
