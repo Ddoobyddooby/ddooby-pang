@@ -18,13 +18,25 @@ export interface Pos {
   readonly c: number;
 }
 
+/** 한 칸의 장애물 층 (PLAN2 5.1). 얼음벽 칸에는 블록·잠금·젤리가 없다 */
+export interface CellLayer {
+  /** 블록에 씌운 잠금 */
+  readonly lock?: true;
+  /** 블록 없는 칸을 차지하는 얼음벽 겹수 */
+  readonly frost?: 1 | 2 | 3;
+  /** 블록 아래 젤리 겹수 */
+  readonly jelly?: 1 | 2;
+}
+
 export interface Board {
   readonly rows: number;
   readonly cols: number;
-  /** 1차원 배열, index = r * cols + c. null은 빈칸 (resolve 도중에만 존재) */
+  /** 1차원 배열, index = r * cols + c. null은 빈칸 (resolve 도중, 또는 얼음벽 칸) */
   readonly cells: readonly (Block | null)[];
   /** 다음에 만들 블록의 id */
   readonly nextId: number;
+  /** 칸마다 장애물 층 (index는 cells와 같다). 없으면 장애물 없음 (v0.1과 같다) */
+  readonly layers?: readonly (CellLayer | null)[];
 }
 
 export interface GameState {

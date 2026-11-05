@@ -27,6 +27,14 @@ describe('scenes/bootRoute (스토리 화면 설계 1절)', () => {
     expect(bootRoute('?stage=0', true)).toEqual({ scene: 'Menu' });
   });
 
+  it('DEV ?obstacles → 스토리 게임(시험 스테이지는 GameScene이 넣는다). 배포 빌드에서는 무시', () => {
+    expect(bootRoute('?obstacles', true)).toEqual({
+      scene: 'Game',
+      data: { mode: 'story', stageId: 1 },
+    });
+    expect(bootRoute('?obstacles', false)).toEqual({ scene: 'Menu' });
+  });
+
   it('DEV ?result → 결과 화면 미리보기. 배포 빌드에서는 무시', () => {
     expect(bootRoute('?result=12450&best=9000', true)).toEqual({
       scene: 'Result',

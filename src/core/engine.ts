@@ -11,6 +11,7 @@ import { blastArea, chainActivate, decideSpecial, specialPosition } from './spec
 import type {
   Block,
   Board,
+  CellLayer,
   GameEvent,
   GameState,
   MatchGroup,
@@ -21,18 +22,23 @@ import type {
 
 const COLOR_COUNT = 6;
 
-/** 게임 시작 상태. 같은 seed면 항상 같은 보드 (SPEC 6절 seed, 10절 수용 기준) */
+/**
+ * 게임 시작 상태. 같은 seed면 항상 같은 보드 (SPEC 6절 seed, 10절 수용 기준).
+ * layers(장애물 층, PLAN2 5.1)가 있으면 그 위치 그대로 보드에 붙는다
+ */
 export function createInitialState(options: {
   rows: number;
   cols: number;
   colors: number;
   seed: number;
+  layers?: readonly (CellLayer | null)[];
 }): GameState {
   const [board, rngState] = createPlayableBoard(
     options.rows,
     options.cols,
     options.colors,
     createRng(options.seed),
+    options.layers,
   );
   return { board, rngState, colors: options.colors };
 }
@@ -47,9 +53,13 @@ function invalid(state: GameState, steps: GameEvent[][]): ResolveResult {
   };
 }
 
-/** resolve가 끝난 보드는 빈칸 0, 매치 0, 가능한 수 ≥ 1 이어야 한다 (PLAN 10절) */
-function assertInvariants(board: Board): void {
-  if (board.cells.some((b) => b === null)) throw new Error('resolve 후 빈칸이 남았다');
+/** resolve가 끝난 보드는 빈칸은 얼음벽 칸뿐, 매치 0, 가능한 수 ≥ 1 이어야 한다 (PLAN 10절, PLAN2 5.1) */
+export function assertInvariants(board: Board): void {
+  board.cells.forEach((block, i) => {
+    const frost = (board.layers?.[i]?.frost ?? 0) > 0;
+    if (block === null && !frost) throw new Error('resolve 후 빈칸이 남았다');
+    if (block !== null && frost) throw new Error('resolve 후 얼음벽 칸에 블록이 있다');
+  });
   if (findMatches(board).length > 0) throw new Error('resolve 후 매치가 남았다');
   if (!hasAnyMove(board)) throw new Error('resolve 후 가능한 수가 없다');
 }

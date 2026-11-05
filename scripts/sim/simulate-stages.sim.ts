@@ -13,8 +13,12 @@ const [from, to] = (env.SIM_STAGES ?? '1-999').split('-').map(Number) as [number
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 const num = (x: number) => Math.round(x).toLocaleString('en-US');
-const goalText = (g: Goal) =>
-  g.type === 'score' ? `${num(g.target)}점` : `${colorName(g.color)} ${g.count}`;
+const goalText = (g: Goal) => {
+  if (g.type === 'score') return `${num(g.target)}점`;
+  if (g.type === 'collect') return `${colorName(g.color)} ${g.count}`;
+  if (g.type === 'clearJelly') return '젤리 전부';
+  return `${g.obstacle} ${g.count}`;
+};
 
 it(`스토리 자동 플레이 ${games}판씩`, { timeout: 600_000 }, () => {
   const stages: StageDef[] = parseStory(JSON.parse(storyRaw)).filter(

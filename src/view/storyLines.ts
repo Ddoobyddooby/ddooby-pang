@@ -1,8 +1,15 @@
 // 스토리 HUD 문구 계산. Phaser 없는 순수 함수라 테스트할 수 있다 (설계 5절).
 
 import type { Color } from '../core/types';
-import type { Goal } from '../data/stageSchema';
+import type { Goal, ObstacleKind } from '../data/stageSchema';
 import { formatScore } from './format';
+
+/** 장애물 미션 문구에 쓰는 이름 */
+export const OBSTACLE_NAMES: Record<ObstacleKind, string> = {
+  lock: '자물쇠',
+  frost: '얼음',
+  jelly: '젤리',
+};
 
 /** StoryMode.goalProgress()의 한 칸 (view가 modes에 의존하지 않게 필요한 모양만 적는다) */
 export interface GoalProgressLike {
@@ -24,7 +31,13 @@ export function goalLine({ goal, current, done }: GoalProgressLike): GoalLine {
     const shown = formatScore(Math.min(current, goal.target));
     return { color: null, text: `점수 ${shown} / ${formatScore(goal.target)}`, done };
   }
-  return { color: goal.color, text: `${Math.min(current, goal.count)} / ${goal.count}`, done };
+  if (goal.type === 'collect') {
+    return { color: goal.color, text: `${Math.min(current, goal.count)} / ${goal.count}`, done };
+  }
+  // 장애물 미션 그림·남은 수는 V2-W2-05에서 다듬는다
+  if (goal.type === 'clearJelly') return { color: null, text: '젤리 모두', done };
+  const shown = Math.min(current, goal.count);
+  return { color: null, text: `${OBSTACLE_NAMES[goal.obstacle]} ${shown} / ${goal.count}`, done };
 }
 
 /** 미션 줄(최대 maxLines). 점수 미션이 없으면 마지막에 `점수 N` 줄을 따로 둔다 */

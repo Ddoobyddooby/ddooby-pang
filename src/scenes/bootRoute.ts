@@ -12,6 +12,7 @@ const TIMEATTACK_KEYS = ['demo', 'seed', 'time', 'specials'];
 /**
  * 기본은 메뉴.
  * DEV `?result=N` → 결과 화면 미리보기, DEV `?stage=N` → 스토리 N번 게임,
+ * DEV `?obstacles` → 장애물 시험 스테이지 (스토리 게임, GameScene이 스테이지를 바꾼다),
  * `?demo` `?seed` `?time` `?specials` → 타임어택 게임 (GameScene이 각 옵션을 읽는다)
  */
 export function bootRoute(search: string, dev: boolean): BootRoute {
@@ -19,6 +20,7 @@ export function bootRoute(search: string, dev: boolean): BootRoute {
   if (dev) {
     const preview = previewResult(search);
     if (preview) return { scene: 'Result', data: { result: preview } };
+    if (params.has('obstacles')) return { scene: 'Game', data: { mode: 'story', stageId: 1 } };
     const stageId = Number(params.get('stage'));
     if (Number.isInteger(stageId) && stageId >= 1) {
       return { scene: 'Game', data: { mode: 'story', stageId } };

@@ -33,6 +33,7 @@ export function playStage(stage: StageDef, seed: number): GameOutcome {
     cols: stage.cols,
     colors: stage.colors,
     seed,
+    layers: stage.layers,
   });
   const mode = new StoryMode(stage);
   while (!mode.isOver()) {

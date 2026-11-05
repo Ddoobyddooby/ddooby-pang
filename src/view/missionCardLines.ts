@@ -3,6 +3,7 @@
 
 import type { Color } from '../core/types';
 import type { Goal } from '../data/stageSchema';
+import { OBSTACLE_NAMES } from './storyLines';
 import { formatScore } from './format';
 import { gameTitle } from './gameTitle';
 
@@ -28,7 +29,10 @@ export interface MissionCardLines {
 export function missionLine(goal: Goal): MissionLine {
   if (goal.type === 'score')
     return { color: null, text: `점수 ${formatScore(goal.target)} 넘기기!` };
-  return { color: goal.color, text: `${goal.count}개 모으기!` };
+  if (goal.type === 'collect') return { color: goal.color, text: `${goal.count}개 모으기!` };
+  // 장애물 미션 그림·문구는 V2-W2-05에서 다듬는다
+  if (goal.type === 'clearJelly') return { color: null, text: '젤리 모두 없애기!' };
+  return { color: null, text: `${OBSTACLE_NAMES[goal.obstacle]} ${goal.count}개 없애기!` };
 }
 
 /** 제목(게임 화면 제목과 같은 문구) / 미션 줄(최대 maxLines, 스테이지 순서 그대로) / 이동 줄 */

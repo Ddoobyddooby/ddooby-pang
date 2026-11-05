@@ -1,10 +1,10 @@
 // 가능한 수 탐색, 셔플, 플레이 가능한 보드 생성 (PLAN 4.7)
 
 import { BOARD } from '../config';
-import { createBoard, getBlock, swapBlocks } from './board';
+import { createBoard, getBlock, isMovable, swapBlocks } from './board';
 import { findMatches, MIN_RUN } from './matcher';
 import { nextInt, type RngState } from './rng';
-import type { Block, Board, GameEvent, Pos } from './types';
+import type { Block, Board, CellLayer, GameEvent, Pos } from './types';
 
 type ShuffleEvent = Extract<GameEvent, { type: 'shuffle' }>;
 
@@ -25,8 +25,12 @@ function hasMatchThrough(board: Board, pos: Pos): boolean {
   return 1 + count(0, -1) + count(0, 1) >= MIN_RUN || 1 + count(-1, 0) + count(1, 0) >= MIN_RUN;
 }
 
-/** a와 b를 바꾸면 유효한 수인가 (매치가 생기거나, 컬러 블록이 끼어 있다) */
+/**
+ * a와 b를 바꾸면 유효한 수인가 (매치가 생기거나, 컬러 블록이 끼어 있다).
+ * 빈칸·얼음벽 칸·잠긴 블록은 스왑할 수 없다 (PLAN2 5.2)
+ */
 export function isValidSwap(board: Board, a: Pos, b: Pos): boolean {
+  if (!isMovable(board, a) || !isMovable(board, b)) return false;
   if (isColorBomb(getBlock(board, a)) || isColorBomb(getBlock(board, b))) return true;
   const swapped = swapBlocks(board, a, b);
   return hasMatchThrough(swapped, a) || hasMatchThrough(swapped, b);
@@ -37,12 +41,12 @@ export function findHint(board: Board): { a: Pos; b: Pos } | null {
   for (let r = 0; r < board.rows; r++) {
     for (let c = 0; c < board.cols; c++) {
       const a = { r, c };
-      if (!getBlock(board, a)) continue;
+      if (!isMovable(board, a)) continue;
       for (const b of [
         { r, c: c + 1 },
         { r: r + 1, c },
       ]) {
-        if (getBlock(board, b) && isValidSwap(board, a, b)) return { a, b };
+        if (isValidSwap(board, a, b)) return { a, b };
       }
     }
   }
@@ -58,16 +62,20 @@ function isPlayable(board: Board): boolean {
   return findMatches(board).length === 0 && hasAnyMove(board);
 }
 
-/** 매치가 없고 가능한 수가 있는 보드를 만든다. 상한까지 다시 생성한다 */
+/**
+ * 매치가 없고 가능한 수가 있는 보드를 만든다. 상한까지 다시 생성한다.
+ * layers(장애물 층)는 위치 그대로 붙는다. 얼음벽이 너무 많아 수가 없으면 여기서 실패한다 (PLAN2 5.4)
+ */
 export function createPlayableBoard(
   rows: number,
   cols: number,
   colors: number,
   rng: RngState,
+  layers?: readonly (CellLayer | null)[],
 ): [board: Board, rng: RngState] {
   for (let attempt = 0; attempt < BOARD.maxGenerateAttempts; attempt++) {
     let board: Board;
-    [board, rng] = createBoard(rows, cols, colors, rng);
+    [board, rng] = createBoard(rows, cols, colors, rng, layers);
     if (hasAnyMove(board)) return [board, rng];
   }
   throw new Error(`플레이 가능한 보드를 ${BOARD.maxGenerateAttempts}회 안에 만들지 못했다`);
@@ -75,7 +83,8 @@ export function createPlayableBoard(
 
 /**
  * 블록 위치를 Fisher-Yates로 섞는다 (특수 블록 포함, 빈칸은 그대로).
- * 매치 0 + 가능한 수 ≥ 1이 될 때까지 반복하고, 상한을 넘으면 일반 블록으로 새로 만든다.
+ * 잠긴 블록과 얼음벽 칸은 그 자리에 두고 움직일 수 있는 블록만 섞는다 (PLAN2 5.2).
+ * 매치 0 + 가능한 수 ≥ 1이 될 때까지 반복하고, 상한을 넘으면 일반 블록으로 새로 만든다 (층은 그대로).
  */
 export function shuffle(
   board: Board,
@@ -83,7 +92,7 @@ export function shuffle(
   rng: RngState,
 ): { board: Board; event: ShuffleEvent; rng: RngState } {
   const slots: number[] = [];
-  board.cells.forEach((b, i) => b && slots.push(i));
+  board.cells.forEach((b, i) => b && !board.layers?.[i]?.lock && slots.push(i));
 
   for (let attempt = 0; attempt < BOARD.maxGenerateAttempts; attempt++) {
     const blocks = slots.map((i) => board.cells[i]!);
@@ -100,9 +109,9 @@ export function shuffle(
 
   // 상한 초과: 일반 블록으로 새 보드 (id는 이어서 발급)
   let fresh: Board;
-  [fresh, rng] = createPlayableBoard(board.rows, board.cols, colors, rng);
+  [fresh, rng] = createPlayableBoard(board.rows, board.cols, colors, rng, board.layers);
   const cells = fresh.cells.map((b) => b && { ...b, id: board.nextId + b.id - 1 });
-  const regenerated: Board = { ...board, cells, nextId: board.nextId + cells.length };
+  const regenerated: Board = { ...board, cells, nextId: board.nextId + fresh.nextId - 1 };
   return { board: regenerated, event: toShuffleEvent(regenerated), rng };
 }
 

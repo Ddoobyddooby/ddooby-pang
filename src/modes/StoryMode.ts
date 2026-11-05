@@ -55,10 +55,23 @@ export class StoryMode implements GameMode {
 
   goalProgress(): GoalProgress[] {
     return this.stage.goals.map((goal) => {
-      const current = goal.type === 'score' ? this.total : this.collected[goal.color]!;
-      const target = goal.type === 'score' ? goal.target : goal.count;
+      const [current, target] = this.goalCount(goal);
       return { goal, current, done: current >= target };
     });
+  }
+
+  /** [지금, 목표]. 장애물 미션은 V2-W2-04 전까지 진행 0 (달성되지 않는다) */
+  private goalCount(goal: Goal): [current: number, target: number] {
+    switch (goal.type) {
+      case 'score':
+        return [this.total, goal.target];
+      case 'collect':
+        return [this.collected[goal.color]!, goal.count];
+      case 'clearJelly':
+        return [0, 1];
+      case 'clearObstacle':
+        return [0, goal.count];
+    }
   }
 
   canInput(): boolean {

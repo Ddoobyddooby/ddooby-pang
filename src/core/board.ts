@@ -1,7 +1,7 @@
 // 보드 생성과 조회·수정 유틸 (PLAN 4.1, 4.7). 수정 함수는 항상 새 Board를 돌려준다.
 
 import { nextInt, type RngState } from './rng';
-import type { Block, Board, Color, Pos } from './types';
+import type { Block, Board, CellLayer, Color, Pos } from './types';
 
 export function inBounds(board: Board, { r, c }: Pos): boolean {
   return r >= 0 && r < board.rows && c >= 0 && c < board.cols;
@@ -36,6 +36,26 @@ export function swapBlocks(board: Board, a: Pos, b: Pos): Board {
   return { ...board, cells };
 }
 
+/** 그 칸의 장애물 층 (없으면 null) */
+export function layerAt(board: Board, pos: Pos): CellLayer | null {
+  if (!board.layers || !inBounds(board, pos)) return null;
+  return board.layers[indexOf(board, pos)] ?? null;
+}
+
+/** 얼음벽 칸인가 (블록이 없고 낙하·리필이 지나가지 못한다) */
+export function isFrost(board: Board, pos: Pos): boolean {
+  return (layerAt(board, pos)?.frost ?? 0) > 0;
+}
+
+export function isLocked(board: Board, pos: Pos): boolean {
+  return layerAt(board, pos)?.lock === true;
+}
+
+/** 스왑할 수 있는 블록이 있는 칸인가 (블록이 있고 잠기지 않았다) */
+export function isMovable(board: Board, pos: Pos): boolean {
+  return getBlock(board, pos) !== null && !isLocked(board, pos);
+}
+
 /** 상하좌우로 한 칸 차이 */
 export function isAdjacent(a: Pos, b: Pos): boolean {
   return Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1;
@@ -47,6 +67,7 @@ export function samePos(a: Pos, b: Pos): boolean {
 
 /**
  * 매치가 없는 보드를 만든다. 왼쪽 위부터 채우며, 왼쪽 2칸 또는 위쪽 2칸과 같은 색이면 후보에서 뺀다.
+ * layers가 있으면 얼음벽 칸은 비우고(RNG를 쓰지 않는다) 층을 보드에 붙인다. 잠긴 칸도 색은 seed로 정한다.
  * 가능한 수가 있는지는 보장하지 않는다 (moves.ts의 createPlayableBoard가 담당).
  */
 export function createBoard(
@@ -54,14 +75,23 @@ export function createBoard(
   cols: number,
   colors: number,
   rng: RngState,
+  layers?: readonly (CellLayer | null)[],
 ): [board: Board, rng: RngState] {
   if (colors < 3 || colors > 6) throw new RangeError(`colors는 3~6이어야 한다: ${colors}`);
+  if (layers && layers.length !== rows * cols) {
+    throw new RangeError(`layers 길이는 ${rows * cols}이어야 한다: ${layers.length}`);
+  }
 
-  const cells: Block[] = [];
+  const cells: (Block | null)[] = [];
   const colorAt = (r: number, c: number) => cells[r * cols + c]?.color;
+  let nextId = 1;
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
+      if ((layers?.[r * cols + c]?.frost ?? 0) > 0) {
+        cells.push(null);
+        continue;
+      }
       const banned = new Set<Color | null | undefined>();
       if (c >= 2 && colorAt(r, c - 1) === colorAt(r, c - 2)) banned.add(colorAt(r, c - 1));
       if (r >= 2 && colorAt(r - 1, c) === colorAt(r - 2, c)) banned.add(colorAt(r - 1, c));
@@ -71,9 +101,9 @@ export function createBoard(
 
       let pick: number;
       [pick, rng] = nextInt(rng, candidates.length);
-      cells.push({ id: cells.length + 1, color: candidates[pick]! });
+      cells.push({ id: nextId++, color: candidates[pick]! });
     }
   }
 
-  return [{ rows, cols, cells, nextId: cells.length + 1 }, rng];
+  return [{ rows, cols, cells, nextId, ...(layers ? { layers } : {}) }, rng];
 }

@@ -19,6 +19,8 @@ export const SCORE = {
   match6Base: 300,
   match6Extra: 50,
   bySpecial: 20,
+  /** 장애물 1겹(잠금 해제 1회, 얼음 1겹, 젤리 1겹)당. 연쇄 배율 적용 (PLAN2 5.2, V2-W2-02~04에서 쓴다) */
+  obstacle: 50,
   cascadeStep: 0.5,
   /** 스토리 클리어 후 남은 이동 1회당 */
   movesLeftBonus: 300,

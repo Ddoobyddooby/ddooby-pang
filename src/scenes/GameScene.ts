@@ -10,6 +10,7 @@
 //   ?time=15    (개발 모드) 제한 시간을 15초로 줄인다 (없으면 stages/timeattack.json의 timeLimit)
 //   ?specials   (개발 모드) 시작 보드에 특수 블록 5종을 하나씩 놓는다
 //   ?specials=combo (개발 모드) 무지개 블록 옆에 줄·폭탄·슈퍼를 하나씩 놓는다 (조합 확인, PLAN 6.18)
+//   ?obstacles  (개발 모드) 장애물 시험 스테이지 (PLAN2 5.4). 결과는 저장하지 않는다
 
 import Phaser from 'phaser';
 import { GAME, HINT, HUD, MAP, MISSION_CARD, TIMEATTACK, VIEW } from '../config';
@@ -42,6 +43,7 @@ import { StoryMode } from '../modes/StoryMode';
 import { TimeAttackMode } from '../modes/TimeAttackMode';
 import { addSceneBackground } from '../view/theme/sceneBackground';
 import { drawBoardFrame } from '../view/theme/BoardFrame';
+import { obstacleStage } from '../dev/obstacleStage';
 
 /** 개발 모드 키 → 발동 연출 미리보기 */
 const SPECIAL_PREVIEW_KEYS: Record<string, SpecialKind> = {
@@ -98,6 +100,8 @@ export class GameScene extends Phaser.Scene {
   private demo = false;
   /** 스토리 시작 미션 카드 (떠 있는 동안만) */
   private missionCard?: MissionCard;
+  /** DEV ?obstacles 시험 스테이지: 결과를 저장하지 않는다 */
+  private devStage = false;
 
   constructor() {
     super('Game');
@@ -110,8 +114,13 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     const params = new URLSearchParams(window.location.search);
     const stages = getStages(this.registry);
-    const stage =
-      this.startData.mode === 'story' ? stages.story[this.startData.stageId - 1] : undefined;
+    this.devStage =
+      import.meta.env.DEV && this.startData.mode === 'story' && params.has('obstacles');
+    const stage = this.devStage
+      ? obstacleStage()
+      : this.startData.mode === 'story'
+        ? stages.story[this.startData.stageId - 1]
+        : undefined;
     if (this.startData.mode === 'story' && !stage) {
       throw new Error(`스테이지 ${this.startData.stageId}가 없다`);
     }
@@ -145,6 +154,7 @@ export class GameScene extends Phaser.Scene {
       cols: setting.cols,
       colors: setting.colors,
       seed: this.seed,
+      layers: stage?.layers,
     });
     if (import.meta.env.DEV && params.has('specials')) {
       this.placeSpecialSamples(
@@ -335,7 +345,9 @@ export class GameScene extends Phaser.Scene {
     const result = this.mode.result();
     // 결과 화면이 열린 스테이지를 보고 버튼을 정하므로 registry 갱신(commitSave)이 Result 시작보다 먼저다
     const stageCount = getStages(this.registry).story.length;
-    commitSave(this.registry, applyModeResult(getSave(this.registry), result, stageCount));
+    if (!this.devStage) {
+      commitSave(this.registry, applyModeResult(getSave(this.registry), result, stageCount));
+    }
     this.scene.start('Result', { result });
   }
 
@@ -413,17 +425,18 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(600, () => void this.demoLoop());
   }
 
-  /** 개발 모드: 스프라이트의 실제 위치가 core 보드와 같은지 매 턴 확인 (PLAN 10절) */
+  /** 개발 모드: 스프라이트의 실제 위치가 core 보드와 같은지 매 턴 확인 (PLAN 10절). 얼음벽 칸은 블록 없음 */
   private checkViewMatchesBoard(): void {
     const actual = this.view.spriteCells();
     const { board } = this.state;
+    const blockCount = board.cells.filter((block) => block !== null).length;
     const wrong: string[] = [];
     board.cells.forEach((block, i) => {
       const key = `${Math.floor(i / board.cols)},${i % board.cols}`;
       if (actual.get(key) !== block?.id)
         wrong.push(`${key}: view=${actual.get(key)} board=${block?.id}`);
     });
-    if (wrong.length > 0 || actual.size !== board.cells.length) {
+    if (wrong.length > 0 || actual.size !== blockCount) {
       console.error('[game] view ≠ board', {
         seed: this.seed,
         moves: this.moves,
