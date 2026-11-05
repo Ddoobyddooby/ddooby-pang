@@ -123,7 +123,7 @@ export class FxDirector {
       .setOrigin(0.5)
       .setDepth(PRAISE_DEPTH)
       .setScale(0);
-    const fadeMs = Math.min(COMBO.nameMs / 3, 250);
+    const fadeMs = s.fadeMs;
     scene.tweens.chain({
       targets: text,
       tweens: [
@@ -142,15 +142,17 @@ export class FxDirector {
   }
 
   /** 조합 제거 연출: at에서 퍼지는 원 + 터지는 칸마다 별 + 종류별 흔들림 (bombBomb은 호출이 두 번) */
-  playComboBlast(combo: ComboKind, at: Pos, cells: readonly Pos[]): void {
+  playComboBlast(combo: ComboKind, at: Pos, cells: readonly { at: Pos; delay: number }[]): void {
     const burst = COMBO.burst[combo];
     const { x, y } = cellCenter(this.layout, at);
     this.ring(x, y, burst.ring * this.layout.cell);
     const perCell = Math.min(burst.stars, Math.floor(FX.maxParticles / Math.max(1, cells.length)));
     if (perCell > 0) {
-      for (const p of cells) {
-        const c = cellCenter(this.layout, p);
-        this.stars.explode(perCell, c.x, c.y);
+      for (const cell of cells) {
+        const c = cellCenter(this.layout, cell.at);
+        const burst = () => this.stars.explode(perCell, c.x, c.y);
+        if (cell.delay > 0) this.scene.time.delayedCall(cell.delay, burst);
+        else burst();
       }
     }
     this.shake(COMBO.shake[combo]);

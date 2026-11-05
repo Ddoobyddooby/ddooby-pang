@@ -80,6 +80,8 @@ export const COMBO = {
     popScale: 1.3,
     popMs: 160,
     rise: 30,
+    /** 사라지며 떠오르는 시간 (nameMs 맨 끝) */
+    fadeMs: 230,
   },
   /** 모이는 두 블록이 슬로모션 동안 커지는 배율 (위치는 at 그대로) */
   chargeScale: 1.35,

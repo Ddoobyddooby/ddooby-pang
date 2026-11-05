@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COMBO } from '../../src/config';
 import type { ComboKind, GameEvent, Pos } from '../../src/core/types';
 import {
-  blastCells,
+  comboBlast,
+  comboCenter,
+  comboMover,
   comboBlastTimes,
   comboOf,
   comboPhases,
@@ -46,10 +48,71 @@ describe('조합 시간표', () => {
     expect(comboBlastTimes('colorColor')).toEqual([0]);
   });
 
-  it('combo 이벤트와 터질 칸을 step에서 찾는다', () => {
+  it('combo 이벤트를 step에서 찾는다', () => {
     expect(comboOf([combo('bombBomb')])?.combo).toBe('bombBomb');
     expect(comboOf([remove])).toBeUndefined();
-    expect(blastCells([transform, activate, remove])).toEqual([p(1, 1), p(1, 2)]);
+  });
+});
+
+const colorAct = (at: Pos, cleared: Pos[]): GameEvent => ({
+  type: 'activate',
+  special: 'color',
+  at,
+  cleared,
+  depth: 0,
+});
+
+describe('조합 중심·폭발 계획', () => {
+  it('컬러가 partner 쪽(역방향)이면 중심이 컬러 발동 칸이고 at 쪽 블록이 모인다', () => {
+    const ev = combo('colorLine') as Extract<GameEvent, { type: 'combo' }>;
+    const next = [transform, colorAct(p(1, 1), [p(1, 1)]), remove];
+    expect(comboCenter(ev, next)).toEqual(p(1, 1));
+    expect(comboMover(ev, p(1, 1))).toEqual(p(1, 2));
+  });
+
+  it('컬러가 아닌 조합·정방향 컬러는 combo.at이 중심이다', () => {
+    const line = combo('lineLine') as Extract<GameEvent, { type: 'combo' }>;
+    expect(comboCenter(line, [remove])).toEqual(p(1, 2));
+    expect(comboMover(line, p(1, 2))).toEqual(p(1, 1));
+    const color = combo('colorBomb') as Extract<GameEvent, { type: 'combo' }>;
+    expect(comboCenter(color, [colorAct(p(1, 2), [p(1, 2)]), remove])).toEqual(p(1, 2));
+  });
+
+  it('직접 범위만 센다: 컬러 조합은 변신을 기다린 시각, 연쇄 칸은 제외', () => {
+    const ev = combo('colorLine') as Extract<GameEvent, { type: 'combo' }>;
+    const next: GameEvent[] = [
+      transform,
+      colorAct(p(1, 1), [p(1, 1), p(5, 5)]),
+      {
+        type: 'remove',
+        blocks: [
+          { id: 1, at: p(1, 1), bySpecial: true },
+          { id: 9, at: p(7, 7), bySpecial: true }, // 연쇄로 휘말린 칸
+        ],
+      },
+    ];
+    const removeAt = new Map([
+      [1, 400],
+      [9, 700],
+    ]);
+    const blast = comboBlast(ev, next, removeAt);
+    expect(blast.at).toEqual(p(1, 1));
+    expect(blast.delay).toBe(400);
+    expect(blast.cells).toEqual([{ at: p(1, 1), delay: 0 }]);
+  });
+
+  it('직접 조합은 combo.cleared 칸의 실제 제거 시각을 따른다', () => {
+    const ev = combo('lineLine') as Extract<GameEvent, { type: 'combo' }>;
+    const blast = comboBlast(
+      ev,
+      [remove],
+      new Map([
+        [1, 0],
+        [2, 120],
+      ]),
+    );
+    expect(blast.delay).toBe(0);
+    expect(blast.cells.map((c) => c.delay)).toEqual([0, 120]);
   });
 });
 

@@ -8,7 +8,15 @@ import { BlockSprite } from './BlockSprite';
 import { EventTracker } from './eventTracker';
 import { cellAt, cellCenter, type Layout } from './layout';
 import { activateDelay, flashDelay, removeDelays, transformDelay } from './fx/chainTimeline';
-import { blastCells, comboBlastTimes, comboOf, comboPhases, runSteps } from './fx/comboTimeline';
+import {
+  comboBlast,
+  comboBlastTimes,
+  comboCenter,
+  comboMover,
+  comboOf,
+  comboPhases,
+  runSteps,
+} from './fx/comboTimeline';
 import { cascadeToLevel } from './fx/fxLevels';
 import { removedFromMatch, type RemovedCell } from './fx/matchInfo';
 import { ensureTextures, type Face } from './theme/textures';
@@ -26,7 +34,7 @@ export interface BoardViewHooks {
   /** 조합 이름 팝업 단계가 시작될 때 동기로 부른다 (PLAN2 3.3). 팝업은 nameMs 동안 떠 있고 combo step은 그 뒤에 끝난다 */
   onComboName?(combo: ComboKind, name: string): void;
   /** combo 다음 step이 시작될 때 부른다 (bombBomb은 두 번째를 bombBombSecondMs 뒤에). cells = 그 step에서 제거되는 칸 */
-  onComboBlast?(combo: ComboKind, at: Pos, cells: readonly Pos[]): void;
+  onComboBlast?(combo: ComboKind, at: Pos, cells: readonly { at: Pos; delay: number }[]): void;
 }
 
 export class BoardView {
@@ -41,6 +49,8 @@ export class BoardView {
   private removeAt = new Map<number, number>();
   /** 재생 중인 step의 발동이 기다릴 ms (변신 연출, PLAN 6.18) */
   private activateOffset = 0;
+  /** 재생 중인 step의 다음 step (combo 준비 연출이 컬러 발동 칸을 알아야 한다) */
+  private comboNext: readonly GameEvent[] | undefined;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -85,7 +95,8 @@ export class BoardView {
 
   /** step을 순서대로 재생한다. 한 step 안의 이벤트는 동시에 재생한다 */
   async play(steps: readonly (readonly GameEvent[])[]): Promise<void> {
-    await runSteps(steps, async (step, prev) => {
+    await runSteps(steps, async (step, prev, next) => {
+      this.comboNext = next;
       this.removeAt = removeDelays(step, ANIM.chainStep, ANIM.transform);
       this.activateOffset = transformDelay(step, ANIM.transform);
       const combo = prev && comboOf(prev);
@@ -99,9 +110,12 @@ export class BoardView {
     combo: Extract<GameEvent, { type: 'combo' }>,
     step: readonly GameEvent[],
   ): void {
-    const cells = blastCells(step);
+    // 직접 범위가 실제로 지워지는 시각에 맞춘다 (변신·연쇄 차례는 chainTimeline이 정한 removeAt)
+    const blast = comboBlast(combo, step, this.removeAt);
     for (const ms of comboBlastTimes(combo.combo)) {
-      this.later(ms, () => this.hooks.onComboBlast?.(combo.combo, combo.at, cells));
+      this.later(blast.delay + ms, () =>
+        this.hooks.onComboBlast?.(combo.combo, blast.at, blast.cells),
+      );
     }
   }
 
@@ -242,10 +256,12 @@ export class BoardView {
    * 모인 partner 블록은 끝에서 원래 칸으로 되돌려 놓는다 (스프라이트 위치 = board 위치 대조 유지)
    */
   private async playCombo(event: Extract<GameEvent, { type: 'combo' }>): Promise<void> {
-    const mover = this.sprites.get(this.tracker.idAt(event.partner) ?? -1);
-    const anchor = this.sprites.get(this.tracker.idAt(event.at) ?? -1);
+    // 컬러 조합은 실제 컬러 발동 칸으로 모인다 (역방향이면 combo.at이 아니다)
+    const center = comboCenter(event, this.comboNext);
+    const mover = this.sprites.get(this.tracker.idAt(comboMover(event, center)) ?? -1);
+    const anchor = this.sprites.get(this.tracker.idAt(center) ?? -1);
     const home = mover ? { x: mover.x, y: mover.y } : undefined;
-    const target = cellCenter(this.layout, event.at);
+    const target = cellCenter(this.layout, center);
     for (const { name, ms } of comboPhases()) {
       switch (name) {
         case 'merge':
