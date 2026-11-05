@@ -1,14 +1,14 @@
 # CLAUDE.md
 
-ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 MVP 개발 중). 응답과 문서는 한국어로 쓴다.
+ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 완료, v0.2 개발 중). 응답과 문서는 한국어로 쓴다.
 
 ## 문서
 
 작업 전에 해당 부분을 읽는다. 문서끼리 충돌하면 SPEC > PLAN > TASKS 순으로 따른다.
 
 - `SPEC.md`: 무엇을 / 왜. 게임 규칙, 점수, 스테이지 스키마, 수용 기준
-- `docs/PLAN.md`: 어떻게. 구조, core 타입·이벤트, 오픈 이슈 잠정 결정
-- `docs/TASKS.md`: 작업 체크리스트 (ID `W<주차>-<번호>`)
+- `docs/PLAN.md`: 어떻게 (v0.2). v0.1 설계(core 구조·이벤트·화면)는 `docs/v0.1/PLAN.md`에 있고 계속 유효하다. 코드 주석의 `PLAN 4.5`는 v0.1 문서, `PLAN2 3.1`은 v0.2 문서
+- `docs/TASKS.md`: v0.2 작업 체크리스트 (ID `V2-W<주차>-<번호>`, 브랜치 `feat/v2-w1-01-<요약>`). v0.1 기록은 `docs/v0.1/TASKS.md`
 - `docs/DEVELOPMENT.md`: VSCode에서 실행·확인하는 방법 (사용자용)
 - `docs/WORKFLOW.md`: 세션 운영 세부 (worktree, 지시서 형식, Codex 리뷰·이미지 8절). 위임 순서와 탭은 아래 "작업 위임 흐름"이 우선한다
 - `docs/FEEDBACK.md`: 시범 플레이 반응과 리뷰 의견. 고칠 것으로 정하면 TASKS로 옮긴다
@@ -69,7 +69,7 @@ claude-분석 탭은 이 형식으로 사용자 승인을 받고, 승인 후 구
 - 점수, 배율, 애니메이션 시간은 `src/config.ts`에 두고 코드에 박지 않는다.
 - view는 core가 준 이벤트를 재생만 한다. 게임 상태를 직접 계산하지 않는다.
 - 의존 방향: `scenes → view/modes → core`, `scenes → data/storage`. core는 아무것도 의존하지 않는다.
-- 소리 파일은 `.ogg`와 `.m4a`를 항상 같이 둔다 (iOS Safari는 Ogg Vorbis를 못 읽을 수 있다. PLAN 7.4·10절)
+- 소리 파일은 `.ogg`와 `.m4a`를 항상 같이 둔다 (iOS Safari는 Ogg Vorbis를 못 읽을 수 있다. v0.1 PLAN 7.4·10절)
 
 ## 명령어
 

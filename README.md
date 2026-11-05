@@ -2,7 +2,7 @@
 
 스테이지형 매치-3 퍼즐 게임. 같은 색 블록 3개 이상을 맞춰 터뜨린다.
 
-> **상태**: v0.1 MVP 개발 중. 1주차(코어 엔진 + 기본 화면), 디자인(테마 + 연쇄 이펙트) 완료 → 2주차 진행 중: 2주차(특수 블록, 60초 타임어택) 완료 → 3주차: 스토리 모드(메뉴, 스테이지 지도 1~10, 해금·저장)와 Android APK 시험 빌드(에뮬레이터) 완료 → 4주차(폴리싱 + APK) 시작 전. 진행 상황은 [docs/TASKS.md](docs/TASKS.md)
+> **상태**: v0.1 완료(2026-11-05), v0.2 개발 중 (특수 블록 조합, 장애물, 테마, 주간 랭킹). 진행 상황은 [docs/TASKS.md](docs/TASKS.md)
 
 ## 주요 기능 (v0.1)
 
@@ -40,7 +40,7 @@ scenes ─→ view ──→ core
 | `src/data/` | 스테이지 JSON 로더, 설정값 |
 | `src/storage/` | 진행 상황 저장 |
 
-> 폴더는 1주차 작업 중에 생긴다. 자세한 설계는 [docs/PLAN.md](docs/PLAN.md) 3~4절.
+> 폴더는 1주차 작업 중에 생긴다. 자세한 설계는 [docs/v0.1/PLAN.md](docs/v0.1/PLAN.md) 3~4절.
 
 ## 시작하기
 
@@ -60,6 +60,6 @@ npm run build   # 타입체크 + dist/ 빌드
 | 문서 | 내용 |
 |---|---|
 | [SPEC.md](SPEC.md) | 무엇을 / 왜: 게임 규칙, 점수, 스테이지 스키마, 수용 기준 |
-| [docs/PLAN.md](docs/PLAN.md) | 어떻게: 구현 계획 |
+| [docs/PLAN.md](docs/PLAN.md) | 어떻게: v0.2 구현 계획 (v0.1은 [docs/v0.1/](docs/v0.1/)) |
 | [docs/TASKS.md](docs/TASKS.md) | 작업 단위 |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | 개발 가이드: VSCode에서 실행하고 확인하는 방법 |
