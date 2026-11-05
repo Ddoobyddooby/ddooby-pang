@@ -17,9 +17,10 @@
 
 | 항목 | 결정 |
 |---|---|
-| 조합 발동 조건 | 나란히 있는 특수 블록 둘을 스왑하면 색이 달라도, 매치가 없어도 발동 |
+| 조합 발동 조건 | 나란히 있는 특수 블록 둘을 스왑하면 색이 달라도(예: 빨강 가로 + 노랑 세로), 매치가 없어도 발동 |
+| 컬러(무지개) + 특수 | 슈퍼 포함 모두 v0.1 동작 그대로 (W4-25 변신 → 차례 발동) |
 | 폭탄 + 폭탄 | 범위 5×5 한 번, 연출만 두 번 쾅쾅 |
-| 조합 이름 | 크로스! / 빅 크로스! / 메가 폭발! / 줄줄이 팡! / 폭탄 비! / 올 클리어! / 슈퍼 콤보! |
+| 조합 이름 | 크로스! / 빅 크로스! / 메가 폭발! / 줄줄이 팡! / 폭탄 비! / 올 클리어! / 슈퍼 콤보! (컬러 + 슈퍼도 슈퍼 콤보!) |
 | 1주차 분담 | 조합 core와 연출을 다른 태스크로 |
 | 테마 | Codex 시안 5개(사탕·우주·바다·공주·인형) → 사용자가 3개 선택 → 메인 화면에서 고름 |
 | 별 3개 기준 (FEEDBACK R6) | 4주차 스테이지 재조정 때 같이 올린다 |
@@ -34,29 +35,30 @@
 
 | 두 블록 | `ComboKind` | 지우는 칸 (보드 밖은 잘림) |
 |---|---|---|
-| 슈퍼 + 아무 특수 (슈퍼 + 슈퍼, 컬러 + 슈퍼 포함) | `superAny` | `at` 기준 슈퍼 범위(5×5 + 십자) ∪ 상대 효과. 상대가 줄이면 그 방향 줄, 폭탄이면 3×3, 슈퍼면 같은 범위, **컬러면 슈퍼 블록 색 전체** |
 | 컬러 + 컬러 | `colorColor` | 보드 전체 (v0.1 그대로) |
+| 컬러 + 슈퍼 | `colorSuper` | v0.1 W4-25 그대로: 슈퍼 블록 색 블록이 슈퍼로 변신 → 차례 발동 |
 | 컬러 + 줄 | `colorLine` | v0.1 W4-25 그대로: 상대 색 블록이 줄로 변신 → 차례 발동 (가로·세로 섞기) |
 | 컬러 + 폭탄 | `colorBomb` | v0.1 W4-25 그대로: 상대 색 블록이 폭탄으로 변신 → 차례 발동 |
 | 폭탄 + 폭탄 | `bombBomb` | `at` 기준 5×5 |
 | 줄 + 폭탄 | `lineBomb` | `at` 행 기준 위아래 3행 + `at` 열 기준 좌우 3열 |
+| 슈퍼 + 줄·폭탄·슈퍼 | `superAny` | `at` 기준 슈퍼 범위(5×5 + 십자) ∪ 상대 효과. 상대가 줄이면 그 방향 줄, 폭탄이면 3×3, 슈퍼면 같은 범위 |
 | 줄 + 줄 (방향 무관) | `lineLine` | `at`의 행 전체 + 열 전체 |
 
-- **바뀌는 v0.1 동작**: 컬러 + 슈퍼는 지금 "같은 색 블록이 슈퍼로 변신"이다. v0.2에서는 `superAny`로 바뀐다 (SPEC 3절)
+- v0.1 동작은 바뀌지 않는다. 지금 매치가 없어 되돌아가던 "컬러(무지개)가 아닌 특수 블록 둘" 스왑만 새로 조합이 된다
 - 지운 범위 안의 다른 특수 블록은 v0.1처럼 연쇄 발동한다 (`chainActivate`, 차례 `depth` 1부터). 조합한 두 블록 자신은 다시 발동하지 않는다
 - 점수: 조합으로 지운 블록은 특수 효과 제거와 같다 (`SCORE.bySpecial`, 연쇄 배율 그대로). 새 점수 값은 만들지 않는다
 - 조합도 이동 1회 (스왑 한 번이므로 modes 변경 없음)
 
 ### 3.2 core 타입·이벤트
 
-- `types.ts`: `export type ComboKind = 'lineLine' | 'lineBomb' | 'bombBomb' | 'colorLine' | 'colorBomb' | 'colorColor' | 'superAny'`
+- `types.ts`: `export type ComboKind = 'lineLine' | 'lineBomb' | 'bombBomb' | 'colorLine' | 'colorBomb' | 'colorSuper' | 'colorColor' | 'superAny'`
 - 새 이벤트 (조합 첫 step 맨 앞, `swap` 다음 step):
 
   ```ts
   { type: 'combo'; combo: ComboKind; at: Pos; partner: Pos; cleared: readonly Pos[] }
   ```
 
-  `cleared`는 조합 자체 범위다. `colorLine`·`colorBomb`·`colorColor`는 v0.1처럼 `activate`(컬러)·`transform`·차례 `activate`가 뒤따르고, `combo.cleared`는 컬러 효과 범위와 같다. 나머지 4개는 `combo` 하나가 범위를 맡고, 휘말린 특수 블록만 `activate`(depth ≥ 1)로 나온다
+  `cleared`는 조합 자체 범위다. `colorLine`·`colorBomb`·`colorSuper`·`colorColor`는 v0.1처럼 `activate`(컬러)·`transform`·차례 `activate`가 뒤따르고, `combo.cleared`는 컬러 효과 범위와 같다. 나머지 4개(`lineLine`·`lineBomb`·`bombBomb`·`superAny`)는 `combo` 하나가 범위를 맡고, 휘말린 특수 블록만 `activate`(depth ≥ 1)로 나온다
 - `engine.ts`: `Trigger`에 `{ kind: 'combo'; at; partner }` 추가. `specials.ts`: `comboKind(x, y)`, `comboArea(kind, at, board, partnerBlock)` 순수 함수
 - `remove` 이벤트의 `bySpecial`은 조합 범위도 true
 - DEV 대조(`view ↔ board`)와 `assertInvariants`는 그대로 통과해야 한다
@@ -68,14 +70,14 @@
 - 연출 중 입력은 지금처럼 resolve 재생 동안 막힌다
 - 값은 `config.ts`의 `COMBO` 한 곳: 이름 문자열, `mergeMs`, `slowMs`, `nameMs`, 종류별 흔들림 세기, `bombBombSecondMs`
 - 소리: 전용 효과음 `public/audio/combo.ogg` + `.m4a` (CC0 소리, `public/audio/CREDITS.md`). 마땅한 게 없으면 `special` 소리를 재사용하고 FEEDBACK에 남긴다
-- 개발 URL 옵션 `?specials=pairs`: 7개 조합을 각각 한 번에 시험할 수 있게 특수 블록을 나란히 배치 (v0.1 `?specials=combo` 확장)
+- 개발 URL 옵션 `?specials=pairs`: 8개 조합을 각각 한 번에 시험할 수 있게 특수 블록을 나란히 배치 (v0.1 `?specials=combo` 확장)
 
 ### 3.4 테스트
 
-- `tests/core/combo.test.ts`: 7개 범주마다 고정 보드 → 지워진 칸 집합, `combo` 이벤트 필드, 연쇄 발동 depth, 서로 다른 색 두 특수 블록 스왑이 `valid`인지
-- 회귀: 한쪽만 특수인 스왑, 일반 매치, `?specials=combo`의 기존 컬러 + 줄·폭탄 결과가 v0.1과 같음 (`superAny`로 바뀐 컬러 + 슈퍼 테스트는 새 기대값으로)
+- `tests/core/combo.test.ts`: 8개 범주마다 고정 보드 → 지워진 칸 집합, `combo` 이벤트 필드, 연쇄 발동 depth, 서로 다른 색 두 특수 블록 스왑이 `valid`인지
+- 회귀: 한쪽만 특수인 스왑, 일반 매치, `?specials=combo`의 기존 컬러 + 줄·폭탄 결과가 v0.1과 같음 (컬러 + 슈퍼 포함)
 - 결정성: 같은 seed + 같은 스왑 목록 → 같은 점수·보드 (기존 결정성 테스트에 조합 스왑 섞기)
-- view: 이벤트 → 연출 단계 목록을 만드는 순수 함수가 있으면 단위 테스트. 브라우저 390×844 `?specials=pairs`로 7개 캡처
+- view: 이벤트 → 연출 단계 목록을 만드는 순수 함수가 있으면 단위 테스트. 브라우저 390×844 `?specials=pairs`로 8개 캡처
 
 ## 4. 테마 (1~2주차)
 
@@ -107,5 +109,4 @@
 ## 6. 리스크
 
 - 조합이 너무 세서 쉬워짐 → 4주차 재조정에서 이동 수로 맞춘다. `superAny` 밸런스는 SPEC 11절 3번
-- 컬러 + 슈퍼 동작 변경으로 v0.1에 익숙한 아이가 헷갈릴 수 있음 → 시범 플레이에서 본다
 - 테마 그림 7장 × 3세트의 크기 차이 → 테마마다 배치 값을 따로 둔다 (4.3)
