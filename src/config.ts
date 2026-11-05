@@ -72,9 +72,32 @@ export const COMBO = {
     colorColor: { duration: 360, intensity: 0.014 },
   },
   bombBombSecondMs: 180,
+  /** 이름 팝업: 큰 글자(아이용). 톡 커졌다 자리잡고(popMs 합쳐서 nameMs 안에) 끝에서 위로 떠오르며 사라진다 */
+  nameStyle: {
+    fontSize: 88,
+    strokeThickness: 14,
+    yRatio: 0.3,
+    popScale: 1.3,
+    popMs: 160,
+    rise: 30,
+  },
+  /** 모이는 두 블록이 슬로모션 동안 커지는 배율 (위치는 at 그대로) */
+  chargeScale: 1.35,
+  /** 제거 연출: 종류별로 칸마다 터지는 별 수(아래로 갈수록 세다)와 at에서 퍼지는 원 반지름(칸 단위). 별은 FX.maxParticles를 넘지 않는다 */
+  burst: {
+    lineLine: { stars: 2, ring: 1.5 },
+    lineBomb: { stars: 2, ring: 2 },
+    bombBomb: { stars: 3, ring: 2.5 },
+    colorLine: { stars: 3, ring: 2 },
+    colorBomb: { stars: 3, ring: 2.5 },
+    superAny: { stars: 3, ring: 3 },
+    colorSuper: { stars: 4, ring: 3 },
+    colorColor: { stars: 5, ring: 4 },
+  },
 } as const satisfies {
   name: Record<ComboKind, string>;
   shake: Record<ComboKind, { duration: number; intensity: number }>;
+  burst: Record<ComboKind, { stars: number; ring: number }>;
   [key: string]: unknown;
 };
 
@@ -559,6 +582,7 @@ export const SOUND = {
     bad: { file: 'bad', volume: 0.35 },
     match: { file: 'match', volume: 0.5 },
     special: { file: 'special', volume: 0.45 },
+    combo: { file: 'combo', volume: 0.55 },
     clear: { file: 'clear', volume: 0.45 },
     fail: { file: 'fail', volume: 0.4 },
     button: { file: 'button', volume: 0.5 },

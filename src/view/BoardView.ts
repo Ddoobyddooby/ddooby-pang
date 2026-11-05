@@ -2,12 +2,13 @@
 // 게임 상태를 직접 계산하지 않는다. 위치는 EventTracker로 이벤트만 따라간다.
 
 import Phaser from 'phaser';
-import { ANIM, FX, VIEW } from '../config';
-import type { Block, Board, GameEvent, Pos, SpecialKind } from '../core/types';
+import { ANIM, COMBO, FX, VIEW } from '../config';
+import type { Block, Board, ComboKind, GameEvent, Pos, SpecialKind } from '../core/types';
 import { BlockSprite } from './BlockSprite';
 import { EventTracker } from './eventTracker';
 import { cellAt, cellCenter, type Layout } from './layout';
 import { activateDelay, flashDelay, removeDelays, transformDelay } from './fx/chainTimeline';
+import { blastCells, comboBlastTimes, comboOf, comboPhases, runSteps } from './fx/comboTimeline';
 import { cascadeToLevel } from './fx/fxLevels';
 import { removedFromMatch, type RemovedCell } from './fx/matchInfo';
 import { ensureTextures, type Face } from './theme/textures';
@@ -22,6 +23,10 @@ export interface BoardViewHooks {
   onTransform?(count: number): void;
   /** score 이벤트(delta > 0)를 재생하기 시작할 때 동기로 부른다. 팝업은 기다리지 않는다 */
   onScore?(delta: number, level: number, at: Pos): void;
+  /** 조합 이름 팝업 단계가 시작될 때 동기로 부른다 (PLAN2 3.3). 팝업은 nameMs 동안 떠 있고 combo step은 그 뒤에 끝난다 */
+  onComboName?(combo: ComboKind, name: string): void;
+  /** combo 다음 step이 시작될 때 부른다 (bombBomb은 두 번째를 bombBombSecondMs 뒤에). cells = 그 step에서 제거되는 칸 */
+  onComboBlast?(combo: ComboKind, at: Pos, cells: readonly Pos[]): void;
 }
 
 export class BoardView {
@@ -80,10 +85,23 @@ export class BoardView {
 
   /** step을 순서대로 재생한다. 한 step 안의 이벤트는 동시에 재생한다 */
   async play(steps: readonly (readonly GameEvent[])[]): Promise<void> {
-    for (const step of steps) {
+    await runSteps(steps, async (step, prev) => {
       this.removeAt = removeDelays(step, ANIM.chainStep, ANIM.transform);
       this.activateOffset = transformDelay(step, ANIM.transform);
+      const combo = prev && comboOf(prev);
+      if (combo) this.blastCombo(combo, step);
       await Promise.all(step.map((event) => this.playEvent(event)));
+    });
+  }
+
+  /** 조합 준비 연출 바로 뒤 step의 제거에 파티클·흔들림·소리를 맞춘다 (bombBomb은 두 번) */
+  private blastCombo(
+    combo: Extract<GameEvent, { type: 'combo' }>,
+    step: readonly GameEvent[],
+  ): void {
+    const cells = blastCells(step);
+    for (const ms of comboBlastTimes(combo.combo)) {
+      this.later(ms, () => this.hooks.onComboBlast?.(combo.combo, combo.at, cells));
     }
   }
 
@@ -182,8 +200,7 @@ export class BoardView {
         return Promise.resolve();
 
       case 'combo':
-        // 조합 준비 연출(모이기·슬로모션·이름)은 V2-W1-02. 지금은 기다리지 않고 다음 step으로 (PLAN2 3.2)
-        return Promise.resolve();
+        return this.playCombo(event);
 
       case 'match':
         this.hooks.onMatch?.(cascadeToLevel(event.cascade), removedFromMatch(event.groups));
@@ -217,6 +234,67 @@ export class BoardView {
           this.hooks.onScore?.(event.delta, cascadeToLevel(event.cascade), event.at);
         return Promise.resolve();
     }
+  }
+
+  /**
+   * 조합 준비 연출 (PLAN2 3.3): partner 블록이 at으로 모인다 → 두 블록이 커지며 슬로모션 → 이름 팝업.
+   * 모두 끝난 뒤에야 resolve하므로 다음 step(remove·transform·activate)은 그 뒤에 시작한다.
+   * 모인 partner 블록은 끝에서 원래 칸으로 되돌려 놓는다 (스프라이트 위치 = board 위치 대조 유지)
+   */
+  private async playCombo(event: Extract<GameEvent, { type: 'combo' }>): Promise<void> {
+    const mover = this.sprites.get(this.tracker.idAt(event.partner) ?? -1);
+    const anchor = this.sprites.get(this.tracker.idAt(event.at) ?? -1);
+    const home = mover ? { x: mover.x, y: mover.y } : undefined;
+    const target = cellCenter(this.layout, event.at);
+    for (const { name, ms } of comboPhases()) {
+      switch (name) {
+        case 'merge':
+          if (mover) this.layer.bringToTop(mover);
+          await (mover
+            ? tween(this.scene, {
+                targets: mover,
+                x: target.x,
+                y: target.y,
+                duration: ms,
+                ease: 'Quad.easeIn',
+              })
+            : this.wait(ms));
+          break;
+        case 'slow':
+          // 슬로모션: 겹친 두 블록이 천천히 부풀어 오른다 (뒤따르는 제거가 더 크게 터져 보이도록)
+          await Promise.all(
+            [mover, anchor].map((sprite) =>
+              sprite
+                ? tween(this.scene, {
+                    targets: sprite,
+                    scale: COMBO.chargeScale,
+                    duration: ms,
+                    ease: 'Sine.easeInOut',
+                  })
+                : this.wait(ms),
+            ),
+          );
+          break;
+        case 'name':
+          this.hooks.onComboName?.(event.combo, COMBO.name[event.combo]);
+          await this.wait(ms);
+          break;
+      }
+    }
+    if (mover && home) {
+      this.scene.tweens.killTweensOf(mover);
+      mover.setPosition(home.x, home.y);
+    }
+    for (const sprite of [mover, anchor]) {
+      if (sprite) {
+        this.scene.tweens.killTweensOf(sprite);
+        sprite.setScale(1);
+      }
+    }
+  }
+
+  private wait(ms: number): Promise<void> {
+    return new Promise((resolve) => this.scene.time.delayedCall(ms, resolve));
   }
 
   private playShuffle(event: Extract<GameEvent, { type: 'shuffle' }>): Promise<void> {

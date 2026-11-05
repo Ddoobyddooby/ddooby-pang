@@ -209,6 +209,12 @@ export class GameScene extends Phaser.Scene {
     // 같은 색 블록이 특수 블록으로 바뀔 때 반짝 소리 한 번 (PLAN 6.18)
     hooks.onTransform = () => this.sfx.play('star');
     hooks.onScore = (delta, level, at) => fx.playScore(delta, level, at);
+    // 조합: 이름이 뜰 때 한 번, 제거가 터질 때마다 (bombBomb은 두 번) 전용 소리
+    hooks.onComboName = (_combo, name) => fx.showComboName(name);
+    hooks.onComboBlast = (combo, at, cells) => {
+      fx.playComboBlast(combo, at, cells);
+      this.sfx.play('combo');
+    };
 
     this.hud = new Hud(this, gameTitle(this.startData), screen);
     if (import.meta.env.DEV) this.hud.setSeed(this.seed);

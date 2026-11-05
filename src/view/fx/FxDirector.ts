@@ -2,9 +2,9 @@
 // 어떤 모드인지 모른다. GameScene이 BoardView의 onMatch / onActivate / onScore에 연결해 준다.
 
 import type Phaser from 'phaser';
-import { FX, THEME } from '../../config';
+import { COMBO, FX, THEME } from '../../config';
 import { cascadeMultiplier, groupBase } from '../../core/scoring';
-import type { Color, Pos, SpecialKind } from '../../core/types';
+import type { Color, ComboKind, Pos, SpecialKind } from '../../core/types';
 import { cellCenter, type Layout } from '../layout';
 import { FX_TEX, type Face } from '../theme/textures';
 import { fxLevel, particleCount } from './fxLevels';
@@ -106,6 +106,54 @@ export class FxDirector {
       const c = cellCenter(this.layout, p);
       this.stars.explode(FX.special.starsPerSparkle, c.x, c.y);
     }
+  }
+
+  /** 조합 이름 팝업 (PLAN2 3.3): 큰 글자가 톡 커졌다 자리잡고, nameMs가 끝나기 전에 위로 떠오르며 사라진다. 기다리게 하지 않는다 */
+  showComboName(name: string): void {
+    const { scene, layout } = this;
+    const s = COMBO.nameStyle;
+    const text = scene.add
+      .text(layout.x + layout.width / 2, layout.y + layout.height * s.yRatio, name, {
+        fontFamily: THEME.font,
+        fontSize: `${s.fontSize}px`,
+        color: THEME.title.fill,
+        stroke: THEME.title.stroke,
+        strokeThickness: s.strokeThickness,
+      })
+      .setOrigin(0.5)
+      .setDepth(PRAISE_DEPTH)
+      .setScale(0);
+    const fadeMs = Math.min(COMBO.nameMs / 3, 250);
+    scene.tweens.chain({
+      targets: text,
+      tweens: [
+        { scale: s.popScale, duration: s.popMs, ease: 'Back.easeOut' },
+        { scale: 1, duration: s.popMs / 2 },
+        {
+          y: text.y - s.rise,
+          alpha: 0,
+          delay: Math.max(0, COMBO.nameMs - s.popMs * 1.5 - fadeMs),
+          duration: fadeMs,
+          ease: 'Quad.easeIn',
+        },
+      ],
+      onComplete: () => text.destroy(),
+    });
+  }
+
+  /** 조합 제거 연출: at에서 퍼지는 원 + 터지는 칸마다 별 + 종류별 흔들림 (bombBomb은 호출이 두 번) */
+  playComboBlast(combo: ComboKind, at: Pos, cells: readonly Pos[]): void {
+    const burst = COMBO.burst[combo];
+    const { x, y } = cellCenter(this.layout, at);
+    this.ring(x, y, burst.ring * this.layout.cell);
+    const perCell = Math.min(burst.stars, Math.floor(FX.maxParticles / Math.max(1, cells.length)));
+    if (perCell > 0) {
+      for (const p of cells) {
+        const c = cellCenter(this.layout, p);
+        this.stars.explode(perCell, c.x, c.y);
+      }
+    }
+    this.shake(COMBO.shake[combo]);
   }
 
   /** 점수 팝업: 작게 시작해 톡 커졌다가, 위로 떠오르며 흐려지고 사라진다. 가로는 보드 안쪽에 맞춘다 */
