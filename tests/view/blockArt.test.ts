@@ -8,6 +8,7 @@ import {
   ensureTextures,
   specialKey,
 } from '../../src/view/theme/textures';
+import { THEMES } from '../../src/view/theme/themes';
 
 const COLORS: (Color | null)[] = [0, 1, 2, 3, 4, 5, null];
 const FACES = ['normal', 'squint', 'happy'] as const;
@@ -36,7 +37,7 @@ function fakeCtx(): { ctx: unknown; images: unknown[]; calls: string[] } {
 
 /** 로드에 성공한 그림 번호만 텍스처로 갖고 있는 가짜 scene */
 function fakeScene(loaded: number[]) {
-  const art = new Map(loaded.map((i) => [blockArtKey(i), { art: i }]));
+  const art = new Map(loaded.map((i) => [blockArtKey('storybook', i), { art: i }]));
   const baked = new Map<string, ReturnType<typeof fakeCtx>>();
   const createCanvas = vi.fn((key: string) => {
     const c = fakeCtx();
@@ -72,9 +73,12 @@ describe('view/theme/textures 몸통 그림', () => {
   });
 
   it('그림 키는 서로 다르고 구운 블록 키와 겹치지 않는다', () => {
-    const artKeys = DECOR.blockArt.map((_, i) => blockArtKey(i));
-    expect(new Set(artKeys).size).toBe(7);
-    const baked = COLORS.flatMap((c) => FACES.map((f) => blockKey(c, f)));
+    const artKeys = THEMES.flatMap((t) => t.blocks.map((_, i) => blockArtKey(t.id, i)));
+    expect(new Set(artKeys).size).toBe(7 * THEMES.length);
+    const baked = THEMES.flatMap((t) =>
+      COLORS.flatMap((c) => FACES.map((f) => blockKey(c, f, t.id))),
+    );
+    expect(new Set(baked).size).toBe(21 * THEMES.length);
     for (const k of artKeys) expect(baked).not.toContain(k);
   });
 });
@@ -118,6 +122,15 @@ describe('ensureTextures 그림/도형 분기', () => {
     const { scene, baked } = fakeScene([]);
     ensureTextures(scene);
     expect(usedArt(baked)).toEqual([false, false, false, false, false, false, false]);
+  });
+
+  it('테마마다 따로 굽는다: 다른 테마 그림은 쓰지 않는다', () => {
+    const { scene, baked } = fakeScene([0, 1, 2, 3, 4, 5, 6]); // storybook 그림만 있다
+    ensureTextures(scene, 'candy');
+    // candy 그림이 없어 도형으로 구웠고, 키에 테마가 들어 있다
+    expect(baked.has(blockKey(0, 'normal', 'candy'))).toBe(true);
+    expect(baked.has(blockKey(0, 'normal', 'storybook'))).toBe(false);
+    expect(baked.get(blockKey(0, 'normal', 'candy'))!.images).toEqual([]);
   });
 
   it('두 번 불러도 텍스처를 다시 만들지 않는다', () => {

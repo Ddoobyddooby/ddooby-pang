@@ -4,8 +4,9 @@
 // 몸통은 BootScene이 읽은 그림(W4-23, PLAN 6.16)을 쓰고, 그림을 못 읽은 색만 아래 SHAPES 도형으로 그린다.
 
 import type Phaser from 'phaser';
-import { DECOR, THEME } from '../../config';
+import { THEME } from '../../config';
 import type { Color, SpecialKind } from '../../core/types';
+import { getActiveThemeId, getTheme, type BlockArt, type ThemeId } from './themes';
 
 export type Face = 'normal' | 'squint' | 'happy';
 
@@ -17,8 +18,13 @@ const SPECIALS: readonly Exclude<SpecialKind, 'color'>[] = ['lineH', 'lineV', 'b
 
 export const FX_TEX = { heart: 'fx-heart', star: 'fx-star' } as const;
 
-export function blockKey(color: Color | null, face: Face): string {
-  return `block-${color ?? 'rainbow'}-${face}`;
+/** 블록 텍스처 키. 테마마다 따로 구우므로 테마 ID가 들어간다 (theme을 안 주면 지금 고른 테마) */
+export function blockKey(
+  color: Color | null,
+  face: Face,
+  theme: ThemeId = getActiveThemeId(),
+): string {
+  return `block-${theme}-${color ?? 'rainbow'}-${face}`;
 }
 
 export function specialKey(kind: Exclude<SpecialKind, 'color'>): string {
@@ -50,12 +56,12 @@ const FACE_PLACE: readonly { dy: number; scale: number }[] = [
   { dy: 4, scale: 0.72 },
 ];
 
-/** 몸통 그림 텍스처 키. BootScene이 DECOR.blockArt[index]를 이 키로 읽는다 */
-export function blockArtKey(index: number): string {
-  return `block-art-${index}`;
+/** 몸통 그림 텍스처 키. BootScene이 각 테마의 blocks[index]를 이 키로 읽는다 */
+export function blockArtKey(theme: ThemeId, index: number): string {
+  return `block-art-${theme}-${index}`;
 }
 
-/** 색 → 몸통 그림 번호 (DECOR.blockArt 순서). 무지개(컬러 블록)는 마지막 6번 */
+/** 색 → 몸통 그림 번호 (테마의 blocks 순서). 무지개(컬러 블록)는 마지막 6번 */
 export function blockArtIndex(color: Color | null): number {
   return color ?? 6;
 }
@@ -149,12 +155,17 @@ function paperFinish(ctx: Ctx, shape: Path2D): void {
 
 const PAPER_DOTS = 260;
 
-/** 그림 몸통 + 얼굴. 그림은 시안 좌표 100칸(-50~50)에 맞춰 DECOR.blockArt[n].scale만큼 키워 그린다 */
-function drawArtBlock(ctx: Ctx, art: CanvasImageSource, color: Color | null, face: Face): void {
-  const place = DECOR.blockArt[blockArtIndex(color)]!;
+/** 몸통 그림과 그 배치 (테마의 blocks[n]) */
+interface Art {
+  image: CanvasImageSource;
+  place: BlockArt;
+}
+
+/** 그림 몸통 + 얼굴. 그림은 시안 좌표 100칸(-50~50)에 맞춰 place.scale만큼 키워 그린다 */
+function drawArtBlock(ctx: Ctx, { image, place }: Art, face: Face): void {
   const half = 50 * place.scale;
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(art, -half, -half, half * 2, half * 2);
+  ctx.drawImage(image, -half, -half, half * 2, half * 2);
   ctx.save();
   ctx.translate(0, place.faceDy);
   ctx.scale(place.faceScale, place.faceScale);
@@ -162,9 +173,9 @@ function drawArtBlock(ctx: Ctx, art: CanvasImageSource, color: Color | null, fac
   ctx.restore();
 }
 
-function drawBlock(ctx: Ctx, color: Color | null, face: Face, art?: CanvasImageSource): void {
+function drawBlock(ctx: Ctx, color: Color | null, face: Face, art?: Art): void {
   if (art) {
-    drawArtBlock(ctx, art, color, face);
+    drawArtBlock(ctx, art, face);
     return;
   }
   ctx.lineWidth = 5;
@@ -278,20 +289,32 @@ function bake(scene: Phaser.Scene, key: string, size: number, draw: (ctx: Ctx) =
 }
 
 /** BootScene이 읽은 몸통 그림. 로드에 실패해 텍스처가 없으면 undefined (코드 도형으로 굽는다) */
-function artImage(scene: Phaser.Scene, color: Color | null): CanvasImageSource | undefined {
-  const key = blockArtKey(blockArtIndex(color));
+function artOf(scene: Phaser.Scene, themeId: ThemeId, color: Color | null): Art | undefined {
+  const index = blockArtIndex(color);
+  const key = blockArtKey(themeId, index);
   if (!scene.textures.exists(key)) return undefined;
-  return scene.textures.get(key).getSourceImage() as HTMLImageElement;
+  return {
+    image: scene.textures.get(key).getSourceImage() as HTMLImageElement,
+    place: getTheme(themeId).blocks[index]!,
+  };
 }
 
-export function ensureTextures(scene: Phaser.Scene): void {
+/** 한 테마의 블록 21장(7색 × 표정 3)을 굽는다. 이미 있으면 건너뛴다 */
+export function ensureBlockTextures(scene: Phaser.Scene, themeId: ThemeId): void {
   const colors: (Color | null)[] = [0, 1, 2, 3, 4, 5, null];
   for (const color of colors) {
-    const art = artImage(scene, color);
+    const art = artOf(scene, themeId, color);
     for (const face of FACES) {
-      bake(scene, blockKey(color, face), TEX_SIZE, (ctx) => drawBlock(ctx, color, face, art));
+      bake(scene, blockKey(color, face, themeId), TEX_SIZE, (ctx) =>
+        drawBlock(ctx, color, face, art),
+      );
     }
   }
+}
+
+/** 지금 고른 테마의 블록 + 특수 배지·파티클. 다른 테마 블록은 필요할 때 ensureBlockTextures로 굽는다 */
+export function ensureTextures(scene: Phaser.Scene, themeId: ThemeId = getActiveThemeId()): void {
+  ensureBlockTextures(scene, themeId);
   for (const kind of SPECIALS) {
     bake(scene, specialKey(kind), TEX_SIZE, (ctx) => drawSpecial(ctx, kind));
   }

@@ -19,7 +19,7 @@ import {
   scrollToCenter,
   type NodeState,
 } from '../view/mapLayout';
-import { Background } from '../view/theme/Background';
+import { addSceneBackground } from '../view/theme/sceneBackground';
 import { addHills } from '../view/theme/Hills';
 import { Sfx } from '../view/Sfx';
 import type { PressLock } from '../view/ui/Button';
@@ -53,7 +53,7 @@ export class StageMapScene extends Phaser.Scene {
     this.lock = { pressed: false };
     this.sfx = new Sfx(this);
 
-    new Background(this);
+    const art = addSceneBackground(this, width, height, { storybookArt: false, hills: false });
 
     const stages = getStages(this.registry).story;
     const save = getSave(this.registry);
@@ -63,7 +63,7 @@ export class StageMapScene extends Phaser.Scene {
     this.dragged = false;
     // 언덕(바닥 장식과 같은 깊이) 위에 길, 그 위에 노드. 묶음 안에서는 넣은 순서가 앞뒤
     this.content = this.add.container(0, 0).setDepth(-90);
-    this.content.add(addHills(this, width, worldHeight));
+    if (!art) this.content.add(addHills(this, width, worldHeight));
 
     this.drawPath(nodes);
     const views = nodes.map((p, i) =>

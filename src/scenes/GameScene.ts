@@ -29,7 +29,6 @@ import { HintTimer } from '../view/hintTimer';
 import { BoardInput } from '../view/input';
 import { createLayout, screenLayout, type Layout, type ScreenLayout } from '../view/layout';
 import { missionCardLines } from '../view/missionCardLines';
-import { addHills } from '../view/theme/Hills';
 import { addRoundButton, drawPauseIcon } from '../view/ui/RoundButton';
 import { applyModeResult } from '../storage/progress';
 import { commitSave, getSave } from './saveRegistry';
@@ -41,8 +40,7 @@ import type { StageDef } from '../data/stageSchema';
 import type { GameMode } from '../modes/GameMode';
 import { StoryMode } from '../modes/StoryMode';
 import { TimeAttackMode } from '../modes/TimeAttackMode';
-import { Background } from '../view/theme/Background';
-import { addStorybookBackground } from '../view/theme/StorybookBackground';
+import { addSceneBackground } from '../view/theme/sceneBackground';
 import { drawBoardFrame } from '../view/theme/BoardFrame';
 
 /** 개발 모드 키 → 발동 연출 미리보기 */
@@ -157,10 +155,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setScroll(-(width - GAME.width) / 2, 0); // 넓은 화면에서 가운데 맞춤
     const screen = screenLayout(height);
     const layout = createLayout(setting.rows, setting.cols, screen.board);
-    if (!addStorybookBackground(this, width, height)) {
-      new Background(this);
-      addHills(this, width, height);
-    }
+    addSceneBackground(this, width, height, { storybookArt: true, hills: true });
     drawBoardFrame(this, layout);
     const hooks: BoardViewHooks = {}; // FxDirector가 BoardView를 필요로 해서 알림 연결은 나중에 채운다
     this.view = new BoardView(this, this.state.board, layout, hooks);

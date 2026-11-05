@@ -10,6 +10,7 @@ import {
   recordTimeAttack,
   setMusic,
   setMuted,
+  setTheme,
   type KeyValueStore,
   type SaveData,
 } from '../../src/storage/progress';
@@ -60,7 +61,7 @@ describe('parseSave', () => {
       timeattack: { bestScore: 900 },
     };
     const save = parseSave(JSON.stringify(old));
-    expect(save.settings).toEqual({ muted: false, music: true });
+    expect(save.settings).toEqual({ muted: false, music: true, theme: 'storybook' });
     expect(save.story.unlocked).toBe(4);
     expect(save.timeattack.bestScore).toBe(900);
   });
@@ -78,7 +79,11 @@ describe('parseSave', () => {
 describe('settings.music (W4-13)', () => {
   it('music이 없는 저장값(W4-02~W4-12)은 켜짐으로 채우고 muted는 그대로', () => {
     const old = { ...defaultSave(), settings: { muted: true } };
-    expect(parseSave(JSON.stringify(old)).settings).toEqual({ muted: true, music: true });
+    expect(parseSave(JSON.stringify(old)).settings).toEqual({
+      muted: true,
+      music: true,
+      theme: 'storybook',
+    });
   });
 
   it('boolean이 아니면 켜짐', () => {
@@ -94,7 +99,7 @@ describe('settings.music (W4-13)', () => {
   it('setMusic은 음악만 바꾸고 원본·효과음 설정은 그대로', () => {
     const before = setMuted(defaultSave(), true);
     const after = setMusic(before, false);
-    expect(after.settings).toEqual({ muted: true, music: false });
+    expect(after.settings).toEqual({ muted: true, music: false, theme: 'storybook' });
     expect(before.settings.music).toBe(true);
     expect(after.story).toBe(before.story);
     expect(parseSave(JSON.stringify(after))).toEqual(after);
@@ -310,5 +315,46 @@ describe('continueUnlock (W4-27)', () => {
     const snapshot = JSON.stringify(save);
     continueUnlock(save, 30);
     expect(JSON.stringify(save)).toBe(snapshot);
+  });
+});
+
+describe('settings.theme (V2-W2-07)', () => {
+  const withTheme = (theme: unknown) =>
+    parseSave(JSON.stringify({ ...defaultSave(), settings: { muted: false, music: true, theme } }))
+      .settings.theme;
+
+  it('기본값은 storybook', () => {
+    expect(defaultSave().settings.theme).toBe('storybook');
+  });
+
+  it('theme이 없는 옛 저장값은 storybook으로 채우고 나머지 설정·기록은 그대로', () => {
+    const old = {
+      version: 1,
+      story: { unlocked: 4, bestStars: { 1: 3 }, bestScore: { 1: 2500 } },
+      timeattack: { bestScore: 900 },
+      settings: { muted: true, music: false },
+    };
+    const save = parseSave(JSON.stringify(old));
+    expect(save.version).toBe(1);
+    expect(save.settings).toEqual({ muted: true, music: false, theme: 'storybook' });
+    expect(save.story.unlocked).toBe(4);
+    expect(save.timeattack.bestScore).toBe(900);
+  });
+
+  it('등록된 테마 ID는 그대로, 모르는 값·다른 타입은 storybook', () => {
+    for (const id of ['storybook', 'candy', 'space', 'ocean']) expect(withTheme(id)).toBe(id);
+    expect(withTheme('princess')).toBe('storybook');
+    expect(withTheme('')).toBe('storybook');
+    expect(withTheme(2)).toBe('storybook');
+    expect(withTheme(null)).toBe('storybook');
+  });
+
+  it('setTheme은 테마만 바꾸고 원본은 그대로. 저장했다 읽어도 유지', () => {
+    const before = setMuted(defaultSave(), true);
+    const after = setTheme(before, 'ocean');
+    expect(after.settings).toEqual({ muted: true, music: true, theme: 'ocean' });
+    expect(before.settings.theme).toBe('storybook');
+    expect(after.story).toBe(before.story);
+    expect(parseSave(JSON.stringify(after))).toEqual(after);
   });
 });

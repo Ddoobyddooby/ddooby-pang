@@ -7,7 +7,7 @@ import { GAME, MUSIC, RESULT, THEME } from '../config';
 import type { ModeResult } from '../modes/GameMode';
 import { Music } from '../view/Music';
 import { Sfx } from '../view/Sfx';
-import { Background } from '../view/theme/Background';
+import { addSceneBackground } from '../view/theme/sceneBackground';
 import { addButton, type PressLock } from '../view/ui/Button';
 import { drawCreamPanel } from '../view/ui/Panel';
 import { musicFor } from './musicRules';
@@ -56,7 +56,7 @@ export class ResultScene extends Phaser.Scene {
     // 스토리는 성공/실패, 경쟁은 최고 기록 여부 (resultSounds)
     for (const name of resultSounds(this.result)) this.sfx.play(name);
 
-    new Background(this);
+    addSceneBackground(this, width, height, { storybookArt: false, hills: false });
     // 있는 줄만 고른 간격으로 쌓아 화면 가운데에 (resultLayout)
     const layout = resultLayout(view);
     const at = (row: ResultRow) => cy + (layout.rows[row] ?? 0);

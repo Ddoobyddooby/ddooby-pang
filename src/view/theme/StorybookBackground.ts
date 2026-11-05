@@ -1,11 +1,11 @@
-// 게임 화면 그림책 배경 (A안). 구름·별·언덕이 그림에 들어 있어 Background·addHills 대신 쓴다.
+// 테마 배경 그림 (그림책 A안·사탕·우주·바다). 구름·언덕 같은 장식이 그림에 들어 있어 Background·addHills 대신 쓴다.
 // 화면 폭에 맞춰 줄여 바닥에 붙이고, 화면이 그림보다 길면 장식 없는 가운데 띠만 늘린다.
 // 화면이 그림보다 짧으면(넓은 화면) 띠를 늘리지 않고 위쪽이 잘린다.
 
 import type Phaser from 'phaser';
-import { DECOR, GAME } from '../../config';
+import { GAME } from '../../config';
+import { backgroundKey, getActiveThemeId, getTheme, type ThemeId } from './themes';
 
-export const STORYBOOK_KEY = 'bg-storybook';
 const DEPTH = -100;
 
 export interface StorybookSlices {
@@ -35,17 +35,19 @@ export function storybookSlices(
 
 /**
  * screenWidth는 EXPAND로 넓어진 화면 폭 (카메라가 가운데 맞춤으로 밀어 둔 상태 기준).
- * 그림을 못 읽었으면 false (부르는 쪽이 코드로 그리는 하늘 장식으로 대신한다)
+ * 그림을 못 읽었으면 false (부르는 쪽이 코드로 그리는 하늘 장식으로 대신한다). 테마를 안 주면 지금 고른 테마
  */
-export function addStorybookBackground(
+export function addThemeBackground(
   scene: Phaser.Scene,
   screenWidth: number,
   screenHeight: number,
+  themeId: ThemeId = getActiveThemeId(),
 ): boolean {
-  if (!scene.textures.exists(STORYBOOK_KEY)) return false;
-  const tex = scene.textures.get(STORYBOOK_KEY);
+  const key = backgroundKey(themeId);
+  if (!scene.textures.exists(key)) return false;
+  const tex = scene.textures.get(key);
   const { width: w, height: h } = tex.getSourceImage() as HTMLImageElement;
-  const { band } = DECOR.storybook;
+  const { band } = getTheme(themeId).background;
   if (!tex.has('top')) {
     tex.add('top', 0, 0, 0, w, band.top);
     tex.add('band', 0, 0, band.top, w, band.bottom - band.top);
@@ -56,7 +58,7 @@ export function addStorybookBackground(
   const left = (GAME.width - width) / 2;
   const add = (frame: string, y: number, displayH: number): void => {
     scene.add
-      .image(left, y, STORYBOOK_KEY, frame)
+      .image(left, y, key, frame)
       .setOrigin(0)
       .setDisplaySize(width, displayH)
       .setDepth(DEPTH);

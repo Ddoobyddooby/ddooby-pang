@@ -12,8 +12,8 @@ import {
 import { Music, musicKey, musicUrls } from '../view/Music';
 import { Sfx, sfxKey, type SfxName } from '../view/Sfx';
 import { RIBBON_KEY } from '../view/Hud';
-import { STORYBOOK_KEY } from '../view/theme/StorybookBackground';
 import { blockArtKey } from '../view/theme/textures';
+import { backgroundKey, devTheme, setActiveTheme, THEMES } from '../view/theme/themes';
 import { registerBackButton } from './backButton';
 import { bootRoute, devUnlock } from './bootRoute';
 import { commitSave, getSave, putSave } from './saveRegistry';
@@ -36,10 +36,11 @@ export class BootScene extends Phaser.Scene {
     this.load.on('loaderror', (file: Phaser.Loader.File) =>
       console.warn('[boot] 파일 로드 실패, 없이 진행', file.key),
     );
-    // 게임 화면 그림책 배경. 실패하면 GameScene이 코드로 그리는 하늘 장식으로 대신한다
-    this.load.image(STORYBOOK_KEY, DECOR.storybook.url);
-    // 블록 몸통 그림 7장. 실패한 색은 textures.ts가 코드 도형으로 굽는다
-    DECOR.blockArt.forEach(({ url }, i) => this.load.image(blockArtKey(i), url));
+    // 모든 테마의 배경 1장 + 블록 몸통 7장. 배경이 실패하면 코드로 그리는 하늘 장식으로, 블록이 실패하면 코드 도형으로 대신한다
+    for (const theme of THEMES) {
+      this.load.image(backgroundKey(theme.id), theme.background.url);
+      theme.blocks.forEach(({ url }, i) => this.load.image(blockArtKey(theme.id, i), url));
+    }
     this.load.image(RIBBON_KEY, DECOR.ribbon.url); // 제목 리본. 실패하면 제목만
     for (const [name, { file }] of Object.entries(SOUND.effects)) {
       // [ogg, m4a]: Phaser가 이 브라우저가 재생할 수 있는 첫 형식을 고른다
@@ -109,6 +110,8 @@ export class BootScene extends Phaser.Scene {
       : new LocalStorageAdapter(store ?? { getItem: () => null, setItem: () => undefined });
     const save = await storage.load();
     putSave(this.registry, storage, save);
+    // 고른 테마. DEV ?theme=<id>는 저장하지 않고 이 판만 덮어쓴다
+    setActiveTheme(devTheme(window.location.search, import.meta.env.DEV) ?? save.settings.theme);
     new Sfx(this).setMuted(save.settings.muted); // 효과음 끔 (모든 씬이 따른다)
     Music.of(this.game).setEnabled(save.settings.music);
   }

@@ -2,6 +2,7 @@
 // localStorage와 Capacitor Preferences는 BootScene이 같은 모양의 객체로 넘겨준다.
 
 import { SAVE } from '../config';
+import { DEFAULT_THEME, parseThemeId, type ThemeId } from '../data/themeIds';
 import type { ModeResult } from '../modes/GameMode';
 
 export type Stars = 0 | 1 | 2 | 3;
@@ -12,9 +13,10 @@ export interface SaveData {
   timeattack: { bestScore: number };
   /**
    * 옛 저장값에는 없거나 일부만 있다. parseSave가 기본값으로 채운다 (version은 1 그대로).
-   * muted = 효과음 끔 (W4-02, W4-13부터 효과음만), music = 배경 음악 켬 (W4-13)
+   * muted = 효과음 끔 (W4-02, W4-13부터 효과음만), music = 배경 음악 켬 (W4-13),
+   * theme = 고른 테마 (V2-W2-07, 없거나 모르는 값이면 storybook)
    */
-  settings: { muted: boolean; music: boolean };
+  settings: { muted: boolean; music: boolean; theme: ThemeId };
 }
 
 /** DOM의 Storage와 겹치지 않게 SaveStorage. Capacitor Preferences(비동기)도 같은 모양으로 붙인다 */
@@ -34,7 +36,7 @@ export function defaultSave(): SaveData {
     version: 1,
     story: { unlocked: 1, bestStars: {}, bestScore: {} },
     timeattack: { bestScore: 0 },
-    settings: { muted: false, music: true },
+    settings: { muted: false, music: true, theme: DEFAULT_THEME },
   };
 }
 
@@ -84,6 +86,7 @@ export function parseSave(json: string | null): SaveData {
   const settings = isRecord(raw.settings) ? raw.settings : {};
   if (typeof settings.muted === 'boolean') save.settings.muted = settings.muted;
   if (typeof settings.music === 'boolean') save.settings.music = settings.music;
+  save.settings.theme = parseThemeId(settings.theme);
   return save;
 }
 
@@ -95,6 +98,11 @@ export function setMuted(save: SaveData, muted: boolean): SaveData {
 /** 배경 음악 켜고 끄기. 원본은 바꾸지 않는다 */
 export function setMusic(save: SaveData, music: boolean): SaveData {
   return { ...save, settings: { ...save.settings, music } };
+}
+
+/** 테마를 바꾼다. 원본은 바꾸지 않는다 */
+export function setTheme(save: SaveData, theme: ThemeId): SaveData {
+  return { ...save, settings: { ...save.settings, theme } };
 }
 
 /** 최고 점수는 큰 값만 남긴다. 원본은 바꾸지 않는다 */

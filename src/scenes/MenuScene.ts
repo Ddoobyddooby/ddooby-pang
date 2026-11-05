@@ -5,16 +5,25 @@ import Phaser from 'phaser';
 import { GAME, MENU, THEME } from '../config';
 import type { Color } from '../core/types';
 import { addButton, type PressLock } from '../view/ui/Button';
-import { Background } from '../view/theme/Background';
-import { addHills } from '../view/theme/Hills';
+import { addSceneBackground } from '../view/theme/sceneBackground';
 import { blockKey, ensureTextures } from '../view/theme/textures';
+import { getActiveThemeId, getTheme, setActiveTheme, type ThemeId } from '../view/theme/themes';
+import { openThemePicker } from '../view/ThemePicker';
+import { setTheme } from '../storage/progress';
 import { storyLabel, storyProgress, timeAttackLabel } from './menuText';
 import { Music } from '../view/Music';
 import { musicFor } from './musicRules';
 import { addSceneMusicButton, addSceneMuteButton } from './muteToggle';
-import { getSave } from './saveRegistry';
+import { commitSave, getSave } from './saveRegistry';
 import type { GameData } from './sceneData';
 import { getStages } from './stageRegistry';
+
+/** 테마 버튼 (MENU와 같은 방식, 2주차 config.ts는 장애물 태스크만 고쳐서 여기 둔다) */
+const THEME_BUTTON = {
+  text: '테마',
+  dy: 345,
+  button: { width: 340, height: 110, fontSize: 44, subFontSize: 26 },
+} as const;
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -27,8 +36,7 @@ export class MenuScene extends Phaser.Scene {
     const cx = GAME.width / 2;
     const cy = height / 2;
 
-    new Background(this);
-    addHills(this, width, height);
+    addSceneBackground(this, width, height, { storybookArt: false, hills: true });
 
     this.add
       .text(cx, cy + MENU.title.dy, MENU.title.text, {
@@ -66,6 +74,32 @@ export class MenuScene extends Phaser.Scene {
       () => this.scene.start('Game', { mode: 'timeattack' } satisfies GameData),
       lock,
     );
+    this.addThemeButton(cx, cy + THEME_BUTTON.dy);
+  }
+
+  /** 테마 버튼: 지금 테마 이름을 작게 보여 주고, 누르면 고르기 창. 고르면 저장하고 메뉴를 다시 그린다 */
+  private addThemeButton(cx: number, y: number): void {
+    const themeLock: PressLock = { pressed: false };
+    addButton(
+      this,
+      cx,
+      y,
+      { ...THEME_BUTTON.button, label: THEME_BUTTON.text, sub: getTheme(getActiveThemeId()).name },
+      () =>
+        openThemePicker(
+          this,
+          getActiveThemeId(),
+          (id) => this.pickTheme(id),
+          () => (themeLock.pressed = false),
+        ),
+      themeLock,
+    );
+  }
+
+  private pickTheme(id: ThemeId): void {
+    commitSave(this.registry, setTheme(getSave(this.registry), id));
+    setActiveTheme(id);
+    this.scene.restart();
   }
 
   /** 말랑 친구들 5개가 번갈아 통통 튄다 (블록 텍스처의 평소 얼굴) */
