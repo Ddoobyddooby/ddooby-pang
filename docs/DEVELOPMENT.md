@@ -597,8 +597,15 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
    - 3행: 메가 폭발(폭탄 + 폭탄), 슈퍼 콤보(슈퍼 + 특수)
    - 5행: 줄줄이 팡(무지개 + 줄), 폭탄 비(무지개 + 폭탄)
    - 7행: 슈퍼 콤보(무지개 + 슈퍼), 올 클리어(무지개 + 무지개)
-3. 색이 다른 특수 블록 둘도 바뀌면서 터지고 이동이 1 줄어든다. 아직 연출은 없고 범위만 지워진다 (연출은 V2-W1-02). 쌍이 가까워 이웃 쌍까지 연쇄로 터질 수 있다
+3. 색이 다른 특수 블록 둘도 바뀌면서 터지고 이동이 1 줄어든다. 쌍이 가까워 이웃 쌍까지 연쇄로 터질 수 있다 (연출은 V2-W1-02)
 4. 개발자 도구 콘솔에 `view ≠ board` 오류가 없다
+
+### V2-W1-02 특수 블록 조합 연출
+1. `npm run dev` → `http://localhost:5173/?specials=pairs`. 조합마다 새로고침하고 각 행 왼쪽 블록을 오른쪽으로 끈다
+2. 두 블록이 한 칸으로 모이고 → 천천히 커지고 → 큰 이름(크로스!, 메가 폭발! …)이 뜬 **뒤에야** 블록이 터진다. 터질 때 별·원·흔들림과 조합 소리(`combo`)가 난다
+3. 폭탄 + 폭탄(3행 왼쪽)은 쾅 소리가 두 번
+4. 무지개 조합(5·7행)은 오른쪽 블록을 왼쪽 무지개로도 끌어 본다. 모이는 곳과 폭발 원이 무지개 칸이고, 블록이 변신한 뒤에 터진다
+5. 소리 크기와 느낌을 들어 본다 (합성음, `public/audio/combo.*`, `SOUND.effects.combo` 볼륨 0.55)
 
 ## 5. 문제 해결
 
@@ -1101,3 +1108,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **`satisfies Record<ComboKind, …>`**: 설정 객체가 8가지 조합 키를 모두 갖는지 컴파일 때 검사하면서 값의 구체 타입은 유지한다 (`src/config.ts`의 `COMBO`)
 - **BFS 연쇄 발동**: `chainActivate`의 `activated`(이미 터진 칸, 다시 안 터짐)와 `depth`(차례) 인자로 조합한 두 블록은 빼고 범위 안 특수 블록만 차례 1부터 퍼뜨린다 (`src/core/specials.ts`)
 - **규칙이 바뀌면 "가능한 수"도 같이**: 특수 블록 둘 스왑이 유효해졌으니 `isValidSwap`도 그 쌍을 가능한 수로 센다. 안 그러면 조합만 남은 보드를 "수 없음"으로 보고 셔플해 버린다 (`src/core/moves.ts`)
+
+### V2-W1-02 특수 블록 조합 연출
+- **연출 시간표를 순수 함수로**: 언제 무엇을 터뜨릴지(`comboPrepMs`, `comboBlast`, `comboCenter`)를 Phaser 없이 계산하면 가상 시계 테스트가 쉽다 (`src/view/fx/comboTimeline.ts`)
+- **await로 step 순서 지키기**: `runSteps`가 step마다 기다리므로 조합 준비 Promise가 끝나기 전엔 다음 step(제거)이 시작되지 않는다 (`src/view/BoardView.ts`)
+- **가짜 scene으로 실제 경로 테스트**: 트윈·delayedCall을 가상 시계로 흘려 `BoardView.play`를 그대로 돌리고, "일부러 기다리지 않게" 바꿨을 때 테스트가 실패하는지 확인했다 (mutation 확인) (`tests/view/boardViewCombo.test.ts`)
+- **훅으로 역할 나누기**: 보드 연출은 view, 소리는 scene이 `BoardViewHooks.onComboName`·`onComboBlast`로 받는다
+- **트윈을 Promise로**: `tween.ts`로 감싸 `await` 가능한 연출을 만든다
+- **소리 합성**: 무료 소리가 없을 때 짧은 효과음을 스크립트로 만든다 (`scripts/make-combo-sound.py` → ogg + m4a)
