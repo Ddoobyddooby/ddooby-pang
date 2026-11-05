@@ -28,3 +28,6 @@ android/local.properties
 
 # Codex 탭 결과 (WORKFLOW 8.5)
 .codex-out/
+
+# V2-W2-08 core 공유 PoC 결과 (scripts/server-poc/out/)
+scripts/server-poc/out/
