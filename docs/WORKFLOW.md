@@ -15,7 +15,7 @@
 ## 2. 역할 (나눠서 할 때)
 
 - **메인 세션**: 사용자와 설계·컨셉·방향을 정한다. SPEC / PLAN / TASKS / 설계 문서(`docs/superpowers/`)를 쓴다. 코딩 탭에 작업 지시서를 보내고, 결과를 검토하고, `docs/DEVELOPMENT.md` 4·6절과 `TASKS.md` 체크를 반영한다. **제품 코드는 직접 고치지 않는다**
-- **코딩 탭**: 받은 지시서대로 코드·테스트를 쓰고 커밋·push한다. `docs/`, `CLAUDE.md`, `AGENTS.md`는 고치지 않는다 (지시서에 적힌 경우만 예외)
+- **코딩 탭**: 받은 지시서대로 코드·테스트를 쓰고 자기 브랜치에 커밋한다. 리뷰 통과 뒤 메인의 지시를 받고 main에 반영·push한다. `docs/`, `CLAUDE.md`, `AGENTS.md`는 고치지 않는다 (지시서에 적힌 경우만 예외)
 - 두 코딩 탭이 같은 파일을 동시에 고치지 않게 메인이 작업을 나눈다
 
 ## 3. 코딩 탭 찾기
@@ -35,7 +35,7 @@
 2. **작업 폴더·브랜치·포트**: 아래 5절
 3. **할 일**: 파일, 함수 이름·시그니처, config에 둘 값. 건드리지 말 곳(`src/core` 등)
 4. **확인**: `npm run lint && npm run typecheck && npm test && npm run build`, 브라우저 확인 항목(`?demo`, `?seed=N`, DEV 키), DEV `view ≠ board` 에러 0
-5. **커밋·push**: 커밋 메시지, push 여부 (지시서에 있으면 해도 된다, `CLAUDE.md` Git 절)
+5. **커밋·반영**: 커밋 메시지, 리뷰 통과 뒤 main 반영 절차 (`CLAUDE.md` "작업 위임 흐름")
 6. **보고 내용**: 바뀐 값, 커밋 해시, 스크린샷 경로, 사용자 확인 절차, 공부 포인트(메인이 6절에 옮긴다)
 
 ## 5. 코딩 탭의 Git 흐름
@@ -43,29 +43,33 @@
 메인 폴더는 `main`을 쓰고 사용자의 dev 서버(5173)가 떠 있을 수 있다. 코딩 탭은 **자기 worktree**에서 일한다.
 
 ```bash
-# 처음 한 번 (메인 폴더에서)
-git worktree add ../ddooby-pang-A -b feat/w2-08-scoring origin/main
+# 처음 한 번 (메인 폴더에서; 현재 태스크 예시)
+git worktree add ../ddooby-pang-A -b feat/v2-w1-01-combo-core origin/main
 
-# 태스크마다 (worktree 안에서)
-git fetch origin && git switch -C feat/<태스크ID>-<요약> origin/main
-# … 작업 → 커밋
+# 구현 탭: 작업·검증 → 자기 브랜치에 커밋 → 메인에 커밋 해시 보고
+# 메인: diff·완료 기준 확인 → Codex 읽기 전용 리뷰 → 지적 수정·재리뷰
+
+# 리뷰 통과 후 메인의 반영 지시를 받은 구현 탭만 실행
 git fetch origin && git rebase origin/main
 npm run lint && npm run typecheck && npm test && npm run build
 git push origin HEAD:main
+
+# 다음 태스크 시작 시 (worktree 안에서, main 반영을 확인한 뒤; 예시)
+git fetch origin && git switch -c feat/v2-w1-02-combo-view origin/main
 ```
 
-- worktree에서는 `main`을 체크아웃할 수 없어서(메인 폴더가 쓰는 중) `CLAUDE.md`의 "main에 병합 → push" 대신 rebase 후 `HEAD:main`으로 push한다. 결과는 같다
+- worktree에서는 `main`을 체크아웃할 수 없어서(메인 폴더가 쓰는 중) 리뷰 통과 후 rebase하고 `HEAD:main`으로 push한다
 - dev 서버 포트: 탭 A `5174`, 탭 B `5175`. 5173은 사용자 것이라 끄지 않는다
 - 브라우저 자동화(Playwright)는 프로필을 같이 쓴다. 확인이 끝나면 브라우저를 닫는다
 - 일이 끝나면 메인이 worktree와 브랜치를 지운다: `git worktree remove ../ddooby-pang-A && git branch -D <브랜치>`
 
 ## 6. 메인의 검토
 
-1. `git pull` → `npm run lint && npm run typecheck && npm test && npm run build`
-2. 보고의 스크린샷을 보고, 설계 문서·`CLAUDE.md` 아키텍처 규칙과 맞는지 diff를 확인한다
-3. 8.2의 Codex 리뷰를 돌릴 태스크면 돌리고 결과를 거른다
-4. `TASKS.md` 체크, `DEVELOPMENT.md` 4절(확인 방법)·6절(Study for App) 추가 → `[docs]` 커밋·push
-5. 사용자에게 무엇이 바뀌었고 무엇을 직접 확인하면 되는지 알린다
+1. 구현 탭의 커밋 해시·스크린샷을 받고, diff를 설계 문서·`CLAUDE.md` 아키텍처 규칙·완료 기준과 대조한다
+2. 8.2에 따라 Codex 읽기 전용 리뷰를 요청하고, 고칠 지적은 구현 탭에 되돌린다
+3. 리뷰 통과 뒤 구현 탭에 rebase → lint·typecheck·test·build → `HEAD:main` push를 지시한다
+4. 메인에서 반영 결과를 확인하고, `TASKS.md` 체크·`DEVELOPMENT.md` 4절(확인 방법)·6절(Study for App)을 추가한다
+5. 사용자에게 변경 사항과 직접 확인 방법을 보고한다
 
 ## 7. 모델 고르기
 

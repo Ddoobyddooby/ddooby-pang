@@ -52,20 +52,22 @@
 ### 3.2 core 타입·이벤트
 
 - `types.ts`: `export type ComboKind = 'lineLine' | 'lineBomb' | 'bombBomb' | 'colorLine' | 'colorBomb' | 'colorSuper' | 'colorColor' | 'superAny'`
-- 새 이벤트 (조합 첫 step 맨 앞, `swap` 다음 step):
+- 새 이벤트 (`swap` 다음의 **독립된 step**에 하나만 둔다):
 
   ```ts
   { type: 'combo'; combo: ComboKind; at: Pos; partner: Pos; cleared: readonly Pos[] }
   ```
 
-  `cleared`는 조합 자체 범위다. `colorLine`·`colorBomb`·`colorSuper`·`colorColor`는 v0.1처럼 `activate`(컬러)·`transform`·차례 `activate`가 뒤따르고, `combo.cleared`는 컬러 효과 범위와 같다. 나머지 4개(`lineLine`·`lineBomb`·`bombBomb`·`superAny`)는 `combo` 하나가 범위를 맡고, 휘말린 특수 블록만 `activate`(depth ≥ 1)로 나온다
+  `steps` 순서는 `[swap] → [combo] → [match, transform?, activate*, remove, create*, score] → [fall, refill]`이다. `BoardView.play`는 한 step의 이벤트를 `Promise.all`로 동시에 시작하므로, `combo`와 `remove`를 같은 step에 넣어서는 안 된다. `combo` step이 끝난 뒤 다음 step을 시작하면 모이기·슬로모션·이름 팝업이 제거보다 먼저 끝난다
+  `cleared`는 **조합이 직접 겨냥한 칸**(조합한 두 칸 포함, 행 우선·중복 없음)이다. 컬러 조합에서는 컬러의 최초 대상 칸만 담고, 변신한 블록이나 휘말린 특수 블록의 후속 발동 범위는 담지 않는다. `colorLine`·`colorBomb`·`colorSuper`·`colorColor`의 계산 결과는 v0.1 그대로 두고, 뒤 step에 기존 `activate`(컬러)·`transform`·차례 `activate`를 낸다. 나머지 4개(`lineLine`·`lineBomb`·`bombBomb`·`superAny`)는 `combo.cleared`가 직접 제거 범위를 맡고, 휘말린 특수 블록만 `activate`(depth ≥ 1)로 나온다
+- V2-W1-01에서는 `BoardView.playEvent`에 `combo`를 기다림 없는 no-op으로 처리해 타입 검사와 기존 보드 대조를 유지한다. V2-W1-02에서 이 분기를 실제 준비 연출로 교체한다. core 이벤트에는 시간 값을 넣지 않는다
 - `engine.ts`: `Trigger`에 `{ kind: 'combo'; at; partner }` 추가. `specials.ts`: `comboKind(x, y)`, `comboArea(kind, at, board, partnerBlock)` 순수 함수
 - `remove` 이벤트의 `bySpecial`은 조합 범위도 true
 - DEV 대조(`view ↔ board`)와 `assertInvariants`는 그대로 통과해야 한다
 
 ### 3.3 연출 (view)
 
-- `combo` 이벤트를 받으면 순서대로: 두 블록이 `at`으로 모이는 모션 → 짧은 슬로모션(0.2~0.3초) → 조합 이름 팝업 → 범위 제거 + 파티클 + 흔들림 → 뒤따르는 `activate`는 v0.1 차례 연출 그대로
+- `combo` step에서 두 블록이 `at`으로 모이는 모션 → 짧은 슬로모션(0.2~0.3초) → 조합 이름 팝업을 마친다. **다음 step**에서 범위 제거 + 파티클 + 흔들림을 시작하고, 뒤따르는 `activate`는 v0.1 차례 연출 그대로 재생한다. 컬러 조합의 `transform`은 준비 연출이 끝난 뒤 기존 지연 규칙을 따른다
 - 흔들림: `lineLine` 약하게 … `colorColor` 가장 세게. `bombBomb`은 폭발 연출 두 번 (두 번째는 짧게 뒤에)
 - 연출 중 입력은 지금처럼 resolve 재생 동안 막힌다
 - 값은 `config.ts`의 `COMBO` 한 곳: 이름 문자열, `mergeMs`, `slowMs`, `nameMs`, 종류별 흔들림 세기, `bombBombSecondMs`
@@ -74,10 +76,10 @@
 
 ### 3.4 테스트
 
-- `tests/core/combo.test.ts`: 8개 범주마다 고정 보드 → 지워진 칸 집합, `combo` 이벤트 필드, 연쇄 발동 depth, 서로 다른 색 두 특수 블록 스왑이 `valid`인지
+- `tests/core/combo.test.ts`: 8개 범주마다 고정 보드 → 지워진 칸 집합, `combo` 이벤트 필드·독립 step 순서, 연쇄 발동 depth, 서로 다른 색 두 특수 블록 스왑이 `valid`인지. `a→b`와 `b→a`를 모두 확인하고, 슈퍼 + 가로·세로줄은 어느 쪽을 끌어도 상대 방향이 맞는지 본다. 모서리에서 범위가 잘리는 경우, 조합한 두 블록의 재발동 방지, 이동 1회 소모도 확인한다
 - 회귀: 한쪽만 특수인 스왑, 일반 매치, `?specials=combo`의 기존 컬러 + 줄·폭탄 결과가 v0.1과 같음 (컬러 + 슈퍼 포함)
 - 결정성: 같은 seed + 같은 스왑 목록 → 같은 점수·보드 (기존 결정성 테스트에 조합 스왑 섞기)
-- view: 이벤트 → 연출 단계 목록을 만드는 순수 함수가 있으면 단위 테스트. 브라우저 390×844 `?specials=pairs`로 8개 캡처
+- view: `combo` step이 끝나기 전에는 `remove`·`transform`·연쇄 `activate`가 시작되지 않는지 검증한다. 이벤트 → 연출 단계 목록을 만드는 순수 함수가 있으면 단위 테스트하고, 브라우저 390×844 `?specials=pairs`로 8개 캡처
 
 ## 4. 테마 (1~2주차)
 
@@ -102,8 +104,8 @@
 
 ## 5. 2~4주차 큰 틀 (자세한 설계는 그 주 시작 전에)
 
-- **2주차 장애물**: Board 칸에 장애물 층(잠금·얼음벽·젤리) 추가, `layout`·`layers` 파서, 수직 낙하에서 얼음벽 고정 칸·그 아래 리필 지점 (SPEC 4.2). 이벤트 추가(`obstacleHit`, `obstacleClear` 등). v0.1 스테이지 하위 호환 테스트
-- **3주차 온라인**: 시작 전에 core 공유 PoC (SPEC 11절 1번, 5번). `src/online/`에 인증·랭킹만. Supabase 마이그레이션 `supabase/migrations/`
+- **2주차 장애물**: `layout`·`layers` 파서와 Board 표현 → 잠금 → 얼음벽 낙하·리필 → 젤리·새 미션 → 연출로 나눈다 (SPEC 4.2). 이벤트 추가(`obstacleHit`, `obstacleClear` 등). v0.1 스테이지 하위 호환 테스트. **2주차가 끝나기 전에** core 공유 방식과 경쟁 모드 시간 검증 기준 PoC를 마친다 (SPEC 11절 1·5번)
+- **3주차 온라인**: PoC에서 정한 방식을 사용한다. `src/online/`에 인증·랭킹 클라이언트를 모으고, Supabase 마이그레이션은 `supabase/migrations/`에 둔다
 - **4주차 재조정**: 1~30 데이터(이동·장애물·색), `npm run stages:sim`에 장애물 반영, **별 3개 기준 상향 (FEEDBACK R6)**, 플레이 로그 → 조카 2차 테스트
 
 ## 6. 리스크
