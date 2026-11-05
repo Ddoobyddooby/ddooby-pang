@@ -626,6 +626,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 2. `npm run dev` → `?obstacles&demo`. 콘솔에 `view ≠ board`가 없고, 콘솔에서 `__ddooby.state().board.layers.filter(l=>l?.lock).length`가 수를 둘수록 줄어든다 (잠금 그림은 V2-W2-05)
 3. 잠긴 블록은 떨어지지 않고, 그 아래 칸은 잠긴 블록 바로 밑에서 새 블록이 채워진다 (지금은 위에서 떨어지는 연출, 바른 연출은 V2-W2-05)
 
+### V2-W2-03 얼음벽
+1. `npm test` → `tests/core/frost.test.ts` 포함 전체 통과
+2. `npm run dev` → `?obstacles&demo`. 콘솔에서 `__ddooby.state().board.layers`의 `frost` 값이 수마다 1씩 줄고, 0이 되면 그 칸(`cells[i]`)에 블록이 채워진다. 남은 얼음 칸만 비어 있다 (얼음 그림은 V2-W2-05)
+3. 규칙: 바로 옆(상하좌우) 블록이 **매치로** 터지거나 얼음 칸이 특수 범위에 들면 1겹. 한 번에 최대 1겹. 특수 효과로 지워진 블록의 옆, 잠금만 풀린 옆은 피해 없음
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -1156,3 +1161,9 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **제거하지 않는 피해를 이벤트로**: 잠금 해제는 블록을 지우지 않고 칸 상태만 바꾸므로 `remove`가 아니라 `obstacle` 이벤트로 알린다 (`src/core/engine.ts`, `types.ts`)
 - **RNG 소비 순서 지키기**: 구간 처리를 넣어도 리필이 RNG를 쓰는 칸 순서를 그대로 두어 장애물 없는 판은 v0.1과 결과가 같다 (`gravity.ts` refill)
 - **특수 생성 칸 다시 고르기**: 생성 칸이 잠겼으면 잠기지 않은 칸 중에서 고른다 (`src/core/specials.ts` `unlockedSpecialPosition`)
+
+### V2-W2-03 얼음벽
+- **이웃 칸 탐색**: 상하좌우 오프셋으로 매치로 지워진 블록 옆의 얼음을 찾는다 (`src/core/engine.ts`)
+- **Set으로 step당 한 번**: 여러 이유로 같은 칸이 걸려도 한 번만 깎는다
+- **층의 불변 갱신**: `layers.slice()`로 복사해 바꾼다 (core 상태 불변 규칙)
+- **고정 칸이 사라지면 구간 병합**: 얼음이 깨진 칸은 같은 resolve의 낙하에서 더는 고정 칸이 아니다 (`gravity.ts`)
