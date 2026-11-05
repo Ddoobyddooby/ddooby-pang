@@ -106,7 +106,9 @@ function goal(
   layers: readonly (CellLayer | null)[] | undefined,
 ): Goal {
   const o = object(raw, path);
-  const has = (kind: ObstacleKind) => layers?.some((l) => l?.[kind] !== undefined) ?? false;
+  const cellsWith = (kind: ObstacleKind) =>
+    layers?.filter((l) => l?.[kind] !== undefined).length ?? 0;
+  const has = (kind: ObstacleKind) => cellsWith(kind) > 0;
   if (o.type === 'score') return { type: 'score', target: int(o, 'target', path, 1) };
   if (o.type === 'clearJelly') {
     if (!has('jelly')) throw new StageError(`${path}.type`, 'layout에 젤리가 있어야 한다');
@@ -120,7 +122,12 @@ function goal(
     if (!has(obstacle)) {
       throw new StageError(`${path}.obstacle`, `layout에 ${obstacle}가 있어야 한다`);
     }
-    return { type: 'clearObstacle', obstacle, count: int(o, 'count', path, 1) };
+    // 장애물은 새로 생기지 않으므로 처음 칸 수가 상한이다
+    return {
+      type: 'clearObstacle',
+      obstacle,
+      count: int(o, 'count', path, 1, cellsWith(obstacle)),
+    };
   }
   if (o.type === 'collect') {
     const color = typeof o.color === 'string' ? colorFromName(o.color) : null;
@@ -162,7 +169,10 @@ function addObstacle(layer: CellLayer, raw: unknown, path: string): CellLayer {
     throw new StageError(`${path}.type`, `${OBSTACLE_KINDS.join(', ')} 중 하나여야 한다`);
   }
   if (layer[type] !== undefined) throw new StageError(`${path}.type`, `${type}가 두 번 있다`);
-  if (type === 'lock') return { ...layer, lock: true };
+  if (type === 'lock') {
+    if (o.hp !== undefined) throw new StageError(`${path}.hp`, '잠금에는 hp가 없다');
+    return { ...layer, lock: true };
+  }
   if (type === 'frost') return { ...layer, frost: int(o, 'hp', path, 1, 3) as 1 | 2 | 3 };
   return { ...layer, jelly: int(o, 'hp', path, 1, 2) as 1 | 2 };
 }

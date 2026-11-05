@@ -36,14 +36,13 @@ import { commitSave, getSave } from './saveRegistry';
 import { musicFor } from './musicRules';
 import { canPause } from './pauseRules';
 import type { GameData, PauseData } from './sceneData';
-import { getStages } from './stageRegistry';
+import { getDevStage, getStages } from './stageRegistry';
 import type { StageDef } from '../data/stageSchema';
 import type { GameMode } from '../modes/GameMode';
 import { StoryMode } from '../modes/StoryMode';
 import { TimeAttackMode } from '../modes/TimeAttackMode';
 import { addSceneBackground } from '../view/theme/sceneBackground';
 import { drawBoardFrame } from '../view/theme/BoardFrame';
-import { obstacleStage } from '../dev/obstacleStage';
 
 /** 개발 모드 키 → 발동 연출 미리보기 */
 const SPECIAL_PREVIEW_KEYS: Record<string, SpecialKind> = {
@@ -114,10 +113,10 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     const params = new URLSearchParams(window.location.search);
     const stages = getStages(this.registry);
-    this.devStage =
-      import.meta.env.DEV && this.startData.mode === 'story' && params.has('obstacles');
-    const stage = this.devStage
-      ? obstacleStage()
+    const devStage = this.startData.mode === 'story' ? getDevStage(this.registry) : undefined;
+    this.devStage = devStage !== undefined;
+    const stage = devStage
+      ? devStage
       : this.startData.mode === 'story'
         ? stages.story[this.startData.stageId - 1]
         : undefined;

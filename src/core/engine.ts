@@ -1,7 +1,16 @@
 // 처리 루프 (PLAN 4.3): 스왑 → 매치 → 제거 → 점수 → 낙하 → 리필 → (연쇄 반복) → 수 없으면 셔플
 
 import { BOARD, SPECIAL, TIMEATTACK } from '../config';
-import { getBlock, indexOf, inBounds, isAdjacent, posOf, samePos, swapBlocks } from './board';
+import {
+  getBlock,
+  indexOf,
+  inBounds,
+  isAdjacent,
+  isMovable,
+  posOf,
+  samePos,
+  swapBlocks,
+} from './board';
 import { applyGravity, refill } from './gravity';
 import { findMatches } from './matcher';
 import { createPlayableBoard, hasAnyMove, shuffle } from './moves';
@@ -115,7 +124,8 @@ export function resolveSwap(
 ): ResolveResult {
   const start = state.board;
   if (!inBounds(start, a) || !inBounds(start, b) || !isAdjacent(a, b)) return invalid(state, []);
-  if (!getBlock(start, a) || !getBlock(start, b)) return invalid(state, []);
+  // 빈칸·얼음벽 칸·잠긴 블록은 움직일 수 없다: 칸 밖 입력처럼 이벤트 없이 무효 (PLAN2 5.2, isValidSwap과 같은 조건)
+  if (!isMovable(start, a) || !isMovable(start, b)) return invalid(state, []);
 
   const board = swapBlocks(start, a, b);
   // 컬러 블록 스왑은 매치 없이 바로 발동한다. 둘 다 컬러면 끌어온 쪽(a의 블록, 지금 b 칸)

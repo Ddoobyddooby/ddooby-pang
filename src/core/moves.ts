@@ -84,7 +84,7 @@ export function createPlayableBoard(
 /**
  * 블록 위치를 Fisher-Yates로 섞는다 (특수 블록 포함, 빈칸은 그대로).
  * 잠긴 블록과 얼음벽 칸은 그 자리에 두고 움직일 수 있는 블록만 섞는다 (PLAN2 5.2).
- * 매치 0 + 가능한 수 ≥ 1이 될 때까지 반복하고, 상한을 넘으면 일반 블록으로 새로 만든다 (층은 그대로).
+ * 매치 0 + 가능한 수 ≥ 1이 될 때까지 반복하고, 상한을 넘으면 regenerate로 새로 만든다.
  */
 export function shuffle(
   board: Board,
@@ -107,12 +107,28 @@ export function shuffle(
     if (isPlayable(candidate)) return { board: candidate, event: toShuffleEvent(candidate), rng };
   }
 
-  // 상한 초과: 일반 블록으로 새 보드 (id는 이어서 발급)
-  let fresh: Board;
-  [fresh, rng] = createPlayableBoard(board.rows, board.cols, colors, rng, board.layers);
-  const cells = fresh.cells.map((b) => b && { ...b, id: board.nextId + b.id - 1 });
-  const regenerated: Board = { ...board, cells, nextId: board.nextId + fresh.nextId - 1 };
-  return { board: regenerated, event: toShuffleEvent(regenerated), rng };
+  const regenerated = regenerate(board, colors, rng);
+  return { ...regenerated, event: toShuffleEvent(regenerated.board) };
+}
+
+/**
+ * 셔플 상한 초과: 일반 블록으로 새 보드 (id는 board.nextId부터 이어서 발급).
+ * 잠긴 칸은 기존 블록(id·색·특수)을 그대로 두고, 그 제약 아래 매치 0 + 가능한 수 ≥ 1을 찾는다.
+ * 잠긴 칸이 없으면 createPlayableBoard와 같은 RNG 순서·결과다 (createBoard가 매치 0을 보장)
+ */
+function regenerate(board: Board, colors: number, rng: RngState): { board: Board; rng: RngState } {
+  const locked = (i: number) => board.layers?.[i]?.lock === true && board.cells[i] !== null;
+  for (let attempt = 0; attempt < BOARD.maxGenerateAttempts; attempt++) {
+    let fresh: Board;
+    [fresh, rng] = createBoard(board.rows, board.cols, colors, rng, board.layers);
+    let nextId = board.nextId;
+    const cells = fresh.cells.map((b, i) =>
+      locked(i) ? board.cells[i]! : b && { ...b, id: nextId++ },
+    );
+    const candidate: Board = { ...board, cells, nextId };
+    if (isPlayable(candidate)) return { board: candidate, rng };
+  }
+  throw new Error(`셔플 보드를 ${BOARD.maxGenerateAttempts}회 안에 다시 만들지 못했다`);
 }
 
 function toShuffleEvent(board: Board): ShuffleEvent {

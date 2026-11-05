@@ -17,7 +17,7 @@ import { backgroundKey, devTheme, setActiveTheme, THEMES } from '../view/theme/t
 import { registerBackButton } from './backButton';
 import { bootRoute, devUnlock } from './bootRoute';
 import { commitSave, getSave, putSave } from './saveRegistry';
-import { putStages } from './stageRegistry';
+import { putDevStage, putStages } from './stageRegistry';
 
 /** 글꼴이 늦거나 실패해도 게임은 이 시간 안에 시작한다 (오프라인, 느린 휴대폰) */
 const FONT_TIMEOUT_MS = 2000;
@@ -58,27 +58,35 @@ export class BootScene extends Phaser.Scene {
       (data): StageData | Error => data,
       (error: unknown) => (error instanceof Error ? error : new Error(String(error))),
     );
-    void Promise.all([this.loadFont(), this.loadSave(), stages]).then(([, , result]) => {
-      if (result instanceof Error) {
-        this.showError(result.message);
-        return;
-      }
-      putStages(this.registry, result);
-      // 스테이지가 늘었으면 마지막까지 깬 옛 저장도 다음 판을 연다 (W4-27)
-      const loaded = getSave(this.registry);
-      const continued = continueUnlock(loaded, result.story.length);
-      if (continued !== loaded) commitSave(this.registry, continued);
-      // DEV ?unlock=N: 열린 스테이지를 N으로 바꿔 저장한다 (지도 확인용, 되돌리려면 ?unlock=1)
-      const unlock = devUnlock(window.location.search, import.meta.env.DEV);
-      if (unlock !== null) {
-        const save = getSave(this.registry);
-        commitSave(this.registry, { ...save, story: { ...save.story, unlocked: unlock } });
-      }
-      // 기본은 메뉴. 개발 주소(?demo, ?stage=N, ?result=N 등)는 해당 화면으로 바로 (bootRoute.ts)
-      const route = bootRoute(window.location.search, import.meta.env.DEV);
-      if (route.scene === 'Menu') this.scene.start('Menu');
-      else this.scene.start(route.scene, route.data);
-    });
+    // DEV ?obstacles: 시험 스테이지. 배포 빌드에서는 분기째 빠져 dist에 들어가지 않는다
+    const devStage =
+      import.meta.env.DEV && new URLSearchParams(window.location.search).has('obstacles')
+        ? import('../dev/obstacleStage').then((m) => m.obstacleStage())
+        : Promise.resolve(undefined);
+    void Promise.all([this.loadFont(), this.loadSave(), stages, devStage]).then(
+      ([, , result, dev]) => {
+        if (result instanceof Error) {
+          this.showError(result.message);
+          return;
+        }
+        putStages(this.registry, result);
+        if (dev) putDevStage(this.registry, dev);
+        // 스테이지가 늘었으면 마지막까지 깬 옛 저장도 다음 판을 연다 (W4-27)
+        const loaded = getSave(this.registry);
+        const continued = continueUnlock(loaded, result.story.length);
+        if (continued !== loaded) commitSave(this.registry, continued);
+        // DEV ?unlock=N: 열린 스테이지를 N으로 바꿔 저장한다 (지도 확인용, 되돌리려면 ?unlock=1)
+        const unlock = devUnlock(window.location.search, import.meta.env.DEV);
+        if (unlock !== null) {
+          const save = getSave(this.registry);
+          commitSave(this.registry, { ...save, story: { ...save.story, unlocked: unlock } });
+        }
+        // 기본은 메뉴. 개발 주소(?demo, ?stage=N, ?result=N 등)는 해당 화면으로 바로 (bootRoute.ts)
+        const route = bootRoute(window.location.search, import.meta.env.DEV);
+        if (route.scene === 'Menu') this.scene.start('Menu');
+        else this.scene.start(route.scene, route.data);
+      },
+    );
   }
 
   /** 조용히 넘어가지 않는다: 메시지 전체를 화면에 보여 준다 */

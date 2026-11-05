@@ -213,3 +213,82 @@ describe('core: 장애물 보드에서 일반 플레이', () => {
     expect(play()).toEqual(play());
   });
 });
+
+describe('core: 셔플 상한 재생성도 잠긴 칸을 지킨다 (V2-W2-01 리뷰 1)', () => {
+  // (2,1)·(2,2)만 움직일 수 있고 둘 다 B라 어떻게 섞어도 수가 없다 → 재생성으로 간다.
+  // (2,2)=G, (2,1)≠G가 되면 스왑으로 열 1에 G 세 개가 생긴다
+  const board: Board = {
+    ...parseBoard(`
+      R Y G B P
+      Y G R P B
+      G B B R Y
+      B G G Y P
+      P Y R G B
+    `),
+    layers: Array.from({ length: 25 }, (_, i) => (i === 11 || i === 12 ? null : { lock: true })),
+  };
+
+  it('잠긴 칸 블록(id·색·특수)은 그대로, 새 블록은 nextId부터, 결과는 플레이 가능', () => {
+    expect(hasAnyMove(board)).toBe(false);
+    const { board: after, event } = shuffle(board, 5, createRng(1));
+    board.cells.forEach((b, i) => {
+      if (i !== 11 && i !== 12) expect(after.cells[i]).toBe(b);
+    });
+    expect([after.cells[11]!.id, after.cells[12]!.id]).toEqual([board.nextId, board.nextId + 1]);
+    expect(after.nextId).toBe(board.nextId + 2);
+    expect(findMatches(after)).toEqual([]);
+    expect(hasAnyMove(after)).toBe(true);
+    expect(event.mapping).toHaveLength(25);
+  });
+
+  it('같은 입력 → 같은 결과', () => {
+    expect(shuffle(board, 5, createRng(4))).toEqual(shuffle(board, 5, createRng(4)));
+  });
+});
+
+describe('core: resolveSwap은 잠긴 칸·얼음벽 칸을 거부한다 (V2-W2-01 리뷰 2)', () => {
+  const base = parseBoard(`
+    R Y R
+    B R B
+    Y G Y
+  `);
+  const state = (board: Board) => ({ board, rngState: 1, colors: 5 });
+
+  it('잠긴 칸이 끼면 이벤트 없이 무효, 상태 그대로 (isValidSwap과 같다)', () => {
+    const locked: Board = { ...base, layers: layersFrom(['...', '.L.', '...']) };
+    for (const [a, b] of [
+      [
+        { r: 0, c: 1 },
+        { r: 1, c: 1 },
+      ],
+      [
+        { r: 1, c: 1 },
+        { r: 0, c: 1 },
+      ],
+    ]) {
+      expect(isValidSwap(locked, a!, b!)).toBe(false);
+      const result = resolveSwap(state(locked), a!, b!);
+      expect(result.valid).toBe(false);
+      expect(result.steps).toEqual([]);
+      expect(result.state.board).toBe(locked);
+    }
+  });
+
+  it('잠금이 없으면 같은 스왑이 유효', () => {
+    expect(resolveSwap(state(base), { r: 0, c: 1 }, { r: 1, c: 1 }).valid).toBe(true);
+  });
+
+  it('얼음벽 칸과의 스왑도 이벤트 없이 무효', () => {
+    const board: Board = {
+      ...parseBoard(`
+        R Y R
+        B . B
+        Y R Y
+      `),
+      layers: layersFrom(['...', '.F.', '...']),
+    };
+    const result = resolveSwap(state(board), { r: 0, c: 1 }, { r: 1, c: 1 });
+    expect(result.valid).toBe(false);
+    expect(result.steps).toEqual([]);
+  });
+});

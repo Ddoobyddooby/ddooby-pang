@@ -142,6 +142,33 @@ describe('data/stageSchema: layout·layers (SPEC v0.2 4.3, PLAN2 5.4)', () => {
     );
   });
 
+  it('clearObstacle.count는 그 장애물의 처음 칸 수까지 (V2-W2-01 리뷰 3)', () => {
+    // stage(): 얼음 2칸, 잠금 2칸(L·K), 젤리 6칸(J 5 + K 1)
+    const goal = (obstacle: string, count: number) =>
+      stage({ goals: [{ type: 'clearObstacle', obstacle, count }] });
+    for (const [obstacle, max] of [
+      ['frost', 2],
+      ['lock', 2],
+      ['jelly', 6],
+    ] as const) {
+      expect(() => parseStory([goal(obstacle, max)])).not.toThrow();
+      failsAt(goal(obstacle, max + 1), 'story[0].goals[0].count');
+    }
+  });
+
+  it('잠금에 hp가 있으면 실패 (V2-W2-01 리뷰 4)', () => {
+    const layers = { ...stage().layers, L: { type: 'lock', hp: 999 } };
+    failsAt(stage({ layers }), 'story[0].layers.L.hp');
+    const inList = {
+      ...stage().layers,
+      K: [
+        { type: 'lock', hp: 1 },
+        { type: 'jelly', hp: 1 },
+      ],
+    };
+    failsAt(stage({ layers: inList }), 'story[0].layers.K[0].hp');
+  });
+
   it('기존 story.json 1~30은 layout 없이 그대로 로드된다', () => {
     const story = parseStory(JSON.parse(storyRaw));
     expect(story).toHaveLength(30);
