@@ -7,3 +7,6 @@ package-lock.json
 
 # 문서는 손으로 정리한다
 *.md
+
+# 실제 브라우저 기록 (한 수 한 줄, V2-W2-08)
+scripts/server-poc/fixtures/

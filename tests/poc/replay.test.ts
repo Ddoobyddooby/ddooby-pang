@@ -1,9 +1,10 @@
 // V2-W2-08: 경쟁 모드 리플레이 PoC (SPEC 5.3) — 같은 seed·로그면 같은 점수, 무효 스왑은 점수·상태 그대로,
-// GameScene처럼 스왑들 → 마지막 팡 순서로 합산, 시간이 끝난 뒤의 move는 받지 않는다
+// GameScene처럼 스왑들 → 마지막 팡 순서로 합산, 시간이 끝난 뒤의 move는 받지 않는다.
+// 실제 브라우저 기록(fixtures/browser-runs.json)은 리플레이 점수 == 결과 화면 점수 (화면 경로 일치)
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { randomLog } from '../../scripts/server-poc/logs';
+import { MIN_GAP_MS, randomLog, SHUFFLE_SEEDS } from '../../scripts/server-poc/logs';
 import {
   replayTimeAttack,
   TIMEATTACK_BOARD,
@@ -11,6 +12,32 @@ import {
 } from '../../scripts/server-poc/replay';
 import { createInitialState, resolveFinale, resolveSwap } from '../../src/core/engine';
 import type { GameState, Pos } from '../../src/core/types';
+
+interface BrowserRun {
+  seed: number;
+  kind: 'demo' | 'hand' | 'rngValid';
+  screenScore: number;
+  inFlightAtTimeUp: number[];
+  moves: ReplayMove[];
+}
+const browserRuns = (
+  JSON.parse(
+    readFileSync(join(__dirname, '../../scripts/server-poc/fixtures/browser-runs.json'), 'utf8'),
+  ) as { runs: BrowserRun[] }
+).runs;
+
+/** 로그를 core로 그대로 돌려 셔플 수와 각 스왑의 유효 여부를 센다 (시간은 보지 않음) */
+function trace(seed: number, moves: readonly ReplayMove[]) {
+  let state = initial(seed);
+  let shuffleAt = -1;
+  const valid = moves.map((m, i) => {
+    const result = resolveSwap(state, m.from, m.to);
+    state = result.state;
+    if (shuffleAt < 0 && result.steps.flat().some((e) => e.type === 'shuffle')) shuffleAt = i;
+    return result.valid;
+  });
+  return { shuffleAt, valid };
+}
 
 const initial = (seed: number) => {
   const { rows, cols, colors } = TIMEATTACK_BOARD;
@@ -118,5 +145,80 @@ describe('server-poc/replay (V2-W2-08)', () => {
       { ...last, t: TIMEATTACK_BOARD.timeLimitMs },
     ]);
     expect(late).toEqual({ ...replayTimeAttack(seed, log.slice(0, -1)), lateMoves: 1 });
+  });
+
+  describe('실제 브라우저 기록 (fixtures/browser-runs.json)', () => {
+    it.each(browserRuns.map((run) => [`${run.kind} seed ${run.seed}`, run] as const))(
+      '%s: 리플레이 점수 == 결과 화면 점수',
+      (_, run) => {
+        const result = replayTimeAttack(run.seed, run.moves);
+        expect(result.score).toBe(run.screenScore);
+        expect(result.lateMoves).toBe(0); // 기록기는 게임이 받은 스왑만 남긴다
+      },
+    );
+
+    it('5판 이상이고 셔플·무효 스왑·재생 중 타임 업 판이 들어 있다', () => {
+      expect(new Set(browserRuns.map((r) => r.seed)).size).toBeGreaterThanOrEqual(5);
+      const traces = browserRuns.map((r) => trace(r.seed, r.moves));
+      expect(traces.filter((t) => t.shuffleAt >= 0).length).toBeGreaterThan(0);
+      // rngValid 판은 core 탐색과 같은 순번에서 셔플이 났다 (화면에서도 같은 수열을 뒀다)
+      browserRuns.forEach((run, i) => {
+        if (run.kind === 'rngValid') {
+          expect(traces[i]!.shuffleAt).toBe(SHUFFLE_SEEDS[run.seed as keyof typeof SHUFFLE_SEEDS]);
+        }
+      });
+      const hand = browserRuns.filter((r) => r.kind === 'hand');
+      expect(hand.length).toBeGreaterThan(0);
+      for (const run of hand) expect(trace(run.seed, run.moves).valid).toContain(false);
+      // 타임 업 때 재생 중이던 스왑: 마지막 스왑이고 t < 제한 시간
+      for (const run of browserRuns) {
+        expect(run.inFlightAtTimeUp).toEqual([run.moves.length - 1]);
+        expect(run.moves.at(-1)!.t).toBeLessThan(TIMEATTACK_BOARD.timeLimitMs);
+      }
+    });
+  });
+
+  describe('현실 로그 옵션 (logs.ts)', () => {
+    it('realistic: 유효 스왑 뒤 433ms, 무효 뒤 240ms 이상 띄운다', () => {
+      for (const seed of [1, 2, 3, 4, 5]) {
+        const log = randomLog(seed, seed, { realistic: true });
+        const { valid } = trace(seed, log);
+        expect(valid).toContain(false);
+        for (let i = 0; i + 1 < log.length; i++) {
+          const gap = log[i + 1]!.t - log[i]!.t;
+          expect(gap).toBeGreaterThanOrEqual(valid[i] ? MIN_GAP_MS.valid : MIN_GAP_MS.invalid);
+        }
+      }
+    });
+
+    it('boundary: 59999에 둔 move는 받고, late: 60000부터의 move는 lateMoves로 센다', () => {
+      const limit = TIMEATTACK_BOARD.timeLimitMs;
+      // 간격 하한 때문에 59999에 못 두는 판도 있어 몇 개 중 하나라도
+      const withBoundary = [5, 15, 25, 35]
+        .map((seed) => ({ seed, log: randomLog(seed, seed, { realistic: true, boundary: true }) }))
+        .filter(({ log }) => log.at(-1)!.t === limit - 1);
+      expect(withBoundary.length).toBeGreaterThan(0);
+      for (const { seed, log } of withBoundary) {
+        const result = replayTimeAttack(seed, log);
+        expect(result.lateMoves).toBe(0);
+        expect(result.validMoves + result.invalidMoves).toBe(log.length);
+      }
+
+      const late = randomLog(10, 10, { realistic: true, late: 3 });
+      const inTime = late.filter((m) => m.t < limit);
+      expect(late.length - inTime.length).toBe(3);
+      expect(late.find((m) => m.t >= limit)!.t).toBeGreaterThanOrEqual(limit);
+      const result = replayTimeAttack(10, late);
+      expect(result).toEqual({ ...replayTimeAttack(10, inTime), lateMoves: 3 });
+    });
+
+    it('rngValid: SHUFFLE_SEEDS 보드는 적힌 순번에서 셔플이 일어난다', () => {
+      for (const [seed, at] of Object.entries(SHUFFLE_SEEDS)) {
+        const log = randomLog(Number(seed), 1, { realistic: true, pick: 'rngValid' });
+        const { shuffleAt, valid } = trace(Number(seed), log);
+        expect(shuffleAt).toBe(at);
+        expect(valid.every(Boolean)).toBe(true);
+      }
+    });
   });
 });

@@ -6,13 +6,16 @@
 | 파일 | 역할 |
 |---|---|
 | `scripts/server-poc/replay.ts` | `replayTimeAttack(seed, moves)` 리플레이 시제품. `src/core`·`src/modes`만 import |
-| `scripts/server-poc/logs.ts` | seed RNG(`core/rng.ts`)로 만드는 결정적 랜덤 로그 |
-| `scripts/server-poc/node-scores.poc.ts` | Node(Vitest)에서 seed 1~1000 로그·점수를 `out/node-scores.json`에 쓴다 |
-| `scripts/server-poc/deno/compare.ts` | Deno에서 같은 로그를 리플레이해 대조. 가져올 replay 모듈 경로를 인자로 받는다 |
+| `scripts/server-poc/logs.ts` | seed RNG(`core/rng.ts`)로 만드는 결정적 랜덤 로그. 현실 간격·경계·늦은 move·셔플 재현 옵션 |
+| `scripts/server-poc/node-scores.poc.ts` | Node(Vitest)에서 1000개 로그·점수를 `out/node-scores.json`에 쓴다 |
+| `scripts/server-poc/deno/compare.ts` | Deno에서 1000개 로그와 브라우저 기록을 리플레이해 대조. 가져올 replay 모듈 경로를 인자로 받는다 |
+| `scripts/server-poc/browser/record.js` | 실제 게임 입력 기록기 (GameScene `trySwap`·`finish`를 감싼다. src 수정 없음) |
+| `scripts/server-poc/browser/drive.js` | 경쟁 모드 한 판을 실제 마우스 드래그(또는 `?demo`)로 끝까지 두는 Playwright 드라이버 |
+| `scripts/server-poc/fixtures/browser-runs.json` | 브라우저에서 기록한 6판 (move·t·결과 화면 점수) |
 | `scripts/server-poc/browser/probe.js` | D 실측 프로브 (dev 페이지에 넣는다) |
-| `tests/poc/replay.test.ts` | `npm test`에서 도는 리플레이 테스트 5개 |
+| `tests/poc/replay.test.ts` | `npm test`에서 도는 리플레이 테스트 15개 |
 
-실행: `npm run poc:deno` (Node 기록 → rolldown 번들 → Deno 직접 import 비교 → Deno 번들 비교). 결과물 `scripts/server-poc/out/`은 커밋하지 않는다.
+실행: `npm run poc:deno` (Node 기록 → rolldown 번들 → Deno 직접 import 비교 → Deno 번들 비교, 각각 브라우저 기록 대조 포함). 결과물 `scripts/server-poc/out/`은 커밋하지 않는다.
 
 ## A. 리플레이 흐름과 게임 화면과의 차이
 
@@ -24,25 +27,67 @@
 1. **시간 0 직전에 시작한 스왑**: 게임은 `canInput()`(남은 시간 > 0)일 때 시작한 스왑을 끝까지 재생하고 점수를 더한 뒤 마지막 팡으로 간다. 리플레이도 `t < 60000`이면 받고 끝까지 계산한다. `t ≥ 60000`인 move는 게임이 받지 않으므로 리플레이는 `lateMoves`로 세고 버린다 (서버에서는 거부 사유로 쓸지 정해야 한다)
 2. **`t`의 뜻**: 리플레이는 `t`를 "게임 시간"(TimeAttackMode 타이머가 흐른 양)으로 본다. 게임 타이머는 일시정지 중에 멈추고(D 참고), Phaser가 200ms 넘는 프레임 delta를 잘라 내므로 벽시계보다 느리게 갈 수는 있어도 빠르게 가지는 않는다. 3주차 클라이언트는 `t = 제한 시간 − timeLeftMs()`를 `trySwap` 시작 때 기록해야 리플레이와 맞는다
 3. **재생 중 입력**: 게임은 재생(busy) 동안 입력을 막아 스왑이 겹치지 않는다. 리플레이는 순서만 보고 간격은 보지 않는다 (같은 `t` 두 개도 받는다). 간격 검사는 서버 규칙으로 따로 둬야 한다 (D의 최소 간격 참고)
-4. **셔플**: 수가 없을 때의 셔플은 core `resolveSwap` 안에서 seed RNG로 일어나 리플레이에서도 똑같이 재현된다. 차이 없음
+4. **셔플**: 수가 없을 때의 셔플은 core `resolveSwap` 안에서 seed RNG로 일어나 리플레이에서도 똑같이 재현된다. 차이 없음 (실제 브라우저에서 셔플이 난 2판으로 확인, B.2)
 5. **일시정지·힌트**: 상태를 바꾸지 않는다. 일시정지는 `t`(게임 시간)에 안 잡히고 벽시계에만 잡힌다
 6. **무효 스왑**: 게임은 무효 스왑을 `moves`에 세지 않는다. 리플레이도 `validMoves`에서 빼고 `invalidMoves`로 따로 센다. 로그에 무효 스왑을 남길지는 3주차에 정한다 (남기지 않아도 점수는 같다)
 7. **보드 크기**: 게임은 `public/stages/timeattack.json`(8×8, 5색, 60초)을 읽는다. 리플레이는 같은 값을 상수 `TIMEATTACK_BOARD`로 두고 테스트가 JSON과 대조한다. 서버는 JSON 값을 core 버전과 함께 묶어야 한다 (C의 버전 항목)
 8. **DEV 전용 옵션**: `?specials`(특수 블록 배치), `?time=N`은 시작 상태·제한 시간을 바꾸므로 경쟁 기록 제출에서 빠져야 한다 (DEV에서만 동작하므로 배포본은 문제없음)
 
-## B. 1000개 로그 Node ↔ Deno 점수 비교
+## B. 점수 일치 확인
 
-- 로그: seed 1~1000, 수 37~61개(평균 간격 약 1.3초, 80ms~2.5s), 힌트 스왑 70% + 무작위 인접 스왑 30%. 전체 무효 스왑 11,890개, 마지막 팡이 점수를 낸 판 756개, 점수 1,005~14,160 (중앙 3,720)
+두 비교는 확인하는 것이 다르다.
+
+| 비교 | 확인하는 것 | 확인하지 못하는 것 |
+|---|---|---|
+| B.1 1000개 랜덤 로그 Node ↔ Deno | **런타임 이식성**: 같은 `replayTimeAttack`이 Node와 Deno(직접 import·번들)에서 같은 값을 낸다 | 기준 점수도 `replayTimeAttack`이 낸 값이라, 리플레이가 게임 화면과 같은지는 보지 못한다 |
+| B.2 실제 브라우저 기록 → 리플레이 | **화면 경로 일치**: 실제 `GameScene`(입력 → `trySwap` → 재생 → 마지막 팡 → 결과 화면)의 점수와 리플레이 점수가 같다 | 판 수가 적다 (6판). 다양한 경우는 B.1이 맡는다 |
+
+### B.1 1000개 랜덤 로그 Node ↔ Deno (런타임 이식성)
+
+- 로그 (`logs.ts` `realistic`): 다음 move까지 유효 스왑 뒤 433ms + 0~0.9초, 무효 스왑 뒤 240ms + 0~0.6초 (D절 재생 시간 하한). 힌트 스왑 70% + 무작위 인접 스왑 30%. 수 65~91개, 무효 스왑 19,150개, 마지막 팡이 점수를 낸 판 819개, 점수 2,220~21,245 (중앙 6,175)
+- 일부러 넣은 경우 (`node-scores.poc.ts`가 세어 출력하고, 0판이면 실패):
+  - **늦은 move** (t ≥ 60000): 10번째 판마다 1~3개 → **100판, 200개**. 첫 늦은 move는 t = 60000 (직전 move의 간격 하한이 더 늦으면 그 시각)
+  - **t = 59999 경계**: 10번째 판 + 5마다 시도 → **58판** (나머지 42판은 직전 move의 간격 하한 때문에 59999에 둘 수 없어 빠짐)
+  - **셔플**: **2판** (보드 seed 4860·16824, `pick: 'rngValid'`). 셔플은 이 설정(8×8, 5색)에서 매우 드물다. 데모 봇(첫 힌트)으로는 seed 1~3000 × 40수에서 0회, 무작위 유효 수로는 2만 판(약 120만 수)에서 2회였고, 그 두 판을 그대로 넣었다
+  - 최소 간격 실측: 유효 뒤 433ms, 무효 뒤 240ms (하한을 지킨다)
 - 결과 (`npm run poc:deno`):
 
 | 비교 | 결과 | Deno 리플레이 시간 |
 |---|---|---|
-| Node v23.10.0 → Deno 2.9.8, `src` 직접 import (`--sloppy-imports`) | **1000/1000 일치** | 858ms (판당 0.86ms) |
-| Node v23.10.0 → Deno 2.9.8, rolldown 번들 | **1000/1000 일치** | 842ms (판당 0.84ms) |
+| Node v23.10.0 → Deno 2.9.8, `src` 직접 import (`--sloppy-imports`) | **1000/1000 일치** | 1,381ms (판당 1.38ms) |
+| Node v23.10.0 → Deno 2.9.8, rolldown 번들 | **1000/1000 일치** | 1,326ms (판당 1.33ms) |
 
 - 대조 필드: `score, validMoves, invalidMoves, lateMoves, finaleScore` 전부
-- 불일치를 실제로 잡는지 확인: `node-scores.json`에서 seed 42의 점수를 +10, seed 100의 4번째 move 좌표를 바꾸면 `998/1000 일치`, 두 seed를 출력하고 exit 1 (seed 100은 move 하나로 점수 1410 → 435, 유효 30 → 10으로 뒤 수가 전부 어긋난다)
-- `tests/poc/replay.test.ts` (5개): JSON 보드 값 일치 / 같은 seed·로그 → 같은 로그·점수 / 무효 스왑(인접 무매치, 보드 밖)은 점수·상태 그대로이고 무효 수만 +1 / 스왑 scoreDelta 합 → `resolveFinale` 한 번 순서로 합산 (seed 1~20, 마지막 팡 점수가 있는 판 포함) / `t = 59999`는 받고 `t = 60000`은 `lateMoves`
+- 불일치를 실제로 잡는지 확인 (1차 로그 기준): `node-scores.json`에서 seed 42의 점수를 +10, seed 100의 4번째 move 좌표를 바꾸면 `998/1000 일치`, 두 seed를 출력하고 exit 1 (seed 100은 move 하나로 점수 1410 → 435, 유효 30 → 10으로 뒤 수가 전부 어긋난다)
+
+### B.2 실제 브라우저 기록 → 리플레이 (화면 경로 일치)
+
+- 기록 방법: 사용자의 dev 서버(5173, main과 같은 코드), 390×844. `browser/record.js`를 init script로 넣고, 앱이 실제로 불러온 `GameScene.ts` 모듈(HMR 뒤에는 `?t=…`가 붙은 URL)을 다시 import해 같은 클래스의 `trySwap`·`finish`를 감쌌다. `trySwap` 첫 줄과 같은 조건(busy·끝남·시간 종료가 아님)일 때만 `{ from, to, t = 제한 시간 − timeLeftMs() }`를 남기고, `finish`가 결과 화면으로 넘기는 `mode.result().score`를 화면 점수로 남겼다
+- 입력: `browser/drive.js`가 칸 좌표를 화면 좌표로 바꿔 **실제 마우스 드래그**를 보낸다 (BoardInput → `trySwap` 경로 그대로). `demo`는 `?demo` 자동 플레이를 기록만 한다
+- 결과 (Node `tests/poc`와 Deno `poc:deno` 직접 import·번들 모두 같은 값):
+
+| 판 | 방식 | 수 (유효 / 무효) | 셔플 | 재생 중 타임 업 (마지막 수 t) | 마지막 팡 | 화면 점수 | 리플레이 |
+|---|---|---|---|---|---|---|---|
+| seed 397 | `?demo` | 45 (45 / 0) | - | 45번째 (59,204ms) | 2,210 | 8,410 | **8,410** |
+| seed 1000 | `?demo` | 45 (45 / 0) | - | 45번째 (59,580ms) | 700 | 7,015 | **7,015** |
+| seed 2 | 손 흉내 드래그 | 57 (45 / 12) | - | 57번째 (59,852ms) | 2,085 | 5,210 | **5,210** |
+| seed 5 | 손 흉내 드래그 | 57 (49 / 8) | - | 57번째 (59,360ms) | 1,525 | 5,840 | **5,840** |
+| seed 4860 | rngValid 드래그 | 58 (58 / 0) | 29번째 수 | 58번째 (59,842ms) | 465 | 9,325 | **9,325** |
+| seed 16824 | rngValid 드래그 | 59 (59 / 0) | 26번째 수 | 59번째 (59,866ms) | 165 | 7,575 | **7,575** |
+
+- **6/6 일치**. 6판 모두 마지막 스왑이 재생 중에 시간이 끝났고(그 스왑 점수가 들어간 뒤 마지막 팡), 리플레이도 같은 점수를 냈다
+- 손 흉내: 입력이 열리면 150~700ms 생각한 뒤 75% 힌트 수, 25% 아무 인접 칸(대부분 무효). 남은 시간이 짧으면 0.25초 전에 힌트 수를 둬 "재생 중 타임 업"을 만든다
+- 데모 판의 `rejected`(6·8): 시간이 끝난 뒤 데모 루프가 부른 `trySwap`을 게임이 무시한 횟수. 기록에는 들어가지 않는다
+- 재기록: `drive.js` 주석 참고 (Playwright MCP는 파일을 쓸 수 없어 `postUrl`로 로컬 수집 서버에 POST해 받았다). 손 흉내 판은 `Math.random`을 써서 다시 돌리면 다른 판이 나온다. 그래서 fixture로 고정했다
+
+### 테스트
+
+`tests/poc/replay.test.ts` (15개):
+
+- JSON 보드 값 일치 / 같은 seed·로그 → 같은 로그·점수 / 무효 스왑(인접 무매치, 보드 밖)은 점수·상태 그대로이고 무효 수만 +1
+- 스왑 scoreDelta 합 → `resolveFinale` 한 번 순서로 합산 (seed 1~20, 마지막 팡 점수가 있는 판 포함) / `t = 59999`는 받고 `t = 60000`은 `lateMoves`
+- 브라우저 기록 6판 각각 리플레이 점수 == 화면 점수 / 5판 이상·셔플 판·무효 스왑이 있는 손 흉내 판·재생 중 타임 업이 들어 있다
+- `realistic` 간격 하한 / `boundary`(59999 받음)·`late`(lateMoves로 셈) / `rngValid`가 4860·16824에서 적힌 순번에 셔플
 
 ## C. Deno에서 `src/core`를 가져오는 방식
 

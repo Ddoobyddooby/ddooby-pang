@@ -2,5 +2,5 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  test: { include: ['scripts/server-poc/**/*.poc.ts'], silent: false },
+  test: { include: ['scripts/server-poc/**/*.poc.ts'], silent: false, testTimeout: 60000 },
 });
