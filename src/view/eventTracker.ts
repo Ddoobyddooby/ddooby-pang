@@ -68,6 +68,7 @@ export class EventTracker {
       case 'match':
       case 'activate':
       case 'score':
+      case 'obstacle':
         break;
     }
   }

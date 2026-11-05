@@ -12,6 +12,7 @@ const fake = (scoreDelta: number, valid = true): ResolveResult => ({
   steps: [],
   scoreDelta,
   removedByColor: [0, 0, 0, 0, 0, 0],
+  clearedObstacles: { lock: 0, frost: 0, jelly: 0 },
   valid,
 });
 

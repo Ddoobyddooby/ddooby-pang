@@ -6,6 +6,7 @@ import {
   indexOf,
   inBounds,
   isAdjacent,
+  isLocked,
   isMovable,
   posOf,
   samePos,
@@ -16,7 +17,13 @@ import { findMatches } from './matcher';
 import { createPlayableBoard, hasAnyMove, shuffle } from './moves';
 import { createRng } from './rng';
 import { stepScore } from './scoring';
-import { blastArea, chainActivate, decideSpecial, specialPosition } from './specials';
+import {
+  blastArea,
+  chainActivate,
+  decideSpecial,
+  specialPosition,
+  unlockedSpecialPosition,
+} from './specials';
 import type {
   Block,
   Board,
@@ -24,12 +31,16 @@ import type {
   GameEvent,
   GameState,
   MatchGroup,
+  ObstacleKind,
   Pos,
   ResolveResult,
   SpecialKind,
 } from './types';
 
 const COLOR_COUNT = 6;
+
+type ObstacleCounts = Record<ObstacleKind, number>;
+const noObstacles = (): ObstacleCounts => ({ lock: 0, frost: 0, jelly: 0 });
 
 /**
  * 게임 시작 상태. 같은 seed면 항상 같은 보드 (SPEC 6절 seed, 10절 수용 기준).
@@ -58,6 +69,7 @@ function invalid(state: GameState, steps: GameEvent[][]): ResolveResult {
     steps,
     scoreDelta: 0,
     removedByColor: new Array(COLOR_COUNT).fill(0),
+    clearedObstacles: noObstacles(),
     valid: false,
   };
 }
@@ -75,6 +87,7 @@ export function assertInvariants(board: Board): void {
 
 type ActivateEvent = Extract<GameEvent, { type: 'activate' }>;
 type TransformEvent = Extract<GameEvent, { type: 'transform' }>;
+type ObstacleEvent = Extract<GameEvent, { type: 'obstacle' }>;
 
 /**
  * 컬러 블록 스왑 발동: at의 컬러 블록이 partner 블록의 색을 지운다. 둘 다 컬러면 보드 전체 (PLAN 4.3).
@@ -101,7 +114,8 @@ function colorSwapBurst(board: Board, at: Pos, partner: Pos) {
   const cells = board.cells.slice();
   for (const p of cleared) {
     const block = getBlock(board, p)!;
-    if (block.special) continue;
+    // 잠긴 블록은 바뀌지 않고 잠금만 풀린다 (PLAN2 5.2)
+    if (block.special || isLocked(board, p)) continue;
     const special = kind === 'lineH' || kind === 'lineV' ? lineAt(p) : kind;
     const changed = { ...block, special };
     changes.push({ at: p, block: changed });
@@ -136,13 +150,18 @@ export function resolveSwap(
   }
 
   const removedByColor = new Array<number>(COLOR_COUNT).fill(0);
+  const clearedObstacles = noObstacles();
   const trigger: Trigger = burst
     ? { kind: 'burst', at: burst, partner: samePos(burst, a) ? b : a }
     : { kind: 'match', groups, swapped: [a, b] };
-  const run = runCascades(board, state, trigger, newSpecialInBlast, removedByColor);
+  const run = runCascades(board, state, trigger, newSpecialInBlast, {
+    removedByColor,
+    clearedObstacles,
+  });
   return finishResolve(state, run.board, run.rng, [[{ type: 'swap', a, b }], ...run.steps], {
     scoreDelta: run.scoreDelta,
     removedByColor,
+    clearedObstacles,
   });
 }
 
@@ -156,31 +175,35 @@ export function resolveFinale(
   maxRounds: number = TIMEATTACK.finale.maxRounds,
   newSpecialInBlast = SPECIAL.newSpecialInBlast,
 ): ResolveResult {
-  const firstSpecial = (board: Board) => board.cells.findIndex((block) => block?.special);
+  // 잠긴 특수 블록은 발동하지 않는다 (PLAN2 5.2)
+  const firstSpecial = (board: Board) =>
+    board.cells.findIndex((block, i) => block?.special && !isLocked(board, posOf(board, i)));
   if (firstSpecial(state.board) < 0) return invalid(state, []);
 
   let board = state.board;
   let rng = state.rngState;
   const steps: GameEvent[][] = [];
   const removedByColor = new Array<number>(COLOR_COUNT).fill(0);
+  const clearedObstacles = noObstacles();
   let scoreDelta = 0;
   for (let round = 0; round < maxRounds; round++) {
     const i = firstSpecial(board);
     if (i < 0) break;
     const trigger: Trigger = { kind: 'fire', at: posOf(board, i) };
-    const run = runCascades(
-      board,
-      { ...state, rngState: rng },
-      trigger,
-      newSpecialInBlast,
+    const run = runCascades(board, { ...state, rngState: rng }, trigger, newSpecialInBlast, {
       removedByColor,
-    );
+      clearedObstacles,
+    });
     board = run.board;
     rng = run.rng;
     steps.push(...run.steps);
     scoreDelta += run.scoreDelta;
   }
-  return finishResolve(state, board, rng, steps, { scoreDelta, removedByColor });
+  return finishResolve(state, board, rng, steps, {
+    scoreDelta,
+    removedByColor,
+    clearedObstacles,
+  });
 }
 
 /** 첫 단계를 일으킨 것: 스왑 매치 / 컬러 스왑 발동 / 마지막 팡의 특수 블록 하나 */
@@ -191,15 +214,17 @@ type Trigger =
 
 /**
  * 연쇄 루프 (PLAN 4.3): 매치·발동 → 제거 → 점수 → 낙하·리필을 매치가 없을 때까지.
- * 보드·rng는 state 대신 인자로 받은 값부터, removedByColor는 그 배열에 더한다
+ * 보드·rng는 state 대신 인자로 받은 값부터, totals(색별 제거 수·없어진 장애물 수)는 그 값에 더한다.
+ * 잠긴 블록은 매치·특수 범위에 들면 잠금만 풀리고 남는다 (제거·색 수집·발동 없음, PLAN2 5.2)
  */
 function runCascades(
   start: Board,
   state: GameState,
   trigger: Trigger,
   newSpecialInBlast: 'keep' | 'explode',
-  removedByColor: number[],
+  totals: { removedByColor: number[]; clearedObstacles: ObstacleCounts },
 ): { board: Board; rng: number; steps: GameEvent[][]; scoreDelta: number } {
+  const { removedByColor, clearedObstacles } = totals;
   const idx = (p: Pos) => indexOf(start, p);
   let board = start;
   let rng = state.rngState;
@@ -219,8 +244,10 @@ function runCascades(
     let created = groups.flatMap((group) => {
       const special = decideSpecial(group);
       if (!special) return [];
+      const at = unlockedSpecialPosition(group, swapped, board);
+      if (!at) return [];
       const color = special === 'color' ? null : group.color;
-      return [{ at: specialPosition(group, swapped), block: { id: nextId++, color, special } }];
+      return [{ at, block: { id: nextId++, color, special } }];
     });
     const matched = groups.flatMap((g) => g.cells);
     const chain: { cleared: Pos[]; activations: ActivateEvent[]; transform?: TransformEvent } =
@@ -245,7 +272,7 @@ function runCascades(
           );
         // 지워진 칸을 비우고 새 블록을 놓은 보드에서, 걸린 새 블록부터 다시 퍼뜨린다
         const placed = board.cells.slice();
-        for (const at of cleared) placed[idx(at)] = null;
+        for (const at of cleared) if (!isLocked(board, at)) placed[idx(at)] = null;
         for (const n of created) placed[idx(n.at)] = n.block;
         const second = chainActivate(
           { ...board, cells: placed },
@@ -263,21 +290,32 @@ function runCascades(
 
     const inGroup = new Set(matched.map(idx));
     const cells = board.cells.slice();
+    const layers = board.layers?.slice();
     const removed: { id: number; at: Pos; bySpecial: boolean }[] = [];
+    const obstacles: ObstacleEvent['changes'][number][] = [];
     for (const at of cleared) {
       const i = idx(at);
       const block = cells[i];
       if (!block) continue;
+      if (layers && isLocked(board, at)) {
+        // 잠금만 풀린다. 블록은 그대로 (PLAN2 5.2)
+        const rest = { ...layers[i]! };
+        delete rest.lock;
+        layers[i] = Object.keys(rest).length > 0 ? rest : null;
+        obstacles.push({ at, kind: 'lock', hp: 0 });
+        clearedObstacles.lock++;
+        continue;
+      }
       removed.push({ id: block.id, at, bySpecial: !inGroup.has(i) });
       if (block.color !== null) removedByColor[block.color]!++;
       cells[i] = null;
     }
     for (const n of created) cells[idx(n.at)] = n.block;
-    board = { ...board, cells, nextId };
+    board = { ...board, cells, nextId, ...(layers ? { layers } : {}) };
 
-    // 점수 (PLAN 4.8): 그룹 칸은 groupBase로만, 나머지는 특수 효과 제거로 센다
+    // 점수 (PLAN 4.8): 그룹 칸은 groupBase로만, 나머지는 특수 효과 제거로 센다. 장애물 피해는 겹마다 (PLAN2 5.2)
     const bySpecialCount = removed.filter((r) => r.bySpecial).length;
-    const delta = stepScore(groups, bySpecialCount, cascade);
+    const delta = stepScore(groups, bySpecialCount, cascade, obstacles.length);
     scoreDelta += delta;
     // 팝업 위치: 첫 그룹의 중앙, 그룹이 없으면(컬러 스왑 발동·마지막 팡) 발동 칸
     const scoreAt = groups[0]
@@ -289,6 +327,7 @@ function runCascades(
       ...(chain.transform ? [chain.transform] : []),
       ...activations,
       { type: 'remove', blocks: removed },
+      ...(obstacles.length > 0 ? [{ type: 'obstacle', changes: obstacles } as const] : []),
       ...created.map((n): GameEvent => ({ type: 'create', block: n.block, at: n.at })),
       { type: 'score', delta, cascade, at: scoreAt },
     ]);
@@ -313,7 +352,7 @@ function finishResolve(
   resolved: Board,
   rngState: number,
   steps: GameEvent[][],
-  totals: { scoreDelta: number; removedByColor: number[] },
+  totals: { scoreDelta: number; removedByColor: number[]; clearedObstacles: ObstacleCounts },
 ): ResolveResult {
   let board = resolved;
   let rng = rngState;

@@ -16,12 +16,17 @@ export function cascadeMultiplier(cascade: number): number {
   return 1 + cascade * SCORE.cascadeStep;
 }
 
-/** cascade 한 번의 점수. bySpecialCount = 그 cascade에서 특수 효과로 지워진 블록 수 */
+/**
+ * cascade 한 번의 점수. bySpecialCount = 그 cascade에서 특수 효과로 지워진 블록 수,
+ * obstacleHits = 장애물 피해 겹수 (잠금 해제 1회, 얼음 1겹, 젤리 1겹. PLAN2 5.2)
+ */
 export function stepScore(
   groups: readonly MatchGroup[],
   bySpecialCount: number,
   cascade: number,
+  obstacleHits = 0,
 ): number {
   const base = groups.reduce((sum, g) => sum + groupBase(g.cells.length), 0);
-  return Math.floor((base + bySpecialCount * SCORE.bySpecial) * cascadeMultiplier(cascade));
+  const extra = bySpecialCount * SCORE.bySpecial + obstacleHits * SCORE.obstacle;
+  return Math.floor((base + extra) * cascadeMultiplier(cascade));
 }

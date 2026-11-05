@@ -208,6 +208,10 @@ export class BoardView {
         return Promise.resolve();
       }
 
+      case 'obstacle':
+        // 장애물 그림은 V2-W2-05. 지금은 기다리지 않는다
+        return Promise.resolve();
+
       case 'score':
         if (event.delta > 0)
           this.hooks.onScore?.(event.delta, cascadeToLevel(event.cascade), event.at);

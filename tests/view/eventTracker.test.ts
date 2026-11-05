@@ -21,7 +21,7 @@ describe('view/EventTracker', () => {
     t.apply({ type: 'fall', moves: [{ id: 1, from: { r: 0, c: 0 }, to: { r: 1, c: 0 } }] });
     t.apply({
       type: 'refill',
-      blocks: [{ block: { id: 5, color: 0 }, at: { r: 0, c: 0 }, dropFrom: 1 }],
+      blocks: [{ block: { id: 5, color: 0 }, at: { r: 0, c: 0 }, dropFrom: 1, spawnTop: 0 }],
     });
     expect([...t.snapshot()].sort()).toEqual([
       ['0,0', 5],

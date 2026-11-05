@@ -197,7 +197,12 @@ describe('core: 장애물 보드에서 일반 플레이', () => {
         state = result.state;
         frostIdx.forEach((i) => expect(state.board.cells[i]).toBeNull());
       }
-      expect(state.board.layers).toBe(layers);
+      // 잠금만 풀릴 수 있다. 얼음벽·젤리는 V2-W2-03·04 전까지 그대로
+      state.board.layers!.forEach((layer, i) => {
+        expect(layer?.frost).toBe(layers[i]?.frost);
+        expect(layer?.jelly).toBe(layers[i]?.jelly);
+        if (layer?.lock) expect(layers[i]?.lock).toBe(true);
+      });
     }
   });
 

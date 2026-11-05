@@ -43,6 +43,7 @@ describe('core/types', () => {
       | 'activate'
       | 'transform'
       | 'remove'
+      | 'obstacle'
       | 'create'
       | 'fall'
       | 'refill'

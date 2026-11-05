@@ -19,6 +19,7 @@ function fake(scoreDelta: number, removed: Partial<Record<number, number>> = {})
     steps: [],
     scoreDelta,
     removedByColor,
+    clearedObstacles: { lock: 0, frost: 0, jelly: 0 },
     valid: true,
   };
 }

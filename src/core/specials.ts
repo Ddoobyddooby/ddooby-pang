@@ -1,7 +1,7 @@
 // 특수 블록: 결정, 생성 위치, 발동 범위, 연쇄 발동 (PLAN 4.5)
 
 import { SPECIAL } from '../config';
-import { getBlock, indexOf, posOf, samePos } from './board';
+import { getBlock, indexOf, isLocked, posOf, samePos } from './board';
 import type { Board, Color, GameEvent, MatchGroup, Pos, SpecialKind } from './types';
 
 /** 그룹이 만드는 특수 블록. 없으면 undefined. 우선순위는 PLAN 4.5 테이블 위에서부터 */
@@ -34,6 +34,18 @@ export function specialPosition(group: MatchGroup, swapped: readonly Pos[]): Pos
   const sumC = cells.reduce((sum, p) => sum + p.c, 0);
   const dist = (p: Pos) => (n * p.r - sumR) ** 2 + (n * p.c - sumC) ** 2;
   return cells.reduce((best, p) => (dist(p) < dist(best) ? p : best));
+}
+
+/**
+ * 잠긴 칸을 뺀 그룹에서 specialPosition으로 고른 칸. 다 잠겼으면 null (특수 블록을 만들지 않는다, PLAN2 5.2)
+ */
+export function unlockedSpecialPosition(
+  group: MatchGroup,
+  swapped: readonly Pos[],
+  board: Board,
+): Pos | null {
+  const free = group.cells.filter((p) => !isLocked(board, p));
+  return free.length > 0 ? specialPosition({ ...group, cells: free }, swapped) : null;
 }
 
 /**
@@ -87,7 +99,8 @@ function mostCommonColor(board: Board): Color | null {
  * activated: 이미 발동한 칸 (컬러 스왑 발동). 제거는 되지만 다시 발동하지 않는다.
  * depth: start 칸에서 발동하는 블록의 차례. 휘말린 블록은 터뜨린 블록의 차례 + 1 (PLAN 6.13).
  * 배열이면 start 칸마다 차례 (컬러 + 특수 블록 조합, PLAN 6.18). 차례가 이른 블록부터 발동하고
- * 같으면 먼저 들어온 블록부터라, 시작 칸 차례가 모두 같으면 보통 BFS와 같다
+ * 같으면 먼저 들어온 블록부터라, 시작 칸 차례가 모두 같으면 보통 BFS와 같다.
+ * 잠긴 특수 블록은 범위에 들어도 발동하지 않는다 (잠금만 풀린다, PLAN2 5.2)
  */
 export function chainActivate(
   board: Board,
@@ -102,7 +115,9 @@ export function chainActivate(
     const i = indexOf(board, p);
     if (seen.has(i)) return;
     seen.add(i);
-    if (getBlock(board, p)?.special && !fired.has(i)) queue.push({ at: p, depth: d });
+    if (getBlock(board, p)?.special && !fired.has(i) && !isLocked(board, p)) {
+      queue.push({ at: p, depth: d });
+    }
   };
   start.forEach((p, k) => add(p, typeof depth === 'number' ? depth : depth[k]!));
 

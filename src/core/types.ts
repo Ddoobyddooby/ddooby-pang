@@ -28,6 +28,8 @@ export interface CellLayer {
   readonly jelly?: 1 | 2;
 }
 
+export type ObstacleKind = 'lock' | 'frost' | 'jelly';
+
 export interface Board {
   readonly rows: number;
   readonly cols: number;
@@ -84,8 +86,16 @@ export type GameEvent =
   | { readonly type: 'fall'; readonly moves: readonly { id: number; from: Pos; to: Pos }[] }
   | {
       readonly type: 'refill';
-      /** dropFrom: 화면 위 몇 칸에서 떨어지는지 (1 = 보드 바로 위) */
-      readonly blocks: readonly { block: Block; at: Pos; dropFrom: number }[];
+      /**
+       * dropFrom: 구간 위 몇 칸에서 떨어지는지 (1 = 구간 바로 위).
+       * spawnTop: 구간 맨 위 행. 0이면 보드 위에서, 아니면 고정 칸 바로 아래에서 생긴다 (PLAN2 5.2)
+       */
+      readonly blocks: readonly { block: Block; at: Pos; dropFrom: number; spawnTop: number }[];
+    }
+  | {
+      /** 장애물 피해 (PLAN2 5.3). hp는 피해 뒤 남은 겹, 0이면 사라짐 (잠금은 항상 0). remove와 같은 step */
+      readonly type: 'obstacle';
+      readonly changes: readonly { at: Pos; kind: ObstacleKind; hp: number }[];
     }
   | { readonly type: 'score'; readonly delta: number; readonly cascade: number; readonly at: Pos }
   | {
@@ -103,6 +113,8 @@ export interface ResolveResult {
   readonly scoreDelta: number;
   /** 색별 제거 수 (index = Color). 미션 '색 수집' 집계용 */
   readonly removedByColor: readonly number[];
+  /** 이번 수로 완전히 없어진 장애물 수 (잠금 해제, 얼음벽 0겹, 젤리 0겹. PLAN2 5.3) */
+  readonly clearedObstacles: Readonly<Record<ObstacleKind, number>>;
   /** false면 steps에 swap / swapBack만 들어 있다 */
   readonly valid: boolean;
 }
