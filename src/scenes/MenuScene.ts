@@ -74,12 +74,11 @@ export class MenuScene extends Phaser.Scene {
       () => this.scene.start('Game', { mode: 'timeattack' } satisfies GameData),
       lock,
     );
-    this.addThemeButton(cx, cy + THEME_BUTTON.dy);
+    this.addThemeButton(cx, cy + THEME_BUTTON.dy, lock);
   }
 
-  /** 테마 버튼: 지금 테마 이름을 작게 보여 주고, 누르면 고르기 창. 고르면 저장하고 메뉴를 다시 그린다 */
-  private addThemeButton(cx: number, y: number): void {
-    const themeLock: PressLock = { pressed: false };
+  /** 테마 버튼(스토리·경쟁과 같은 잠금): 지금 테마 이름을 작게 보여 주고, 누르면 고르기 창. 고르면 저장하고 메뉴를 다시 그린다 */
+  private addThemeButton(cx: number, y: number, lock: PressLock): void {
     addButton(
       this,
       cx,
@@ -90,9 +89,9 @@ export class MenuScene extends Phaser.Scene {
           this,
           getActiveThemeId(),
           (id) => this.pickTheme(id),
-          () => (themeLock.pressed = false),
+          () => (lock.pressed = false), // 창이 닫혀야 메뉴 버튼이 다시 눌린다
         ),
-      themeLock,
+      lock,
     );
   }
 

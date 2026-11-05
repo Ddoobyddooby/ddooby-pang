@@ -6,6 +6,7 @@ import Phaser from 'phaser';
 import { DECOR, GAME, THEME, UI } from '../config';
 import type { Color } from '../core/types';
 import { Sfx } from './Sfx';
+import { PickerGate } from './themePickerGate';
 import { addButton, type PressLock } from './ui/Button';
 import { blockKey, ensureBlockTextures } from './theme/textures';
 import { THEMES, type ThemeId } from './theme/themes';
@@ -36,16 +37,29 @@ export function openThemePicker(
   const cy = height / 2;
   const root = scene.add.container(0, 0).setDepth(PICKER.depth);
   const sfx = new Sfx(scene);
-  const close = (after: () => void): void => {
+  // 먼저 일어난 고르기·닫기 하나만 받는다 (카드 누름 연출 중에 막을 눌러도 닫기와 고르기가 둘 다 실행되지 않게)
+  const cards: Phaser.GameObjects.Container[] = [];
+  const dispose = (): void => {
+    scene.tweens.killTweensOf(cards);
     root.destroy();
-    after();
   };
+  const gate = new PickerGate(
+    (id) => {
+      dispose();
+      if (id === current) onClose();
+      else onPick(id);
+    },
+    () => {
+      dispose();
+      onClose();
+    },
+  );
 
   // 막: 누르면 닫힘. 뒤에 있는 버튼이 눌리지 않게 화면 전체를 덮는다
   const dim = scene.add
     .rectangle(cx, cy, width, height, PICKER.dim.color, PICKER.dim.alpha)
     .setInteractive();
-  dim.on('pointerup', () => close(onClose));
+  dim.on('pointerup', () => gate.close());
   root.add(dim);
 
   const { card, panel } = PICKER;
@@ -117,7 +131,7 @@ export function openThemePicker(
       .setSize(card.width, card.height)
       .setInteractive({ useHandCursor: true });
     cardView.on('pointerup', () => {
-      if (lock.pressed) return;
+      if (lock.pressed || !gate.startPick(theme.id)) return;
       lock.pressed = true;
       sfx.play('button');
       scene.tweens.add({
@@ -126,9 +140,10 @@ export function openThemePicker(
         duration: UI.button.pressMs,
         yoyo: true,
         ease: 'Quad.easeOut',
-        onComplete: () => close(() => (theme.id === current ? onClose() : onPick(theme.id))),
+        onComplete: () => gate.finishPick(),
       });
     });
+    cards.push(cardView);
     root.add(cardView);
   });
 
@@ -143,7 +158,7 @@ export function openThemePicker(
         height: PICKER.close.height,
         fontSize: PICKER.close.fontSize,
       },
-      () => close(onClose),
+      () => gate.close(),
       lock,
     ),
   );
