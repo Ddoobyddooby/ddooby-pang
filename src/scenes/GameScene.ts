@@ -10,6 +10,7 @@
 //   ?time=15    (개발 모드) 제한 시간을 15초로 줄인다 (없으면 stages/timeattack.json의 timeLimit)
 //   ?specials   (개발 모드) 시작 보드에 특수 블록 5종을 하나씩 놓는다
 //   ?specials=combo (개발 모드) 무지개 블록 옆에 줄·폭탄·슈퍼를 하나씩 놓는다 (조합 확인, PLAN 6.18)
+//   ?specials=pairs (개발 모드) 조합 8종을 시험할 특수 블록 쌍을 가로로 나란히 놓는다 (PLAN2 3.3)
 
 import Phaser from 'phaser';
 import { GAME, HINT, HUD, MAP, MISSION_CARD, TIMEATTACK, VIEW } from '../config';
@@ -72,6 +73,34 @@ const COMBO_SAMPLES: [Pos, SpecialKind][] = [
   [{ r: 6, c: 1 }, 'color'],
   [{ r: 6, c: 2 }, 'super'],
 ];
+
+/**
+ * ?specials=pairs: 조합 8종의 쌍 (PLAN2 3.3). 1행 줄+줄·줄+폭탄, 3행 폭탄+폭탄·슈퍼+줄,
+ * 5행 컬러+줄·컬러+폭탄, 7행 컬러+슈퍼·컬러+컬러. 왼쪽 칸을 오른쪽으로 끌면 at이 오른쪽 칸
+ */
+const PAIR_SAMPLES: [Pos, SpecialKind][] = [
+  [{ r: 1, c: 1 }, 'lineH'],
+  [{ r: 1, c: 2 }, 'lineV'],
+  [{ r: 1, c: 5 }, 'lineV'],
+  [{ r: 1, c: 6 }, 'bomb'],
+  [{ r: 3, c: 1 }, 'bomb'],
+  [{ r: 3, c: 2 }, 'bomb'],
+  [{ r: 3, c: 5 }, 'super'],
+  [{ r: 3, c: 6 }, 'lineH'],
+  [{ r: 5, c: 1 }, 'color'],
+  [{ r: 5, c: 2 }, 'lineV'],
+  [{ r: 5, c: 5 }, 'color'],
+  [{ r: 5, c: 6 }, 'bomb'],
+  [{ r: 7, c: 1 }, 'color'],
+  [{ r: 7, c: 2 }, 'super'],
+  [{ r: 7, c: 5 }, 'color'],
+  [{ r: 7, c: 6 }, 'color'],
+];
+
+const SAMPLES: Record<string, [Pos, SpecialKind][]> = {
+  combo: COMBO_SAMPLES,
+  pairs: PAIR_SAMPLES,
+};
 
 export class GameScene extends Phaser.Scene {
   private startData: GameData = { mode: 'timeattack' };
@@ -149,9 +178,7 @@ export class GameScene extends Phaser.Scene {
       seed: this.seed,
     });
     if (import.meta.env.DEV && params.has('specials')) {
-      this.placeSpecialSamples(
-        params.get('specials') === 'combo' ? COMBO_SAMPLES : SPECIAL_SAMPLES,
-      );
+      this.placeSpecialSamples(SAMPLES[params.get('specials') ?? ''] ?? SPECIAL_SAMPLES);
     }
     const { width, height } = this.scale;
     this.cameras.main.setScroll(-(width - GAME.width) / 2, 0); // 넓은 화면에서 가운데 맞춤

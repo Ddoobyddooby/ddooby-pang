@@ -39,6 +39,7 @@ describe('core/types', () => {
     expectTypeOf<GameEventType>().toEqualTypeOf<
       | 'swap'
       | 'swapBack'
+      | 'combo'
       | 'match'
       | 'activate'
       | 'transform'

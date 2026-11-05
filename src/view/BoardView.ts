@@ -181,6 +181,10 @@ export class BoardView {
         this.addSprite(event.block, event.at);
         return Promise.resolve();
 
+      case 'combo':
+        // 조합 준비 연출(모이기·슬로모션·이름)은 V2-W1-02. 지금은 기다리지 않고 다음 step으로 (PLAN2 3.2)
+        return Promise.resolve();
+
       case 'match':
         this.hooks.onMatch?.(cascadeToLevel(event.cascade), removedFromMatch(event.groups));
         return Promise.resolve();

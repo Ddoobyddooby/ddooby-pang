@@ -5,6 +5,17 @@ export type Color = 0 | 1 | 2 | 3 | 4 | 5;
 
 export type SpecialKind = 'lineH' | 'lineV' | 'bomb' | 'color' | 'super';
 
+/** 특수 블록 둘을 스왑했을 때의 조합 (PLAN2 3.1). 판정 순서는 specials.ts comboKind */
+export type ComboKind =
+  | 'lineLine'
+  | 'lineBomb'
+  | 'bombBomb'
+  | 'colorLine'
+  | 'colorBomb'
+  | 'colorSuper'
+  | 'colorColor'
+  | 'superAny';
+
 export interface Block {
   /** view가 스프라이트를 추적하는 고유 ID */
   readonly id: number;
@@ -50,6 +61,18 @@ export interface MatchGroup {
 export type GameEvent =
   | { readonly type: 'swap'; readonly a: Pos; readonly b: Pos }
   | { readonly type: 'swapBack'; readonly a: Pos; readonly b: Pos }
+  | {
+      /**
+       * 특수 블록 둘 스왑 조합 (PLAN2 3.2). swap 다음 독립 step에 하나만 있다.
+       * at = 끌어온 블록이 도착한 칸(b), partner = a. cleared = 조합이 직접 겨냥한 칸 (두 칸 포함, 행 우선).
+       * 컬러 조합은 컬러의 최초 대상 칸만 담고, 실제 제거는 다음 step의 activate·transform·remove가 맡는다
+       */
+      readonly type: 'combo';
+      readonly combo: ComboKind;
+      readonly at: Pos;
+      readonly partner: Pos;
+      readonly cleared: readonly Pos[];
+    }
   | { readonly type: 'match'; readonly groups: readonly MatchGroup[]; readonly cascade: number }
   | {
       readonly type: 'activate';

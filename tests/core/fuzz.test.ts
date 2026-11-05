@@ -79,6 +79,7 @@ function replay(before: Board, steps: readonly (readonly GameEvent[])[]): Map<st
           if (at.has(key(e.at))) throw new Error(`create: ${key(e.at)}가 비어 있지 않다`);
           at.set(key(e.at), e.block.id);
           break;
+        case 'combo':
         case 'match':
         case 'activate':
         case 'score':

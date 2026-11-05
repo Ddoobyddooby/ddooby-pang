@@ -1,5 +1,7 @@
 // 게임 수치는 전부 여기서 관리한다 (SPEC 5절, PLAN 4.8). 플레이 테스트 후 조정.
 
+import type { ComboKind } from './core/types';
+
 export const GAME = {
   width: 720,
   height: 1280,
@@ -39,6 +41,42 @@ export const SPECIAL = {
   /** 새 특수 블록 칸이 같은 턴의 발동 범위에 걸리면. 'keep': 남김 (캔디크러시). 'explode': 바로 발동 */
   newSpecialInBlast: 'keep' as 'keep' | 'explode',
 } as const;
+
+/**
+ * 특수 블록 조합 연출 (SPEC v0.2 3.1, PLAN2 3.3). view만 읽는다 (core 결과와 무관).
+ * mergeMs: 두 블록이 at으로 모이는 시간, slowMs: 슬로모션, nameMs: 이름 팝업, bombBombSecondMs: 두 번째 쾅까지 (ms)
+ */
+export const COMBO = {
+  name: {
+    lineLine: '크로스!',
+    lineBomb: '빅 크로스!',
+    bombBomb: '메가 폭발!',
+    colorLine: '줄줄이 팡!',
+    colorBomb: '폭탄 비!',
+    colorColor: '올 클리어!',
+    colorSuper: '슈퍼 콤보!',
+    superAny: '슈퍼 콤보!',
+  },
+  mergeMs: 160,
+  slowMs: 250,
+  nameMs: 700,
+  /** 종류별 화면 흔들림. lineLine 가장 약하게 … colorColor 가장 세게 */
+  shake: {
+    lineLine: { duration: 150, intensity: 0.004 },
+    lineBomb: { duration: 200, intensity: 0.006 },
+    bombBomb: { duration: 260, intensity: 0.009 },
+    colorLine: { duration: 220, intensity: 0.007 },
+    colorBomb: { duration: 240, intensity: 0.008 },
+    colorSuper: { duration: 280, intensity: 0.01 },
+    superAny: { duration: 260, intensity: 0.009 },
+    colorColor: { duration: 360, intensity: 0.014 },
+  },
+  bombBombSecondMs: 180,
+} as const satisfies {
+  name: Record<ComboKind, string>;
+  shake: Record<ComboKind, { duration: number; intensity: number }>;
+  [key: string]: unknown;
+};
 
 /** 애니메이션 시간 (ms) */
 /** 무입력 힌트 (W4-03). 입력할 수 있는 상태로 idleMs가 지나면 가능한 수의 두 블록이 말랑하게 커졌다 작아지기를 반복한다 */

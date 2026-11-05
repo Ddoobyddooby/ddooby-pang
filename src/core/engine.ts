@@ -7,7 +7,14 @@ import { findMatches } from './matcher';
 import { createPlayableBoard, hasAnyMove, shuffle } from './moves';
 import { createRng } from './rng';
 import { stepScore } from './scoring';
-import { blastArea, chainActivate, decideSpecial, specialPosition } from './specials';
+import {
+  blastArea,
+  chainActivate,
+  comboArea,
+  comboKind,
+  decideSpecial,
+  specialPosition,
+} from './specials';
 import type {
   Block,
   Board,
@@ -55,6 +62,7 @@ function assertInvariants(board: Board): void {
 }
 
 type ActivateEvent = Extract<GameEvent, { type: 'activate' }>;
+type ComboEvent = Extract<GameEvent, { type: 'combo' }>;
 type TransformEvent = Extract<GameEvent, { type: 'transform' }>;
 
 /**
@@ -97,6 +105,25 @@ function colorSwapBurst(board: Board, at: Pos, partner: Pos) {
 
 const lineAt = (p: Pos): SpecialKind => ((p.r + p.c) % 2 === 0 ? 'lineH' : 'lineV');
 
+/**
+ * 스왑 뒤 보드에서 at(b)·partner(a)가 모두 특수 블록이면 combo 이벤트 (PLAN2 3.2), 아니면 undefined.
+ * 컬러 조합의 cleared는 burst(컬러 블록 칸) 기준 최초 대상, superAny는 슈퍼가 아닌 쪽의 효과를 더한다
+ */
+function comboOf(
+  board: Board,
+  at: Pos,
+  partner: Pos,
+  burst: Pos | undefined,
+): ComboEvent | undefined {
+  const x = getBlock(board, at)!;
+  const y = getBlock(board, partner)!;
+  if (!x.special || !y.special) return undefined;
+  const combo = comboKind(x.special, y.special);
+  const center = burst ?? at;
+  const other = burst ? (samePos(burst, at) ? y : x) : x.special === 'super' ? y : x;
+  return { type: 'combo', combo, at, partner, cleared: comboArea(combo, center, board, other) };
+}
+
 export function resolveSwap(
   state: GameState,
   a: Pos,
@@ -110,17 +137,26 @@ export function resolveSwap(
   const board = swapBlocks(start, a, b);
   // 컬러 블록 스왑은 매치 없이 바로 발동한다. 둘 다 컬러면 끌어온 쪽(a의 블록, 지금 b 칸)
   const burst = [b, a].find((p) => getBlock(board, p)?.special === 'color');
-  const groups = burst ? [] : findMatches(board);
-  if (!burst && groups.length === 0) {
+  // 두 칸 모두 특수 블록이면 조합 (PLAN2 3.1). 컬러가 끼면 v0.1 컬러 발동 그대로, combo step만 앞에
+  const combo = comboOf(board, b, a, burst);
+  const groups = burst || combo ? [] : findMatches(board);
+  if (!burst && !combo && groups.length === 0) {
     return invalid(state, [[{ type: 'swap', a, b }], [{ type: 'swapBack', a, b }]]);
   }
 
   const removedByColor = new Array<number>(COLOR_COUNT).fill(0);
   const trigger: Trigger = burst
     ? { kind: 'burst', at: burst, partner: samePos(burst, a) ? b : a }
-    : { kind: 'match', groups, swapped: [a, b] };
+    : combo
+      ? { kind: 'combo', at: b, partner: a, cleared: combo.cleared }
+      : { kind: 'match', groups, swapped: [a, b] };
   const run = runCascades(board, state, trigger, newSpecialInBlast, removedByColor);
-  return finishResolve(state, run.board, run.rng, [[{ type: 'swap', a, b }], ...run.steps], {
+  const steps: GameEvent[][] = [
+    [{ type: 'swap', a, b }],
+    ...(combo ? [[combo]] : []),
+    ...run.steps,
+  ];
+  return finishResolve(state, run.board, run.rng, steps, {
     scoreDelta: run.scoreDelta,
     removedByColor,
   });
@@ -163,10 +199,11 @@ export function resolveFinale(
   return finishResolve(state, board, rng, steps, { scoreDelta, removedByColor });
 }
 
-/** 첫 단계를 일으킨 것: 스왑 매치 / 컬러 스왑 발동 / 마지막 팡의 특수 블록 하나 */
+/** 첫 단계를 일으킨 것: 스왑 매치 / 컬러 스왑 발동 / 특수 블록 조합(컬러 제외) / 마지막 팡의 특수 블록 하나 */
 type Trigger =
   | { kind: 'match'; groups: MatchGroup[]; swapped: Pos[] }
   | { kind: 'burst'; at: Pos; partner: Pos }
+  | { kind: 'combo'; at: Pos; partner: Pos; cleared: readonly Pos[] }
   | { kind: 'fire'; at: Pos };
 
 /**
@@ -203,10 +240,13 @@ function runCascades(
       return [{ at: specialPosition(group, swapped), block: { id: nextId++, color, special } }];
     });
     const matched = groups.flatMap((g) => g.cells);
+    // 조합 범위의 다른 특수 블록은 차례 1부터, 조합한 두 블록은 다시 발동하지 않는다 (PLAN2 3.1)
     const chain: { cleared: Pos[]; activations: ActivateEvent[]; transform?: TransformEvent } =
       first?.kind === 'burst'
         ? colorSwapBurst(board, first.at, first.partner)
-        : chainActivate(board, first?.kind === 'fire' ? [first.at] : matched);
+        : first?.kind === 'combo'
+          ? chainActivate(board, first.cleared, [first.at, first.partner], 1)
+          : chainActivate(board, first?.kind === 'fire' ? [first.at] : matched);
     const activations = [...chain.activations];
     let cleared = chain.cleared;
 

@@ -168,7 +168,8 @@ describe('resolveSwap: 특수 블록', () => {
 
   /** 첫 match step (cascade 0)의 이벤트 */
   function firstStep(result: ReturnType<typeof resolveSwap>) {
-    const step = result.steps[1]!;
+    // 특수 블록 둘 스왑이면 swap 다음에 combo step이 있다 (PLAN2 3.2). 첫 제거 step을 본다
+    const step = result.steps.find((s) => s.some((e) => e.type === 'remove'))!;
     const of = <T extends GameEvent['type']>(type: T) =>
       step.filter((e): e is Extract<GameEvent, { type: T }> => e.type === type);
     return {
@@ -289,7 +290,8 @@ describe('resolveSwap: 컬러 블록 스왑', () => {
   const p = (r: number, c: number) => ({ r, c });
 
   function firstStep(result: ReturnType<typeof resolveSwap>) {
-    const step = result.steps[1]!;
+    // 특수 블록 둘 스왑이면 swap 다음에 combo step이 있다 (PLAN2 3.2). 첫 제거 step을 본다
+    const step = result.steps.find((s) => s.some((e) => e.type === 'remove'))!;
     return {
       types: step.map((e) => e.type),
       activate: step.flatMap((e) =>
@@ -404,7 +406,8 @@ describe('resolveSwap: 점수', () => {
     const result = resolveSwap(stateOf(THREE, 6, 1), p(0, 2), p(1, 2));
     expect(matchEvents(result.steps)).toHaveLength(1);
     expect(result.scoreDelta).toBe(30);
-    const step = result.steps[1]!;
+    // 특수 블록 둘 스왑이면 swap 다음에 combo step이 있다 (PLAN2 3.2). 첫 제거 step을 본다
+    const step = result.steps.find((s) => s.some((e) => e.type === 'remove'))!;
     expect(step.filter((e) => e.type === 'score')).toHaveLength(1);
     expect(step.at(-1)).toEqual({ type: 'score', delta: 30, cascade: 0, at: p(0, 1) });
   });
@@ -437,7 +440,8 @@ describe('resolveSwap: 점수', () => {
       p(0, 0),
       p(0, 1),
     );
-    const step = result.steps[1]!;
+    // 특수 블록 둘 스왑이면 swap 다음에 combo step이 있다 (PLAN2 3.2). 첫 제거 step을 본다
+    const step = result.steps.find((s) => s.some((e) => e.type === 'remove'))!;
     const removed = step.flatMap((e) => (e.type === 'remove' ? e.blocks : []));
     expect(step.at(-1)).toEqual({
       type: 'score',
@@ -547,7 +551,8 @@ describe('resolveSwap: 컬러 + 특수 블록 조합', () => {
   const C0 = { a: p(0, 0), b: p(0, 1) }; // (0,0) 컬러 ↔ (0,1) 특수 블록. 컬러가 (0,1)로 간다
 
   function firstStep(result: ReturnType<typeof resolveSwap>) {
-    const step = result.steps[1]!;
+    // 특수 블록 둘 스왑이면 swap 다음에 combo step이 있다 (PLAN2 3.2). 첫 제거 step을 본다
+    const step = result.steps.find((s) => s.some((e) => e.type === 'remove'))!;
     const activations = step.filter(
       (e): e is Extract<GameEvent, { type: 'activate' }> => e.type === 'activate',
     );

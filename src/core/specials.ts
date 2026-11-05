@@ -2,7 +2,16 @@
 
 import { SPECIAL } from '../config';
 import { getBlock, indexOf, posOf, samePos } from './board';
-import type { Board, Color, GameEvent, MatchGroup, Pos, SpecialKind } from './types';
+import type {
+  Block,
+  Board,
+  Color,
+  ComboKind,
+  GameEvent,
+  MatchGroup,
+  Pos,
+  SpecialKind,
+} from './types';
 
 /** 그룹이 만드는 특수 블록. 없으면 undefined. 우선순위는 PLAN 4.5 테이블 위에서부터 */
 export function decideSpecial(
@@ -67,6 +76,61 @@ export function blastArea(
   for (let i = 0; i < board.cells.length; i++) {
     const p = posOf(board, i);
     if (inArea(p)) area.push(p);
+  }
+  return area;
+}
+
+const isLine = (k: SpecialKind) => k === 'lineH' || k === 'lineV';
+
+/** 특수 블록 x, y를 스왑했을 때의 조합 (PLAN2 3.1 표 순서, 순서 무관) */
+export function comboKind(x: SpecialKind, y: SpecialKind): ComboKind {
+  if (x === 'color' || y === 'color') {
+    const other = x === 'color' ? y : x;
+    if (other === 'color') return 'colorColor';
+    if (other === 'super') return 'colorSuper';
+    return isLine(other) ? 'colorLine' : 'colorBomb';
+  }
+  if (x === 'bomb' && y === 'bomb') return 'bombBomb';
+  if (x === 'super' || y === 'super') return 'superAny';
+  if (x === 'bomb' || y === 'bomb') return 'lineBomb';
+  return 'lineLine';
+}
+
+/**
+ * 조합이 직접 겨냥하는 칸 (PLAN2 3.1). 자기 칸 포함, 보드 밖은 잘림, 행 우선 정렬.
+ * 컬러 조합: at은 컬러 블록 칸, partnerBlock 색 블록 전체 (partnerBlock도 컬러면 보드 전체).
+ * superAny: at 기준 슈퍼 범위 ∪ partnerBlock(슈퍼가 아닌 쪽, 둘 다 슈퍼면 어느 쪽이든) 효과를 at 기준으로
+ */
+export function comboArea(kind: ComboKind, at: Pos, board: Board, partnerBlock: Block): Pos[] {
+  switch (kind) {
+    case 'colorColor':
+    case 'colorSuper':
+    case 'colorLine':
+    case 'colorBomb':
+      return blastArea('color', at, board, partnerBlock.color);
+    case 'superAny': {
+      const keys = new Set(
+        [
+          ...blastArea('super', at, board),
+          ...blastArea(partnerBlock.special ?? 'super', at, board),
+        ].map((p) => indexOf(board, p)),
+      );
+      return [...keys].sort((x, y) => x - y).map((i) => posOf(board, i));
+    }
+  }
+
+  const area: Pos[] = [];
+  for (let i = 0; i < board.cells.length; i++) {
+    const p = posOf(board, i);
+    const dr = Math.abs(p.r - at.r);
+    const dc = Math.abs(p.c - at.c);
+    const hit =
+      kind === 'lineLine'
+        ? dr === 0 || dc === 0
+        : kind === 'lineBomb'
+          ? dr <= 1 || dc <= 1
+          : dr <= 2 && dc <= 2; // bombBomb
+    if (hit) area.push(p);
   }
   return area;
 }
