@@ -6,6 +6,7 @@ import {
   indexOf,
   inBounds,
   isAdjacent,
+  isFrost,
   isLocked,
   isMovable,
   posOf,
@@ -38,6 +39,12 @@ import type {
 } from './types';
 
 const COLOR_COUNT = 6;
+const NEIGHBORS = [
+  [-1, 0],
+  [1, 0],
+  [0, -1],
+  [0, 1],
+] as const;
 
 type ObstacleCounts = Record<ObstacleKind, number>;
 const noObstacles = (): ObstacleCounts => ({ lock: 0, frost: 0, jelly: 0 });
@@ -215,7 +222,8 @@ type Trigger =
 /**
  * 연쇄 루프 (PLAN 4.3): 매치·발동 → 제거 → 점수 → 낙하·리필을 매치가 없을 때까지.
  * 보드·rng는 state 대신 인자로 받은 값부터, totals(색별 제거 수·없어진 장애물 수)는 그 값에 더한다.
- * 잠긴 블록은 매치·특수 범위에 들면 잠금만 풀리고 남는다 (제거·색 수집·발동 없음, PLAN2 5.2)
+ * 잠긴 블록은 매치·특수 범위에 들면 잠금만 풀리고 남는다 (제거·색 수집·발동 없음, PLAN2 5.2).
+ * 얼음벽은 범위에 들거나 이웃이 매치로 제거되면 1겹 깎이고, 0겹이면 같은 step의 낙하·리필 대상이 된다
  */
 function runCascades(
   start: Board,
@@ -309,6 +317,24 @@ function runCascades(
       removed.push({ id: block.id, at, bySpecial: !inGroup.has(i) });
       if (block.color !== null) removedByColor[block.color]!++;
       cells[i] = null;
+    }
+    if (layers) {
+      // 얼음벽: 특수·조합 범위에 들거나 상하좌우 이웃 블록이 매치로 제거되면 1겹 (step당 칸마다 최대 1겹, PLAN2 5.2)
+      const hit = new Set(cleared.filter((p) => isFrost(board, p)).map(idx));
+      for (const r of removed) {
+        if (r.bySpecial) continue;
+        for (const [dr, dc] of NEIGHBORS) {
+          const p = { r: r.at.r + dr, c: r.at.c + dc };
+          if (isFrost(board, p)) hit.add(idx(p));
+        }
+      }
+      for (const i of [...hit].sort((x, y) => x - y)) {
+        const hp = layers[i]!.frost! - 1;
+        // 얼음벽 칸에는 다른 장애물이 없다 (PLAN2 5.1): 0겹이면 층째 비워 일반 빈칸이 된다
+        layers[i] = hp > 0 ? { frost: hp as 1 | 2 } : null;
+        obstacles.push({ at: posOf(board, i), kind: 'frost', hp });
+        if (hp === 0) clearedObstacles.frost++;
+      }
     }
     for (const n of created) cells[idx(n.at)] = n.block;
     board = { ...board, cells, nextId, ...(layers ? { layers } : {}) };

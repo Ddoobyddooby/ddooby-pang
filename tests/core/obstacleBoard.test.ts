@@ -187,7 +187,7 @@ describe('core: assertInvariants (PLAN2 5.1)', () => {
 });
 
 describe('core: 장애물 보드에서 일반 플레이', () => {
-  it('seed 1~20, 힌트 수 40번: 오류 없이 resolve되고 얼음벽 칸은 계속 비어 있다', () => {
+  it('seed 1~20, 힌트 수 40번: 오류 없이 resolve되고 남은 얼음벽 칸은 비어 있다', () => {
     for (let seed = 1; seed <= 20; seed++) {
       let state = start(seed);
       for (let move = 0; move < 40; move++) {
@@ -195,11 +195,13 @@ describe('core: 장애물 보드에서 일반 플레이', () => {
         const result = resolveSwap(state, hint.a, hint.b);
         expect(result.valid).toBe(true);
         state = result.state;
-        frostIdx.forEach((i) => expect(state.board.cells[i]).toBeNull());
+        state.board.layers!.forEach((layer, i) => {
+          if (layer?.frost) expect(state.board.cells[i]).toBeNull();
+        });
       }
-      // 잠금만 풀릴 수 있다. 얼음벽·젤리는 V2-W2-03·04 전까지 그대로
+      // 얼음벽은 줄기만 하고 새로 생기지 않는다. 젤리는 V2-W2-04 전까지 그대로
       state.board.layers!.forEach((layer, i) => {
-        expect(layer?.frost).toBe(layers[i]?.frost);
+        expect(layer?.frost ?? 0).toBeLessThanOrEqual(layers[i]?.frost ?? 0);
         expect(layer?.jelly).toBe(layers[i]?.jelly);
         if (layer?.lock) expect(layers[i]?.lock).toBe(true);
       });

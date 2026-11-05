@@ -249,12 +249,15 @@ describe('core: 잠금 스테이지 연속 플레이 (결정성·일관성)', ()
           });
           const changes = result.steps
             .flatMap((s) => ofType(s, 'obstacle'))
-            .flatMap((e) => e.changes);
-          expect(changes.every((c) => c.kind === 'lock' && c.hp === 0)).toBe(true);
+            .flatMap((e) => e.changes)
+            .filter((c) => c.kind === 'lock'); // 얼음벽 피해는 frost.test.ts
+          expect(changes.every((c) => c.hp === 0)).toBe(true);
           expect(result.clearedObstacles.lock).toBe(changes.length);
           expect(lockCount(before) - lockCount(after)).toBe(changes.length);
           for (const step of result.steps) {
-            const unlocked = ofType(step, 'obstacle').flatMap((e) => e.changes.map((c) => c.at));
+            const unlocked = ofType(step, 'obstacle').flatMap((e) =>
+              e.changes.filter((c) => c.kind === 'lock').map((c) => c.at),
+            );
             const removed = ofType(step, 'remove').flatMap((e) => e.blocks.map((b) => b.at));
             for (const p of unlocked) expect(removed).not.toContainEqual(p);
             for (const { at, spawnTop } of ofType(step, 'refill').flatMap((e) => e.blocks)) {
