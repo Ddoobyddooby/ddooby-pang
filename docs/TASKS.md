@@ -9,9 +9,10 @@
 
 ## 1주차 — 특수 블록 조합 + 테마 시안
 
-- [ ] **V2-W1-01** 🧪 조합 core: 특수 블록 둘을 스왑하면 8개 범주 조합 발동, `combo` 독립 step, 컬러(무지개) + 특수는 v0.1 결과 그대로 (SPEC 3절, PLAN2 3.1·3.2·3.4) — claude-1
+- [x] **V2-W1-01** 🧪 조합 core: 특수 블록 둘을 스왑하면 8개 범주 조합 발동, `combo` 독립 step, 컬러(무지개) + 특수는 v0.1 결과 그대로 (SPEC 3절, PLAN2 3.1·3.2·3.4) — claude-1
   - 파일: `src/core/types.ts`, `engine.ts`, `specials.ts`, `src/config.ts`(`COMBO` 연출 값까지 이 태스크가 넣는다), `src/view/BoardView.ts`(`combo` no-op만), 개발 옵션 `?specials=pairs`, `tests/core/combo.test.ts`
   - 완료 기준: 8개 범주 테스트·결정성 테스트·기존 테스트 통과. `swap → combo → 제거` step 순서, 서로 다른 색 특수 블록 스왑, 양방향 스왑(슈퍼 + 가로·세로줄 포함), 모서리 범위, 두 조합 블록 재발동 방지, 이동 1회 소모 확인. view는 아직 조합 연출이 없어도 타입 검사와 보드 대조가 통과한다
+  - 2026-11-05 메인 확인: 536 테스트, `?specials=pairs` 8개 조합 캡처(`.playwright-mcp/v2w101-*.png`). Codex 리뷰 낮음 3건 중 테스트 2건 보강, 슈퍼 + 줄·폭탄 범위 중복은 FEEDBACK R17 (`8fb6379`, `1d053a5`). 지시서 밖 변경: `isValidSwap`이 특수 블록 둘을 가능한 수로 센다(힌트·demo·sim도 조합을 고를 수 있음)
 - [ ] **V2-W1-02** 👀🧪 조합 연출: 모이기 → 슬로모션 → 이름 팝업 → 흔들림·파티클, 폭탄 + 폭탄 두 번 쾅, 전용 소리 (SPEC 3.1, PLAN2 3.3) ⛓ V2-W1-01 main 반영 후 — claude-2
   - 파일: `src/view/fx/`, `BoardView.ts`, `Sfx.ts`, `public/audio/combo.*`
   - 완료 기준: `combo` 준비 연출이 끝나기 전 `remove`·`transform`·연쇄 `activate`가 시작되지 않음. 390×844 `?specials=pairs`로 8개 조합 캡처, 콘솔 오류 0, 연출 값은 `COMBO`에서만
