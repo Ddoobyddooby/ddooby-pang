@@ -65,7 +65,6 @@ export class EventTracker {
             throw new Error(`transform: ${key(at)}에 ${block.id}가 없다`);
         }
         break;
-      case 'combo':
       case 'match':
       case 'activate':
       case 'score':

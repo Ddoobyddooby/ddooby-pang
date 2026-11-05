@@ -25,10 +25,9 @@ function hasMatchThrough(board: Board, pos: Pos): boolean {
   return 1 + count(0, -1) + count(0, 1) >= MIN_RUN || 1 + count(-1, 0) + count(1, 0) >= MIN_RUN;
 }
 
-/** a와 b를 바꾸면 유효한 수인가 (매치가 생기거나, 컬러 블록이 끼어 있거나, 둘 다 특수 블록이다 PLAN2 3.1) */
+/** a와 b를 바꾸면 유효한 수인가 (매치가 생기거나, 컬러 블록이 끼어 있다) */
 export function isValidSwap(board: Board, a: Pos, b: Pos): boolean {
   if (isColorBomb(getBlock(board, a)) || isColorBomb(getBlock(board, b))) return true;
-  if (getBlock(board, a)?.special && getBlock(board, b)?.special) return true;
   const swapped = swapBlocks(board, a, b);
   return hasMatchThrough(swapped, a) || hasMatchThrough(swapped, b);
 }

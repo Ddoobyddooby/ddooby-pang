@@ -86,11 +86,3 @@ for i in 1 2 3 4; do
   afconvert -f m4af -d aac -b 96000 assets/voice-src/trimmed/voice$i.wav public/audio/voice/voice$i.m4a
 done
 ```
-
-## 특수 블록 조합 소리 (V2-W1-02)
-
-| 파일 | 출처 | 쓰는 곳 |
-|---|---|---|
-| `combo.{ogg,m4a}` | 직접 합성 (`scripts/make-combo-sound.py`, 외부 소리 없음) | 특수 블록 조합의 제거가 터질 때 (폭탄 + 폭탄은 두 번) |
-
-올라가는 반짝음 + 낮은 쿵 + 짧은 노이즈 (0.75초). 외부 에셋을 쓰지 않아 저작권 문제가 없다. 더 마음에 드는 CC0 소리가 있으면 같은 이름으로 바꾼다 (`.ogg`는 `oggenc -q 4`, `.m4a`는 `afconvert -f m4af -d aac -b 96000`). 크기는 `src/config.ts` `SOUND.effects.combo.volume`.

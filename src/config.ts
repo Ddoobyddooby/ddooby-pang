@@ -1,7 +1,5 @@
 // 게임 수치는 전부 여기서 관리한다 (SPEC 5절, PLAN 4.8). 플레이 테스트 후 조정.
 
-import type { ComboKind } from './core/types';
-
 export const GAME = {
   width: 720,
   height: 1280,
@@ -41,67 +39,6 @@ export const SPECIAL = {
   /** 새 특수 블록 칸이 같은 턴의 발동 범위에 걸리면. 'keep': 남김 (캔디크러시). 'explode': 바로 발동 */
   newSpecialInBlast: 'keep' as 'keep' | 'explode',
 } as const;
-
-/**
- * 특수 블록 조합 연출 (SPEC v0.2 3.1, PLAN2 3.3). view만 읽는다 (core 결과와 무관).
- * mergeMs: 두 블록이 at으로 모이는 시간, slowMs: 슬로모션, nameMs: 이름 팝업, bombBombSecondMs: 두 번째 쾅까지 (ms)
- */
-export const COMBO = {
-  name: {
-    lineLine: '크로스!',
-    lineBomb: '빅 크로스!',
-    bombBomb: '메가 폭발!',
-    colorLine: '줄줄이 팡!',
-    colorBomb: '폭탄 비!',
-    colorColor: '올 클리어!',
-    colorSuper: '슈퍼 콤보!',
-    superAny: '슈퍼 콤보!',
-  },
-  mergeMs: 160,
-  slowMs: 250,
-  nameMs: 700,
-  /** 종류별 화면 흔들림. lineLine 가장 약하게 … colorColor 가장 세게 */
-  shake: {
-    lineLine: { duration: 150, intensity: 0.004 },
-    lineBomb: { duration: 200, intensity: 0.006 },
-    bombBomb: { duration: 260, intensity: 0.009 },
-    colorLine: { duration: 220, intensity: 0.007 },
-    colorBomb: { duration: 240, intensity: 0.008 },
-    colorSuper: { duration: 280, intensity: 0.01 },
-    superAny: { duration: 260, intensity: 0.009 },
-    colorColor: { duration: 360, intensity: 0.014 },
-  },
-  bombBombSecondMs: 180,
-  /** 이름 팝업: 큰 글자(아이용). 톡 커졌다 자리잡고(popMs 합쳐서 nameMs 안에) 끝에서 위로 떠오르며 사라진다 */
-  nameStyle: {
-    fontSize: 88,
-    strokeThickness: 14,
-    yRatio: 0.3,
-    popScale: 1.3,
-    popMs: 160,
-    rise: 30,
-    /** 사라지며 떠오르는 시간 (nameMs 맨 끝) */
-    fadeMs: 230,
-  },
-  /** 모이는 두 블록이 슬로모션 동안 커지는 배율 (위치는 at 그대로) */
-  chargeScale: 1.35,
-  /** 제거 연출: 종류별로 칸마다 터지는 별 수(아래로 갈수록 세다)와 at에서 퍼지는 원 반지름(칸 단위). 별은 FX.maxParticles를 넘지 않는다 */
-  burst: {
-    lineLine: { stars: 2, ring: 1.5 },
-    lineBomb: { stars: 2, ring: 2 },
-    bombBomb: { stars: 3, ring: 2.5 },
-    colorLine: { stars: 3, ring: 2 },
-    colorBomb: { stars: 3, ring: 2.5 },
-    superAny: { stars: 3, ring: 3 },
-    colorSuper: { stars: 4, ring: 3 },
-    colorColor: { stars: 5, ring: 4 },
-  },
-} as const satisfies {
-  name: Record<ComboKind, string>;
-  shake: Record<ComboKind, { duration: number; intensity: number }>;
-  burst: Record<ComboKind, { stars: number; ring: number }>;
-  [key: string]: unknown;
-};
 
 /** 애니메이션 시간 (ms) */
 /** 무입력 힌트 (W4-03). 입력할 수 있는 상태로 idleMs가 지나면 가능한 수의 두 블록이 말랑하게 커졌다 작아지기를 반복한다 */
@@ -584,7 +521,6 @@ export const SOUND = {
     bad: { file: 'bad', volume: 0.35 },
     match: { file: 'match', volume: 0.5 },
     special: { file: 'special', volume: 0.45 },
-    combo: { file: 'combo', volume: 0.55 },
     clear: { file: 'clear', volume: 0.45 },
     fail: { file: 'fail', volume: 0.4 },
     button: { file: 'button', volume: 0.5 },
