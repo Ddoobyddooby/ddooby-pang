@@ -150,7 +150,11 @@ describe('modes: 복합 미션과 점수 (PLAN 5절 규칙 그대로)', () => {
 
 describe('view: 장애물 미션 문구 (카드·패널)', () => {
   it('미션 카드', () => {
-    expect(missionLine({ type: 'clearJelly' })).toEqual({ color: null, text: '젤리 모두 없애기!' });
+    expect(missionLine({ type: 'clearJelly' })).toEqual({
+      color: null,
+      text: '젤리 모두 없애기!',
+      obstacle: 'jelly',
+    });
     const line = (obstacle: ObstacleKind, count: number) =>
       missionLine({ type: 'clearObstacle', obstacle, count }).text;
     expect(line('lock', 3)).toBe('자물쇠 3개 풀기!');
@@ -160,13 +164,14 @@ describe('view: 장애물 미션 문구 (카드·패널)', () => {
 
   it('패널 진행: 이름 지운 수 / 목표 (목표를 넘으면 목표까지만)', () => {
     expect(goalLine({ goal: { type: 'clearJelly' }, current: 7, target: 20, done: false })).toEqual(
-      { color: null, text: '젤리 7 / 20', done: false },
+      { color: null, text: '젤리 7 / 20', done: false, obstacle: 'jelly' },
     );
     const goal = { type: 'clearObstacle', obstacle: 'lock', count: 3 } as const;
     expect(goalLine({ goal, current: 5, target: 3, done: true })).toEqual({
       color: null,
       text: '자물쇠 3 / 3',
       done: true,
+      obstacle: 'lock',
     });
     const frost = { type: 'clearObstacle', obstacle: 'frost', count: 2 } as const;
     expect(goalLine({ goal: frost, current: 1, target: 2, done: false }).text).toBe('얼음 1 / 2');

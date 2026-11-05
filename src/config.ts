@@ -72,6 +72,32 @@ export const ANIM = {
   transform: 400,
 } as const;
 
+/** 장애물 그림 크기(칸 대비 비율)와 연출 시간 (PLAN2 5.5). 그림 자체는 view/theme/obstacleArt.ts */
+export const OBSTACLE = {
+  /** 장애물 텍스처 한 변 (px). 칸보다 크게 구워 줄여 쓴다 */
+  texSize: 128,
+  /** 칸 대비 크기: 얼음 덩어리, 젤리 바닥, 자물쇠 */
+  size: { frost: 0.98, jelly: 0.92, lock: 0.86 },
+  /** 자물쇠가 블록 중심에서 내려앉는 정도 (칸 대비) */
+  lockDy: 0.04,
+  /** 잠긴 블록을 밀었을 때(무효 입력) 작게 흔들림 */
+  lockShake: { dx: 0.07, ms: 55, repeat: 2 },
+  /** 잠금 해제: 위로 튕기며 돌고 사라짐. 블록은 살짝 통통 */
+  lockRelease: { ms: 480, rise: 0.8, fall: 0.9, spin: 160, blockPop: 1.15, popMs: 200 },
+  /** 얼음 피해: 한 번 부풀며 금이 늘고 조각이 튄다. 깨질 때는 조각이 더 많고 얼음이 줄며 사라진다 */
+  frostHit: { pulse: 1.08, ms: 140, shards: 5 },
+  frostBreak: { ms: 230, shards: 10 },
+  /** 얼음·잠금 조각: 크기(칸 대비), 퍼지는 거리(칸 대비), 시간 */
+  shard: { size: 0.2, dist: 0.7, ms: 460 },
+  /** 젤리 피해: 퐁 줄었다 돌아오며 옅어지고, 0겹이면 줄어들며 사라진다 */
+  jellyHit: { dip: 0.8, ms: 170 },
+  jellyGone: { ms: 240 },
+  /** 장애물 피해 연출은 같은 step의 블록 제거가 `><` 표정으로 터지기 시작할 때에 맞춘다 (ms 더하기) */
+  hitOffset: 60,
+  /** 고정 칸 아래에서 나타나는 리필 블록: 이 크기에서 1로 커지며 내려간다 */
+  spawn: { startScale: 0.25, growMs: 200 },
+} as const;
+
 /** 화면 배치와 블록 모양 (설계: 2026-10-30-screen-layout-design.md) */
 export const VIEW = {
   /** 기준 높이 1280 기준의 구역 배치 (px). 더 긴 화면의 늘어난 높이는 screenLayout이 나눈다 */

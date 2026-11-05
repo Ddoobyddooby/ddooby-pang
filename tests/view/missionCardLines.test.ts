@@ -73,3 +73,13 @@ describe('missionCardLines', () => {
     expect(missionCardLines(stage(goals), 2).goals.map((g) => g.color)).toEqual([0, 1]);
   });
 });
+
+describe('장애물 미션 아이콘', () => {
+  it('clearJelly는 젤리, clearObstacle은 그 종류', () => {
+    expect(missionLine({ type: 'clearJelly' }).obstacle).toBe('jelly');
+    expect(missionLine({ type: 'clearObstacle', obstacle: 'lock', count: 3 }).obstacle).toBe(
+      'lock',
+    );
+    expect(missionLine({ type: 'score', target: 10 }).obstacle).toBeUndefined();
+  });
+});

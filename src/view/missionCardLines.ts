@@ -18,6 +18,8 @@ export interface MissionLine {
   /** 수집 미션이면 그 색 (블록 그림용), 점수 미션이면 null */
   color: Color | null;
   text: string;
+  /** 장애물 미션이면 그 종류 (아이콘용) */
+  obstacle?: ObstacleKind;
 }
 
 export interface MissionCardLines {
@@ -30,10 +32,14 @@ export function missionLine(goal: Goal): MissionLine {
   if (goal.type === 'score')
     return { color: null, text: `점수 ${formatScore(goal.target)} 넘기기!` };
   if (goal.type === 'collect') return { color: goal.color, text: `${goal.count}개 모으기!` };
-  // 장애물 미션 아이콘·그림은 V2-W2-05
-  if (goal.type === 'clearJelly') return { color: null, text: '젤리 모두 없애기!' };
+  if (goal.type === 'clearJelly')
+    return { color: null, text: '젤리 모두 없애기!', obstacle: 'jelly' };
   const name = OBSTACLE_NAMES[goal.obstacle];
-  return { color: null, text: `${name} ${goal.count}${OBSTACLE_GOAL_VERBS[goal.obstacle]}` };
+  return {
+    color: null,
+    text: `${name} ${goal.count}${OBSTACLE_GOAL_VERBS[goal.obstacle]}`,
+    obstacle: goal.obstacle,
+  };
 }
 
 /** clearObstacle 카드 문구의 단위·동사: 자물쇠 3개 풀기! / 얼음 4개 깨기! / 젤리 6칸 지우기! */

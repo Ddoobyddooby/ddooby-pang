@@ -5,6 +5,7 @@
 import Phaser from 'phaser';
 import { MISSION_CARD, THEME, UI } from '../config';
 import type { MissionCardLines } from './missionCardLines';
+import { obstacleIconKey } from './theme/obstacleArt';
 import { blockKey } from './theme/textures';
 import { drawCreamPanel } from './ui/Panel';
 
@@ -53,8 +54,15 @@ export class MissionCard {
         })
         .setOrigin(0, 0.5);
       // 블록 그림 + 글자 묶음을 가로 가운데에
-      const icon = line.color === null ? 0 : c.goal.icon.size + c.goal.icon.gap;
+      const icon = line.color === null && !line.obstacle ? 0 : c.goal.icon.size + c.goal.icon.gap;
       const left = -(icon + text.width) / 2;
+      if (line.obstacle) {
+        items.push(
+          scene.add
+            .image(left + c.goal.icon.size / 2, y, obstacleIconKey(line.obstacle))
+            .setDisplaySize(c.goal.icon.size, c.goal.icon.size),
+        );
+      }
       if (line.color !== null) {
         items.push(
           scene.add

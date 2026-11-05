@@ -16,6 +16,7 @@ import Phaser from 'phaser';
 import { GAME, HINT, HUD, MAP, MISSION_CARD, TIMEATTACK, VIEW } from '../config';
 import { createInitialState, resolveFinale, resolveSwap } from '../core/engine';
 import { findHint } from '../core/moves';
+import { boardObstacles, diffObstacles } from '../view/obstacleState';
 import type { GameState, Pos, SpecialKind } from '../core/types';
 import { BoardView, type BoardViewHooks } from '../view/BoardView';
 import { Hud } from '../view/Hud';
@@ -357,6 +358,9 @@ export class GameScene extends Phaser.Scene {
 
     const result = resolveSwap(this.state, a, b);
     this.sfx.play(result.valid ? 'swap' : 'bad');
+    if (!result.valid) {
+      for (const pos of [a, b]) if (this.view.isLocked(pos)) this.view.shakeLocked(pos);
+    }
     await this.view.play(result.steps);
     this.state = result.state;
     if (result.valid) {
@@ -435,6 +439,7 @@ export class GameScene extends Phaser.Scene {
       if (actual.get(key) !== block?.id)
         wrong.push(`${key}: view=${actual.get(key)} board=${block?.id}`);
     });
+    wrong.push(...diffObstacles(this.view.obstacleCells(), boardObstacles(board)));
     if (wrong.length > 0 || actual.size !== blockCount) {
       console.error('[game] view ≠ board', {
         seed: this.seed,

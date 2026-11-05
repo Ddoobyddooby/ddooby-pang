@@ -2,9 +2,11 @@
 // 게임 상태를 직접 계산하지 않는다. 위치는 EventTracker로 이벤트만 따라간다.
 
 import Phaser from 'phaser';
-import { ANIM, FX, VIEW } from '../config';
+import { ANIM, FX, OBSTACLE, VIEW } from '../config';
 import type { Block, Board, GameEvent, Pos, SpecialKind } from '../core/types';
 import { BlockSprite } from './BlockSprite';
+import { ObstacleView } from './ObstacleView';
+import { obstacleActions, obstacleDelay, refillStart, type ObstacleMap } from './obstacleState';
 import { EventTracker } from './eventTracker';
 import { cellAt, cellCenter, type Layout } from './layout';
 import { activateDelay, flashDelay, removeDelays, transformDelay } from './fx/chainTimeline';
@@ -36,6 +38,9 @@ export class BoardView {
   private removeAt = new Map<number, number>();
   /** 재생 중인 step의 발동이 기다릴 ms (변신 연출, PLAN 6.18) */
   private activateOffset = 0;
+  /** 재생 중인 step (obstacle 연출 시작 시각 계산용) */
+  private step: readonly GameEvent[] = [];
+  private readonly obstacles: ObstacleView;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -62,6 +67,9 @@ export class BoardView {
     for (let i = 1; i < layout.rows; i++)
       cells.lineBetween(x, y + i * layout.cell, x + width, y + i * layout.cell);
 
+    // 젤리·얼음벽은 블록 아래
+    this.obstacles = new ObstacleView(scene, board, layout);
+
     // 보드 밖(위쪽)에서 떨어지는 리필 블록이 HUD 위에 보이지 않게 가린다
     this.layer = scene.add.container(0, 0);
     const maskShape = scene.make.graphics({}, false);
@@ -76,11 +84,14 @@ export class BoardView {
     board.cells.forEach((block, i) => {
       if (block) this.addSprite(block, { r: Math.floor(i / board.cols), c: i % board.cols });
     });
+    // 잠금은 블록 위
+    this.obstacles.addLocks(board);
   }
 
   /** step을 순서대로 재생한다. 한 step 안의 이벤트는 동시에 재생한다 */
   async play(steps: readonly (readonly GameEvent[])[]): Promise<void> {
     for (const step of steps) {
+      this.step = step;
       this.removeAt = removeDelays(step, ANIM.chainStep, ANIM.transform);
       this.activateOffset = transformDelay(step, ANIM.transform);
       await Promise.all(step.map((event) => this.playEvent(event)));
@@ -128,6 +139,34 @@ export class BoardView {
       .strokeRoundedRect(x - size / 2, y - size / 2, size, size, this.layout.cell * select.radius);
   }
 
+  /** 그 칸이 잠겨 있는가 (무효 입력 흔들림 판단용) */
+  isLocked(pos: Pos): boolean {
+    return this.obstacles.isLocked(pos);
+  }
+
+  /** 잠긴 칸을 밀었을 때: 자물쇠와 블록이 작게 흔들린다. 기다리지 않는다 */
+  shakeLocked(pos: Pos): void {
+    this.obstacles.shakeLock(pos);
+    const sprite = this.sprites.get(this.tracker.idAt(pos) ?? -1);
+    if (!sprite) return;
+    const { dx, ms, repeat } = OBSTACLE.lockShake;
+    const x = sprite.x;
+    this.scene.tweens.killTweensOf(sprite);
+    this.scene.tweens.add({
+      targets: sprite,
+      x: x + dx * this.layout.cell,
+      duration: ms,
+      yoyo: true,
+      repeat,
+      onComplete: () => sprite.setX(x),
+    });
+  }
+
+  /** 디버그용: 지금 화면에 보이는 장애물 (보드 층과 대조) */
+  obstacleCells(): ObstacleMap {
+    return this.obstacles.state();
+  }
+
   /** 디버그용: 스프라이트의 실제 화면 위치로 본 "r,c" → id */
   spriteCells(): Map<string, number> {
     const out = new Map<string, number>();
@@ -168,9 +207,22 @@ export class BoardView {
 
       case 'refill':
         return Promise.all(
-          event.blocks.map(({ block, at, dropFrom }) => {
-            this.addSprite(block, { r: at.r - dropFrom, c: at.c });
-            return this.moveTo(block.id, at, ANIM.refillPerCell * dropFrom, 'Quad.easeIn', true);
+          event.blocks.map(({ block, at, dropFrom, spawnTop }) => {
+            const start = refillStart(at, dropFrom, spawnTop);
+            const sprite = this.addSprite(block, { r: start.row, c: at.c });
+            let duration = ANIM.refillPerCell * (at.r - start.row);
+            if (start.grow) {
+              // 고정 칸 아래에서 작게 나타나 커지며 내려간다
+              sprite.setScale(OBSTACLE.spawn.startScale);
+              duration = Math.max(duration, OBSTACLE.spawn.growMs);
+              void tween(this.scene, {
+                targets: sprite,
+                scale: 1,
+                duration: OBSTACLE.spawn.growMs,
+                ease: 'Back.easeOut',
+              });
+            }
+            return this.moveTo(block.id, at, duration, 'Quad.easeIn', true);
           }),
         ).then(() => undefined);
 
@@ -209,8 +261,18 @@ export class BoardView {
       }
 
       case 'obstacle':
-        // 장애물 그림은 V2-W2-05. 지금은 기다리지 않는다
-        return Promise.resolve();
+        return Promise.all(
+          obstacleActions(event).map((action) => {
+            const delay = obstacleDelay(this.step, action, this.removeAt, OBSTACLE.hitOffset);
+            if (action.op === 'release') {
+              const sprite = this.sprites.get(this.tracker.idAt(action.at) ?? -1);
+              this.later(delay, () =>
+                sprite?.pop(OBSTACLE.lockRelease.blockPop, OBSTACLE.lockRelease.popMs),
+              );
+            }
+            return this.obstacles.play(action, delay);
+          }),
+        ).then(() => undefined);
 
       case 'score':
         if (event.delta > 0)

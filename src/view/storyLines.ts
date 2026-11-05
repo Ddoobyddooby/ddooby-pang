@@ -24,6 +24,8 @@ export interface GoalLine {
   color: Color | null;
   text: string;
   done: boolean;
+  /** 장애물 미션이면 그 종류 (아이콘용) */
+  obstacle?: ObstacleKind;
 }
 
 /** 목표를 넘어도 목표까지만 보여 준다 (30 / 25 대신 25 / 25) */
@@ -37,7 +39,8 @@ export function goalLine({ goal, current, target, done }: GoalProgressLike): Goa
   }
   // 장애물 미션: 이름 + 지운 수 / 목표 (clearJelly의 목표는 처음 젤리 칸 수). 아이콘은 V2-W2-05
   const name = goal.type === 'clearJelly' ? OBSTACLE_NAMES.jelly : OBSTACLE_NAMES[goal.obstacle];
-  return { color: null, text: `${name} ${Math.min(current, target)} / ${target}`, done };
+  const obstacle = goal.type === 'clearJelly' ? 'jelly' : goal.obstacle;
+  return { color: null, text: `${name} ${Math.min(current, target)} / ${target}`, done, obstacle };
 }
 
 /** 미션 줄(최대 maxLines). 점수 미션이 없으면 마지막에 `점수 N` 줄을 따로 둔다 */

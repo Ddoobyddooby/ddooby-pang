@@ -58,6 +58,17 @@ export const THEMES: readonly Theme[] = [
   },
 ];
 
+/**
+ * 장애물 색 (PLAN2 5.5). 판 바탕은 모든 테마가 같은 크림이라 대부분 공통이고,
+ * 젤리만 그 테마 블록 색과 겹치지 않게 테마마다 다르다. 그림 자체는 obstacleArt.ts
+ */
+export const OBSTACLE_COLORS: Record<ThemeId, { jelly: string; jellyEdge: string }> = {
+  storybook: { jelly: '#ff6fb5', jellyEdge: '#c93c86' },
+  candy: { jelly: '#9a6bff', jellyEdge: '#5f33c9' },
+  space: { jelly: '#ff6fb5', jellyEdge: '#b02f78' },
+  ocean: { jelly: '#ff8a5c', jellyEdge: '#c4502a' },
+};
+
 export function getTheme(id: ThemeId): Theme {
   return THEMES.find((t) => t.id === id) ?? THEMES[0]!;
 }

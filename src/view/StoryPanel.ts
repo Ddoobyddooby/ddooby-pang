@@ -6,6 +6,7 @@ import { HUD, THEME } from '../config';
 import type { GoalProgressLike } from './storyLines';
 import { isMovesLow, storyLines, type GoalLine } from './storyLines';
 import type { ScreenLayout } from './layout';
+import { obstacleIconKey } from './theme/obstacleArt';
 import { blockKey } from './theme/textures';
 
 interface Row {
@@ -40,6 +41,12 @@ export class StoryPanel {
     initial.goals.forEach((line, i) => {
       const y = lineY(i);
       let x = left;
+      if (line.obstacle) {
+        scene.add
+          .image(x + s.icon.size / 2, y, obstacleIconKey(line.obstacle))
+          .setDisplaySize(s.icon.size, s.icon.size);
+        x += s.icon.size + s.icon.gap;
+      }
       if (line.color !== null) {
         scene.add
           .image(x + s.icon.size / 2, y, blockKey(line.color, 'normal'))
