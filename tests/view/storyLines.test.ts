@@ -4,11 +4,13 @@ import { goalLine, isMovesLow, storyLines } from '../../src/view/storyLines';
 const score = (current: number, target: number) => ({
   goal: { type: 'score', target } as const,
   current,
+  target,
   done: current >= target,
 });
 const collect = (color: 0 | 1 | 2 | 3 | 4 | 5, current: number, count: number) => ({
   goal: { type: 'collect', color, count } as const,
   current,
+  target: count,
   done: current >= count,
 });
 

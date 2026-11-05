@@ -317,6 +317,17 @@ function runCascades(
       removed.push({ id: block.id, at, bySpecial: !inGroup.has(i) });
       if (block.color !== null) removedByColor[block.color]!++;
       cells[i] = null;
+      // 젤리: 그 칸의 블록이 제거되면 1겹 (cleared는 칸마다 한 번이라 step당 최대 1겹, PLAN2 5.2)
+      const jelly = layers?.[i]?.jelly;
+      if (layers && jelly) {
+        const hp = jelly - 1;
+        const rest = { ...layers[i]! };
+        if (hp > 0) rest.jelly = hp as 1;
+        else delete rest.jelly;
+        layers[i] = Object.keys(rest).length > 0 ? rest : null;
+        obstacles.push({ at, kind: 'jelly', hp });
+        if (hp === 0) clearedObstacles.jelly++;
+      }
     }
     if (layers) {
       // 얼음벽: 특수·조합 범위에 들거나 상하좌우 이웃 블록이 매치로 제거되면 1겹 (step당 칸마다 최대 1겹, PLAN2 5.2)

@@ -56,7 +56,7 @@ describe('modes/StoryMode (PLAN 5절)', () => {
     expect(mode.isOver()).toBe(false);
     expect(mode.score()).toBe(0);
     expect(mode.goalProgress()).toEqual([
-      { goal: { type: 'score', target: 100 }, current: 0, done: false },
+      { goal: { type: 'score', target: 100 }, current: 0, target: 100, done: false },
     ]);
   });
 

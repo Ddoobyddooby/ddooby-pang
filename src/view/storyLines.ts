@@ -15,6 +15,7 @@ export const OBSTACLE_NAMES: Record<ObstacleKind, string> = {
 export interface GoalProgressLike {
   goal: Goal;
   current: number;
+  target: number;
   done: boolean;
 }
 
@@ -26,7 +27,7 @@ export interface GoalLine {
 }
 
 /** 목표를 넘어도 목표까지만 보여 준다 (30 / 25 대신 25 / 25) */
-export function goalLine({ goal, current, done }: GoalProgressLike): GoalLine {
+export function goalLine({ goal, current, target, done }: GoalProgressLike): GoalLine {
   if (goal.type === 'score') {
     const shown = formatScore(Math.min(current, goal.target));
     return { color: null, text: `점수 ${shown} / ${formatScore(goal.target)}`, done };
@@ -34,10 +35,9 @@ export function goalLine({ goal, current, done }: GoalProgressLike): GoalLine {
   if (goal.type === 'collect') {
     return { color: goal.color, text: `${Math.min(current, goal.count)} / ${goal.count}`, done };
   }
-  // 장애물 미션 그림·남은 수는 V2-W2-05에서 다듬는다
-  if (goal.type === 'clearJelly') return { color: null, text: '젤리 모두', done };
-  const shown = Math.min(current, goal.count);
-  return { color: null, text: `${OBSTACLE_NAMES[goal.obstacle]} ${shown} / ${goal.count}`, done };
+  // 장애물 미션: 이름 + 지운 수 / 목표 (clearJelly의 목표는 처음 젤리 칸 수). 아이콘은 V2-W2-05
+  const name = goal.type === 'clearJelly' ? OBSTACLE_NAMES.jelly : OBSTACLE_NAMES[goal.obstacle];
+  return { color: null, text: `${name} ${Math.min(current, target)} / ${target}`, done };
 }
 
 /** 미션 줄(최대 maxLines). 점수 미션이 없으면 마지막에 `점수 N` 줄을 따로 둔다 */

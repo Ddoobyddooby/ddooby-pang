@@ -199,10 +199,10 @@ describe('core: 장애물 보드에서 일반 플레이', () => {
           if (layer?.frost) expect(state.board.cells[i]).toBeNull();
         });
       }
-      // 얼음벽은 줄기만 하고 새로 생기지 않는다. 젤리는 V2-W2-04 전까지 그대로
+      // 얼음벽·젤리는 줄기만 하고 새로 생기지 않는다
       state.board.layers!.forEach((layer, i) => {
         expect(layer?.frost ?? 0).toBeLessThanOrEqual(layers[i]?.frost ?? 0);
-        expect(layer?.jelly).toBe(layers[i]?.jelly);
+        expect(layer?.jelly ?? 0).toBeLessThanOrEqual(layers[i]?.jelly ?? 0);
         if (layer?.lock) expect(layers[i]?.lock).toBe(true);
       });
     }

@@ -1,7 +1,7 @@
 // 스토리 (PLAN 5절): 정해진 이동 안에 스테이지 미션을 모두 달성하면 클리어.
 // 판정은 onResolve 뒤에만 한다. 한 턴의 연쇄는 core가 끝까지 계산해서 오므로 마지막 이동에서 달성해도 클리어.
 
-import type { ResolveResult } from '../core/types';
+import type { ObstacleKind, ResolveResult } from '../core/types';
 import type { Goal, StageDef } from '../data/stageSchema';
 import type { GameMode, ModeResult } from './GameMode';
 import { movesLeftBonus, starsFor } from './storyScore';
@@ -10,6 +10,8 @@ export interface GoalProgress {
   goal: Goal;
   /** 목표를 넘어도 그대로 센다 */
   current: number;
+  /** 달성 기준 (clearJelly는 처음 젤리 칸 수) */
+  target: number;
   done: boolean;
 }
 
@@ -19,10 +21,15 @@ export class StoryMode implements GameMode {
   private total = 0;
   /** 색별 제거 수 (특수 효과로 제거된 블록 포함) */
   private readonly collected = [0, 0, 0, 0, 0, 0];
+  /** 완전히 없앤 장애물 수 누적 (ResolveResult.clearedObstacles, PLAN2 5.3) */
+  private readonly cleared: Record<ObstacleKind, number> = { lock: 0, frost: 0, jelly: 0 };
+  /** 처음 젤리 칸 수 (clearJelly 목표). 젤리는 새로 생기지 않는다 */
+  private readonly jellyCells: number;
   private state: 'playing' | 'cleared' | 'failed' = 'playing';
 
   constructor(private readonly stage: StageDef) {
     this.moves = stage.moves;
+    this.jellyCells = stage.layers?.filter((l) => l?.jelly !== undefined).length ?? 0;
   }
 
   onResolve(result: ResolveResult): void {
@@ -31,6 +38,8 @@ export class StoryMode implements GameMode {
     this.moves--;
     this.total += result.scoreDelta;
     result.removedByColor.forEach((n, color) => (this.collected[color]! += n));
+    for (const kind of Object.keys(this.cleared) as ObstacleKind[])
+      this.cleared[kind] += result.clearedObstacles[kind];
 
     if (this.goalProgress().every((g) => g.done)) this.state = 'cleared';
     else if (this.moves === 0) this.state = 'failed';
@@ -56,11 +65,14 @@ export class StoryMode implements GameMode {
   goalProgress(): GoalProgress[] {
     return this.stage.goals.map((goal) => {
       const [current, target] = this.goalCount(goal);
-      return { goal, current, done: current >= target };
+      return { goal, current, target, done: current >= target };
     });
   }
 
-  /** [지금, 목표]. 장애물 미션은 V2-W2-04 전까지 진행 0 (달성되지 않는다) */
+  /**
+   * [지금, 목표]. clearJelly: 지운 젤리 칸 / 처음 젤리 칸 (다 지우면 보드의 젤리 0).
+   * clearObstacle: 그 장애물을 완전히 없앤 수 누적 (잠금 해제, 얼음벽 0겹, 젤리 0겹. PLAN2 5.4)
+   */
   private goalCount(goal: Goal): [current: number, target: number] {
     switch (goal.type) {
       case 'score':
@@ -68,9 +80,9 @@ export class StoryMode implements GameMode {
       case 'collect':
         return [this.collected[goal.color]!, goal.count];
       case 'clearJelly':
-        return [0, 1];
+        return [this.cleared.jelly, this.jellyCells];
       case 'clearObstacle':
-        return [0, goal.count];
+        return [this.cleared[goal.obstacle], goal.count];
     }
   }
 

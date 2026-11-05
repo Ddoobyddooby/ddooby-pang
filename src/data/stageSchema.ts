@@ -12,9 +12,9 @@ export type ObstacleKind = (typeof OBSTACLE_KINDS)[number];
 export type Goal =
   | { readonly type: 'score'; readonly target: number }
   | { readonly type: 'collect'; readonly color: Color; readonly count: number }
-  /** 보드의 젤리를 모두 없앤다 (진행 판정은 V2-W2-04) */
+  /** 보드의 젤리를 모두 없앤다 (진행 = 지운 젤리 칸 / 처음 젤리 칸) */
   | { readonly type: 'clearJelly' }
-  /** 그 장애물을 count개 없앤다 (집계 기준은 V2-W2-04에서 PLAN에 확정) */
+  /** 그 장애물을 count개 완전히 없앤다 (ResolveResult.clearedObstacles 누적, PLAN2 5.4) */
   | { readonly type: 'clearObstacle'; readonly obstacle: ObstacleKind; readonly count: number };
 
 export interface StageDef {
