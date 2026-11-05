@@ -177,6 +177,49 @@ describe('core: 무지개(컬러) 블록 범위 (PLAN2 5.2)', () => {
   });
 });
 
+describe('core: 무지개 + 줄·폭탄·슈퍼 조합 범위 (PLAN 6.18, PLAN2 5.2)', () => {
+  // C ↔ Y특수: 보드의 일반 Y가 그 특수 블록으로 바뀌어 차례로 발동한다. 범위가 여러 번 겹친다.
+  // (1,2) Y는 잠금 + 젤리(K): 변신하지 않고 잠금만 풀려 젤리가 남는다. 나머지 칸은 젤리 1·2겹을 섞는다
+  const grid = ['jJjJj', 'JjKjJ', 'jJjJj', 'JjJjJ', 'jJjJj'];
+  const initial = (r: number, c: number) => (grid[r]![c] === 'J' ? 2 : 1);
+
+  it.each(['Y-', 'Y|', 'Y*', 'Y+'])('C ↔ %s', (token) => {
+    const text = `
+      G B P Y O
+      B P Y O G
+      R C ${token} R P
+      P O G B Y
+      O G B P B
+    `;
+    const result = resolveSwap(stateOf(withLayers(text, grid)), { r: 2, c: 1 }, { r: 2, c: 2 });
+    expect(result.valid).toBe(true);
+    const key = (p: { r: number; c: number }) => `${p.r},${p.c}`;
+    const first = result.steps[1]!;
+    expect(ofType(first, 'activate').length).toBeGreaterThan(1);
+
+    for (const step of result.steps) {
+      const removed = ofType(step, 'remove').flatMap((e) => e.blocks.map((b) => b.at));
+      const changes = jellyChanges(step);
+      // step당 칸마다 최대 1겹
+      expect(new Set(changes.map((c) => key(c.at))).size).toBe(changes.length);
+      if (step !== first) continue;
+      // 첫 step은 모든 칸에 젤리가 있으므로: 제거된 칸 = 젤리 피해 칸, 겹수는 처음 - 1
+      expect(changes.map((c) => key(c.at)).sort()).toEqual(removed.map(key).sort());
+      for (const c of changes) expect(c.hp).toBe(initial(c.at.r, c.at.c) - 1);
+    }
+
+    // 잠금 + 젤리 칸: 첫 step에 잠금만 풀리고 젤리 피해는 없다
+    const lockChanges = ofType(first, 'obstacle')
+      .flatMap((e) => e.changes)
+      .filter((c) => c.kind === 'lock');
+    expect(lockChanges).toEqual([{ at: { r: 1, c: 2 }, kind: 'lock', hp: 0 }]);
+    expect(jellyChanges(first).some((c) => c.at.r === 1 && c.at.c === 2)).toBe(false);
+    expect(result.clearedObstacles.lock).toBe(1);
+    expect(result.clearedObstacles.jelly).toBe(zeroJelly(result.steps));
+    expect(result.clearedObstacles.jelly).toBeGreaterThan(0);
+  });
+});
+
 describe('core: 젤리 스테이지 연속 플레이 (결정성·일관성)', () => {
   const stage = obstacleStage();
   const start = () =>

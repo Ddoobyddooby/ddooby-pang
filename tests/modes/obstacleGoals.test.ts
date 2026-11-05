@@ -101,6 +101,32 @@ describe('modes: clearObstacle (PLAN2 5.4)', () => {
     expect(mode.goalProgress().map((g) => g.current)).toEqual([4, 2, 5]);
     expect(mode.result()).toMatchObject({ cleared: true });
   });
+
+  it.each(['lock', 'frost', 'jelly'] as const)(
+    '마지막 이동까지 %s 하나가 모자라면 실패 (cleared: false, 별 0)',
+    (short) => {
+      const mode = new StoryMode(stageWith(goals, 2));
+      const full = { lock: 3, frost: 2, jelly: 5 };
+      mode.onResolve(fake({}));
+      mode.onResolve(fake({ ...full, [short]: full[short] - 1 }, 100_000));
+      expect(mode.isOver()).toBe(true);
+      expect(
+        mode
+          .goalProgress()
+          .find((g) => g.goal.type === 'clearObstacle' && g.goal.obstacle === short)!.done,
+      ).toBe(false);
+      expect(mode.result()).toMatchObject({ cleared: false, stars: 0, bonus: 0 });
+    },
+  );
+
+  it('마지막 이동에서 채우면 클리어 (남은 이동 0, 보너스 0)', () => {
+    const mode = new StoryMode(stageWith(goals, 2));
+    mode.onResolve(fake({ lock: 3, frost: 2 }));
+    expect(mode.isOver()).toBe(false);
+    mode.onResolve(fake({ jelly: 5 }));
+    expect(mode.movesLeft()).toBe(0);
+    expect(mode.result()).toMatchObject({ cleared: true, bonus: 0 });
+  });
 });
 
 describe('modes: 복합 미션과 점수 (PLAN 5절 규칙 그대로)', () => {
