@@ -4,7 +4,7 @@ import { SCORE } from '../../src/config';
 import { createInitialState, resolveSwap } from '../../src/core/engine';
 import { findHint } from '../../src/core/moves';
 import { createRng } from '../../src/core/rng';
-import { cascadeMultiplier } from '../../src/core/scoring';
+import { cascadeMultiplier, groupBase } from '../../src/core/scoring';
 import type { Board, CellLayer, GameEvent, GameState } from '../../src/core/types';
 import { obstacleStage } from '../../src/dev/obstacleStage';
 import { parseBoard } from '../helpers/board';
@@ -144,6 +144,105 @@ describe('core: 특수 효과 범위로 얼음벽 감소', () => {
     expect(area).toContainEqual({ r: 2, c: 4 });
     const removed = ofType(first, 'remove')[0]!.blocks.map((b) => b.at);
     expect(removed).not.toContainEqual({ r: 2, c: 4 });
+  });
+});
+
+/** 모든 step의 얼음벽 0겹 수 = clearedObstacles.frost, step마다 점수 = 그룹·특수 제거·장애물 겹수 */
+function expectFrostTotals(result: ReturnType<typeof resolveSwap>) {
+  const zeros = result.steps.flatMap(frostChanges).filter((c) => c.hp === 0).length;
+  expect(result.clearedObstacles.frost).toBe(zeros);
+  for (const step of result.steps) {
+    const [match] = ofType(step, 'match');
+    if (!match) continue;
+    const base = match.groups.reduce((sum, g) => sum + groupBase(g.cells.length), 0);
+    const bySpecial = ofType(step, 'remove')[0]!.blocks.filter((b) => b.bySpecial).length;
+    const hits = ofType(step, 'obstacle').flatMap((e) => e.changes).length;
+    expect(ofType(step, 'score')[0]!.delta).toBe(
+      Math.floor(
+        (base + bySpecial * SCORE.bySpecial + hits * SCORE.obstacle) *
+          cascadeMultiplier(match.cascade),
+      ),
+    );
+  }
+}
+
+describe('core: 새 특수 블록이 생긴 칸만 이웃인 얼음벽', () => {
+  it('4칸 매치의 생성 칸 (2,1)이 (1,1) 얼음의 유일한 제거 이웃이어도 1겹', () => {
+    // (2,1) Y ↔ (3,1) R → 2행 (2,0)~(2,3) R R R R, 스왑 칸 (2,1)에 줄 블록이 생긴다
+    const board = withLayers(
+      `
+      G B P O G
+      B . G P B
+      R Y R R O
+      P R O G Y
+      B G B P O
+      `,
+      ['.....', '.2...', '.....', '.....', '.....'],
+    );
+    const replaced = board.cells[3 * 5 + 1]!; // 스왑으로 (2,1)에 온 R
+    const result = resolveSwap(stateOf(board), { r: 2, c: 1 }, { r: 3, c: 1 });
+    const first = result.steps[1]!;
+    expect(ofType(first, 'remove')[0]!.blocks).toContainEqual({
+      id: replaced.id,
+      at: { r: 2, c: 1 },
+      bySpecial: false,
+    });
+    expect(ofType(first, 'create').map((e) => e.at)).toEqual([{ r: 2, c: 1 }]);
+    expect(frostChanges(first)).toEqual([{ at: { r: 1, c: 1 }, kind: 'frost', hp: 1 }]);
+    expect(ofType(first, 'score')[0]!.delta).toBe(SCORE.match4 + SCORE.obstacle);
+    expectFrostTotals(result);
+  });
+});
+
+describe('core: 컬러 + 특수 조합 범위의 얼음벽', () => {
+  it('컬러 + 줄: 같은 색 블록이 줄이 되어 발동한 범위에 든 얼음벽 1겹 (3 → 2)', () => {
+    // (0,0) C ↔ (0,1) R- → R 블록 (2,1)·(3,2)가 세로 줄로 바뀌고, (3,2) 세로 줄이 (1,2)를 지난다
+    const board = withLayers(
+      `
+      C R- G Y
+      Y G . B
+      B R Y G
+      G B R P
+      `,
+      ['....', '..3.', '....', '....'],
+    );
+    const result = resolveSwap(stateOf(board), { r: 0, c: 0 }, { r: 0, c: 1 });
+    const first = result.steps[1]!;
+    expect(ofType(first, 'transform')).toHaveLength(1);
+    const areas = ofType(first, 'activate').flatMap((e) => e.cleared);
+    expect(areas).toContainEqual({ r: 1, c: 2 });
+    expect(frostChanges(first)).toEqual([{ at: { r: 1, c: 2 }, kind: 'frost', hp: 2 }]);
+    const removed = ofType(first, 'remove')[0]!.blocks;
+    expect(removed.every((b) => b.bySpecial)).toBe(true);
+    expect(ofType(first, 'score')[0]!.delta).toBe(
+      removed.length * SCORE.bySpecial + SCORE.obstacle,
+    );
+    expectFrostTotals(result);
+  });
+
+  it('컬러 + 폭탄: (2,1) 폭탄 범위에 든 1겹 얼음벽이 깨지고 같은 resolve에서 채워진다', () => {
+    // (0,0) C ↔ (0,1) R* → R 블록 (2,1)이 폭탄이 되어 3×3에 (2,2)가 든다
+    const board = withLayers(
+      `
+      C R* G Y
+      Y G B P
+      B R . G
+      G B P Y
+      `,
+      ['....', '....', '..1.', '....'],
+    );
+    const result = resolveSwap(stateOf(board), { r: 0, c: 0 }, { r: 0, c: 1 });
+    const first = result.steps[1]!;
+    expect(ofType(first, 'activate').map((e) => e.special)).toContain('bomb');
+    expect(frostChanges(first)).toEqual([{ at: { r: 2, c: 2 }, kind: 'frost', hp: 0 }]);
+    const removed = ofType(first, 'remove')[0]!.blocks;
+    expect(ofType(first, 'score')[0]!.delta).toBe(
+      removed.length * SCORE.bySpecial + SCORE.obstacle,
+    );
+    expect(result.clearedObstacles.frost).toBe(1);
+    expect(result.state.board.layers![2 * 4 + 2]).toBeNull();
+    expect(result.state.board.cells[2 * 4 + 2]).not.toBeNull();
+    expectFrostTotals(result);
   });
 });
 
