@@ -231,6 +231,41 @@ SPEC 4절. v0.1 형식(`layout` 없음) 스테이지와 경쟁 모드는 장애�
 - 시험 (`scripts/supabase-check/`, `npm test`에 넣지 않음): 익명 로그인한 두 사용자 A·B로 ① `weekly_scores` INSERT·UPDATE·DELETE 실패 ② `profiles` UPDATE 실패, SELECT 성공 ③ B가 A의 `runs`를 못 읽음 ④ `stage_attempts`는 자기 것 INSERT 성공, 남의 `user_id`로 INSERT 실패, 남의 것 SELECT 0행. 비로그인(anon)은 쓰기 전부 실패. 시험이 만든 계정·행은 끝나면 남겨도 되는 개발 프로젝트지만 `stage_attempts` 시험 행에는 `stage_id = 999`를 써서 구분한다
 - 사용자가 할 일: 대시보드에서 Anonymous Sign-ins 켜기, `.env.local`에 URL·publishable key 넣기, 터미널에서 `supabase login`·`supabase link --project-ref <ref>`(DB 비밀번호 입력)
 
+### 6.3 V2-W3-02 익명 로그인·닉네임 (SPEC 5.1)
+
+**구조** (의존 방향: `scenes → online`, `online`은 core·view·scenes를 모른다)
+
+| 파일 | 하는 일 |
+|---|---|
+| `src/online/nicknameRules.ts` | 순수 함수. import 없음. `normalizeNickname`, `checkNickname(name) → {ok:true, nickname} \| {ok:false, code}`. 클라이언트(즉시 안내)와 서버(최종 판정)가 같은 파일을 쓴다 |
+| `src/online/bannedWords.ts` | 직접 관리하는 짧은 금칙어 목록 (SPEC 5.1, 11절 4번) |
+| `src/online/client.ts` | `import.meta.env`의 URL·publishable key로 supabase-js 클라이언트를 한 번만 만든다. 키가 없으면 온라인 기능 꺼짐 (`disabled`) |
+| `src/online/account.ts` | `ensureAccount()`: 세션이 있으면 그대로, 없고 온라인이면 `signInAnonymously()`. 실패·오프라인이면 조용히 넘어가고 브라우저 `online` 이벤트와 다음 진입 때 다시 시도. 게임 시작을 기다리게 하지 않는다 |
+| `src/online/profile.ts` | `getMyProfile() → {nickname, tag} \| null \| 'error'`(profiles SELECT), `setNickname(name) → 결과`(Edge Function `set-nickname` 호출) |
+| `supabase/functions/set-nickname/index.ts` | 사용자 토큰 확인 → `checkNickname` → 태그 발급 → service role로 `profiles` upsert |
+| `supabase/functions/_shared/nicknameRules.js` | `src/online/nicknameRules.ts`·`bannedWords.ts`를 rolldown으로 묶은 파일 (PLAN2 5.8 빌드 복사 방식). `npm run server:shared`로 만들고 CI가 다시 만들어 커밋본과 다르면 실패 |
+| `src/view/NicknamePrompt.ts` | 닉네임 입력 창. Phaser에는 글자 입력이 없어 HTML `<input>`을 캔버스 위에 띄운다 (한글 조합 입력 지원). 제출 함수는 주입받는다 |
+| `BootScene`·`ResultScene` | 부팅 때 `ensureAccount()` (기다리지 않음). 경쟁 모드 결과 화면에서 온라인·계정 있음·닉네임 없음이면 입력 창 |
+
+**닉네임 규칙 (PM 확인 대상, 기본값)**
+- 앞뒤 공백 제거, 유니코드 NFC 정규화. 길이 2~10자(코드 포인트 기준. 한글 완성형 1자 = 1)
+- 쓸 수 있는 글자: 한글 완성형, 영문, 숫자. 공백·기호·이모지·자모 단독(ㅋㅋ)은 안 됨 → 보이지 않는 글자·흉내 글자로 금칙어를 피하는 길을 막는다
+- 금칙어: 소문자로 바꾸고 숫자를 뺀 문자열에 목록 단어가 **포함**되면 거부 (`시1발` 같은 숫자 끼워 넣기 차단). 목록은 짧게 유지해 오탐을 줄이고, 통과해야 하는 흔한 이름 목록 테스트로 오탐을 막는다. 범주: 욕설·비속어 대표형과 흔한 변형, 성적 표현, 혐오·비하, 운영자 사칭(운영자·관리자·admin·공식)
+- 태그: 같은 닉네임 안에서 겹치지 않는 0~9999 무작위, 화면에는 `#0427`처럼 4자리. 겹치면 다시 뽑는다(최대 20번, 실패 시 `server` 오류)
+- 한 번 정하면 v0.2에서는 바꾸는 화면이 없다. 서버는 이미 닉네임이 있으면 `already-set`으로 거부
+
+**set-nickname 응답**: 성공 `200 {nickname, tag}` / 규칙 위반 `400 {code: 'too-short'|'too-long'|'bad-chars'|'banned'}` / `401` 토큰 없음·무효 / `409 {code:'already-set'}` / `500 {code:'server'}`. CORS 허용 출처: `https://ddoobyddooby.github.io`, Capacitor `https://localhost`, 개발 `http://localhost:5173`. CORS와 별개로 토큰을 검사한다 (SPEC 8절)
+
+**화면 흐름 (PM 확인 대상)**
+- 경쟁 모드 결과 화면이 뜬 뒤 입력 창: "랭킹에 쓸 이름을 정해 주세요" / 입력칸 / [확인] [나중에]. V2-W3-03부터는 점수 제출·검증이 성공한 뒤에만 띄운다
+- 확인 → 성공: "이안#0427 으로 정했어요" 후 닫힘 / 규칙 위반: 입력칸 아래에 이유(짧아요·길어요·한글·영문·숫자만·쓸 수 없는 말이에요) / 연결 실패: "지금은 연결이 안 돼요. 다음에 다시 물어볼게요" 후 닫힘
+- [나중에] 또는 연결 실패 → 다음 경쟁 결과 때 다시 묻는다. 오프라인·키 없음·계정 없음이면 묻지 않는다
+- 저장 형식(`progress.ts`)은 바꾸지 않는다. 닉네임은 서버에서 읽는다
+
+**검증**: Vitest — 규칙·금칙어·통과 이름 목록, `ensureAccount` 상태 전이(가짜 클라이언트: 세션 있음/온라인 신규/오프라인/실패 후 재시도), set-nickname 처리 로직(가짜 DB: 성공·각 거부·태그 충돌 재시도·already-set), 입력 창 상태. `deno check`로 함수 타입 확인. 원격 시험 `npm run supabase:check`에 닉네임 항목 추가(정상·금칙어·짧음·already-set·토큰 없음 401·허용 안 된 출처 CORS·profiles 직접 UPDATE 여전히 실패). 브라우저 390×844: `?time=5` 경쟁 → 결과 → 입력 창 성공·거부·[나중에], 오프라인(네트워크 끊기)에서 창 없음·게임 정상
+
+**분담**: claude-1 = `src/online/*`, `supabase/functions/*`, `scripts/` 묶음·원격 시험, package.json, CI. claude-2 = `src/view/NicknamePrompt.ts`(주입식) → claude-1 반영 뒤 `BootScene`·`ResultScene` 연결
+
 - **4주차 재조정**: 1~30 데이터(이동·장애물·색), `npm run stages:sim`에 장애물 반영, **별 3개 기준 상향 (FEEDBACK R6)**, 플레이 로그 → 조카 2차 테스트
 
 ## 7. 리스크
