@@ -9,6 +9,7 @@ import {
   continueUnlock,
   type SaveStorage,
 } from '../storage/progress';
+import { ensureAccount } from '../online';
 import { Music, musicKey, musicUrls } from '../view/Music';
 import { Sfx, sfxKey, type SfxName } from '../view/Sfx';
 import { RIBBON_KEY } from '../view/Hud';
@@ -54,6 +55,8 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     registerBackButton(this.game); // 앱(Android)에서만, 한 번만
+    // 익명 계정 확인. 기다리지 않고, 실패·오프라인이어도 게임에 영향이 없다 (online은 throw하지 않는다)
+    void ensureAccount();
     const stages = loadStages().then(
       (data): StageData | Error => data,
       (error: unknown) => (error instanceof Error ? error : new Error(String(error))),

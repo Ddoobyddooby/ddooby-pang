@@ -5,12 +5,15 @@
 import Phaser from 'phaser';
 import { GAME, MUSIC, RESULT, THEME } from '../config';
 import type { ModeResult } from '../modes/GameMode';
+import { getMyProfile, onlineStatus, setNickname } from '../online';
 import { Music } from '../view/Music';
+import { NicknamePrompt } from '../view/NicknamePrompt';
 import { Sfx } from '../view/Sfx';
 import { addSceneBackground } from '../view/theme/sceneBackground';
 import { addButton, type PressLock } from '../view/ui/Button';
 import { drawCreamPanel } from '../view/ui/Panel';
 import { musicFor } from './musicRules';
+import { mayCheckProfile, shouldAskNickname, toPromptResult } from './nicknameGate';
 import {
   formatScore,
   resultLayout,
@@ -31,6 +34,7 @@ export class ResultScene extends Phaser.Scene {
     return this.result.kind;
   }
   private sfx!: Sfx;
+  private nicknamePrompt: NicknamePrompt | null = null;
 
   constructor() {
     super('Result');
@@ -113,6 +117,39 @@ export class ResultScene extends Phaser.Scene {
         lock,
       );
     });
+
+    this.askNickname();
+    // 씬이 끝나거나 바뀔 때 입력 창의 DOM을 지운다
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.closeNicknamePrompt());
+  }
+
+  /**
+   * 경쟁 결과에서 닉네임이 없으면 입력 창을 띄운다 (DEV ?ranking일 때만, PLAN2 6.3 배포 게이트).
+   * 창이 DOM으로 화면 전체를 덮어 결과 화면 버튼은 눌리지 않는다. 오프라인·오류면 묻지 않는다
+   */
+  private askNickname(): void {
+    const gate = {
+      kind: this.result.kind,
+      status: onlineStatus(),
+      devRanking: import.meta.env.DEV && new URLSearchParams(window.location.search).has('ranking'),
+    };
+    if (!mayCheckProfile(gate)) return;
+    void getMyProfile().then((profile) => {
+      // 읽는 사이 다른 화면으로 갔으면 띄우지 않는다
+      if (!this.scene.isActive() || !shouldAskNickname({ ...gate, profile })) return;
+      this.nicknamePrompt = new NicknamePrompt({
+        canvas: this.game.canvas,
+        submit: (name) => setNickname(name).then(toPromptResult),
+        onClose: () => {
+          this.nicknamePrompt = null;
+        },
+      });
+    });
+  }
+
+  private closeNicknamePrompt(): void {
+    this.nicknamePrompt?.destroy();
+    this.nicknamePrompt = null;
   }
 
   private go(button: ResultButton): void {

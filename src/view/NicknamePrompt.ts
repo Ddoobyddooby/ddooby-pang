@@ -43,6 +43,16 @@ const STYLE = {
   maxLength: 20,
 } as const;
 
+const BLOCKED_EVENTS = [
+  'pointerdown',
+  'pointerup',
+  'mousedown',
+  'mouseup',
+  'touchstart',
+  'touchend',
+  'click',
+] as const;
+
 export class NicknamePrompt {
   private readonly text: NicknamePromptText;
   private state: PromptState = initialPromptState();
@@ -87,7 +97,8 @@ export class NicknamePrompt {
     root.setAttribute('data-nickname-prompt', '');
     root.style.cssText = `position:fixed;inset:0;z-index:${STYLE.zIndex};background:${STYLE.dim};touch-action:none;`;
     // 뒤 화면 버튼이 눌리지 않게 막는다. 막을 눌러도 닫히지 않는다 (실수로 이름 입력을 놓치지 않게)
-    root.addEventListener('pointerdown', (e) => e.stopPropagation());
+    // Phaser는 마우스·터치 이벤트를 window에서도 듣는다. 창 위의 입력이 게임에 닿지 않게 모두 여기서 끊는다
+    for (const type of BLOCKED_EVENTS) root.addEventListener(type, (e) => e.stopPropagation());
 
     const panel = document.createElement('div');
     panel.style.cssText = [
