@@ -17,8 +17,11 @@ export type NicknameCheck = {
 };
 /** 앞뒤 공백 제거 + NFC 정규화 (조합형으로 들어온 한글을 완성형으로 맞춘다) */
 export declare function normalizeNickname(input: string): string;
-/** 소문자로 바꾸고 숫자를 뺀 문자열에 금칙어가 들어 있으면 true (`시1발` 같은 끼워 넣기 차단) */
-export declare function containsBannedWord(nickname: string): boolean;
+/**
+ * 소문자로 바꾸고 숫자를 뺀 문자열(`시1발` → `시발`)을 bannedWords의 세 목록과 맞춘다:
+ * 포함(contains) / 전체 일치(exact) / 시작(prefix)
+ */
+export declare function isBannedNickname(nickname: string): boolean;
 export declare function checkNickname(input: string): NicknameCheck;
 export declare function isValidTag(tag: unknown): tag is number;
 /** `#0427`처럼 4자리 */

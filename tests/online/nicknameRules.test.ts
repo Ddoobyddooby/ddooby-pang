@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { BANNED_WORDS, BANNED_WORD_GROUPS } from '../../src/online/bannedWords';
+import {
+  BANNED_CONTAINS,
+  BANNED_EXACT,
+  BANNED_PREFIX,
+  BANNED_WORD_GROUPS,
+} from '../../src/online/bannedWords';
 import {
   NICKNAME_MAX_LENGTH,
   NICKNAME_MIN_LENGTH,
@@ -23,7 +28,22 @@ const COMMON_NAMES = [
   'Cassie', 'Max', 'Dickens', 'Hannah', 'Jasmine', 'Ashley', 'Scott', 'Sam', 'Kim', 'Lee',
   // 숫자 섞인 별명
   '하준2018', 'leo7', '콩이123',
+  // 짧은 금칙어를 품은 정상 말 (PM 리뷰 낮음 1)
+  'Sussex', 'Essex', '해보지', '수학공식', 'Badminton',
 ];
+
+/** exact 금칙어마다 그 말을 품은 정상 말. 모든 exact 단어에 1개 이상 있어야 한다 */
+const EXACT_WORD_EXAMPLES: Record<string, string[]> = {
+  시발: ['시발점', '시발역'],
+  개새: ['무지개새'],
+  새끼: ['새끼고양이', '새끼손가락'],
+  닥쳐: ['닥쳐오는봄'],
+  보지: ['해보지', '보지마'],
+  자지: ['남자지만', '여자지요'],
+  야동: ['누나야동생'],
+  sex: ['Sussex', 'Essex'],
+  pussy: ['pussycat'],
+};
 
 describe('nicknameRules 정규화', () => {
   it('앞뒤 공백을 지우고 NFC로 맞춘다', () => {
@@ -71,27 +91,65 @@ describe('nicknameRules 금칙어', () => {
     expect(COMMON_NAMES.length).toBeGreaterThanOrEqual(30);
   });
 
-  it('목록의 모든 단어가 그대로 쓰이면 거부된다', () => {
-    for (const word of BANNED_WORDS) {
-      // 1자 단어는 길이를 채워 금칙어 판정까지 가게 한다
-      const name = [...word].length < NICKNAME_MIN_LENGTH ? `${word}${word}` : word;
-      expect(checkNickname(name), word).toEqual({ ok: false, code: 'banned' });
+  it('exact 금칙어마다 그 말을 품은 정상 말이 통과한다', () => {
+    expect(Object.keys(EXACT_WORD_EXAMPLES).sort()).toEqual([...BANNED_EXACT].sort());
+    for (const [word, examples] of Object.entries(EXACT_WORD_EXAMPLES)) {
+      expect(examples.length, word).toBeGreaterThan(0);
+      for (const name of examples) {
+        expect(name.toLowerCase(), name).toContain(word);
+        expect(checkNickname(name), name).toEqual({ ok: true, nickname: name });
+      }
     }
   });
 
-  it('대문자·숫자 끼워 넣기·앞뒤에 붙이기도 거부한다', () => {
-    const profanity = BANNED_WORD_GROUPS.profanity[0] ?? '';
-    const chars = [...profanity];
-    expect(checkNickname(`${chars[0]}1${chars.slice(1).join('')}`)).toEqual({
-      ok: false,
-      code: 'banned',
-    });
-    expect(checkNickname(`나는${profanity}`)).toEqual({ ok: false, code: 'banned' });
-    expect(checkNickname('ADMIN')).toEqual({ ok: false, code: 'banned' });
+  /** 1자 단어는 길이를 채워 금칙어 판정까지 가게 한다 */
+  const padded = (word: string) =>
+    [...word].length < NICKNAME_MIN_LENGTH ? `${word}${word}` : word;
+
+  it('contains: 그대로·앞뒤에 붙여도·숫자 끼워 넣어도 거부한다', () => {
+    for (const word of BANNED_CONTAINS) {
+      const chars = [...word];
+      for (const name of [
+        padded(word),
+        `나는${word}`,
+        `${word}왕`,
+        `${chars[0]}1${chars.slice(1).join('')}`,
+      ]) {
+        expect(checkNickname(name), name).toEqual({ ok: false, code: 'banned' });
+      }
+    }
+  });
+
+  it('exact: 전체가 그 말이면 숫자·대소문자를 섞어도 거부한다', () => {
+    for (const word of BANNED_EXACT) {
+      const chars = [...word];
+      for (const name of [
+        word,
+        `${word}7`,
+        `${chars[0]}1${chars.slice(1).join('')}`,
+        word.toUpperCase(),
+      ]) {
+        expect(checkNickname(name), name).toEqual({ ok: false, code: 'banned' });
+      }
+    }
+  });
+
+  it('prefix: 그 말로 시작하면 거부한다 (운영자 사칭)', () => {
+    for (const word of BANNED_PREFIX) {
+      for (const name of [word, `${word}님`, `${word}7`, word.toUpperCase()]) {
+        expect(checkNickname(name), name).toEqual({ ok: false, code: 'banned' });
+      }
+    }
     expect(checkNickname('Ad2min7')).toEqual({ ok: false, code: 'banned' });
     expect(checkNickname('운영자123')).toEqual({ ok: false, code: 'banned' });
-    expect(checkNickname('진짜관리자')).toEqual({ ok: false, code: 'banned' });
+    expect(checkNickname('공식계정')).toEqual({ ok: false, code: 'banned' });
+  });
+
+  it('대표 예: 숫자 끼워 넣기·대소문자', () => {
+    expect(checkNickname('시1발')).toEqual({ ok: false, code: 'banned' });
+    expect(checkNickname('씨1발왕')).toEqual({ ok: false, code: 'banned' });
     expect(checkNickname('FuCk')).toEqual({ ok: false, code: 'banned' });
+    expect(checkNickname('SEX')).toEqual({ ok: false, code: 'banned' });
   });
 
   it('범주 4개가 모두 있고 단어는 소문자·숫자 없음·중복 없음이다', () => {
@@ -101,13 +159,16 @@ describe('nicknameRules 금칙어', () => {
       'hate',
       'impersonation',
     ]);
-    for (const words of Object.values(BANNED_WORD_GROUPS)) expect(words.length).toBeGreaterThan(0);
-    for (const word of BANNED_WORDS) {
+    for (const g of Object.values(BANNED_WORD_GROUPS)) {
+      expect(g.contains.length + g.exact.length + g.prefix.length).toBeGreaterThan(0);
+    }
+    const all = [...BANNED_CONTAINS, ...BANNED_EXACT, ...BANNED_PREFIX];
+    for (const word of all) {
       expect(word, word).toBe(word.toLowerCase());
       expect(word, word).not.toMatch(/[0-9]/);
     }
-    expect(new Set(BANNED_WORDS).size).toBe(BANNED_WORDS.length);
-    expect(BANNED_WORDS.length).toBeLessThan(100);
+    expect(new Set(all).size).toBe(all.length);
+    expect(all.length).toBeLessThan(100);
   });
 });
 

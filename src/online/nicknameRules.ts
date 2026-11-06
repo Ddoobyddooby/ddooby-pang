@@ -1,7 +1,7 @@
 // 닉네임 규칙 (SPEC v0.2 5.1, PLAN2 6.3). 클라이언트(즉시 안내)와 set-nickname 함수(최종 판정)가 같이 쓴다.
 // 서버용은 `npm run server:shared`가 이 파일을 supabase/functions/_shared/nicknameRules.js로 묶는다.
 // 그래서 bannedWords 말고는 import하지 않는다 (config.ts를 끌어오면 서버 번들에 화면 값까지 들어간다)
-import { BANNED_WORDS } from './bannedWords';
+import { BANNED_CONTAINS, BANNED_EXACT, BANNED_PREFIX } from './bannedWords';
 
 /** 길이 하한·상한 (코드 포인트 기준. 한글 완성형 1자 = 1) */
 export const NICKNAME_MIN_LENGTH = 2;
@@ -24,10 +24,17 @@ export function normalizeNickname(input: string): string {
   return input.normalize('NFC').trim();
 }
 
-/** 소문자로 바꾸고 숫자를 뺀 문자열에 금칙어가 들어 있으면 true (`시1발` 같은 끼워 넣기 차단) */
-export function containsBannedWord(nickname: string): boolean {
+/**
+ * 소문자로 바꾸고 숫자를 뺀 문자열(`시1발` → `시발`)을 bannedWords의 세 목록과 맞춘다:
+ * 포함(contains) / 전체 일치(exact) / 시작(prefix)
+ */
+export function isBannedNickname(nickname: string): boolean {
   const folded = nickname.toLowerCase().replace(/[0-9]/g, '');
-  return BANNED_WORDS.some((word) => folded.includes(word));
+  return (
+    BANNED_CONTAINS.some((word) => folded.includes(word)) ||
+    BANNED_EXACT.includes(folded) ||
+    BANNED_PREFIX.some((word) => folded.startsWith(word))
+  );
 }
 
 export function checkNickname(input: string): NicknameCheck {
@@ -36,7 +43,7 @@ export function checkNickname(input: string): NicknameCheck {
   if (length < NICKNAME_MIN_LENGTH) return { ok: false, code: 'too-short' };
   if (length > NICKNAME_MAX_LENGTH) return { ok: false, code: 'too-long' };
   if (!ALLOWED.test(nickname)) return { ok: false, code: 'bad-chars' };
-  if (containsBannedWord(nickname)) return { ok: false, code: 'banned' };
+  if (isBannedNickname(nickname)) return { ok: false, code: 'banned' };
   return { ok: true, nickname };
 }
 
