@@ -29,7 +29,11 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      # 온라인 기능 키 (저장소 Variables, PLAN2 6.1). 없으면 빈 값으로 빌드되고 온라인 기능만 꺼진다
       - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist

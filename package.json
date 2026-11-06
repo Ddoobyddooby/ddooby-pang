@@ -10,6 +10,7 @@
     "fonts:subset": "node scripts/subset-font.mjs",
     "stages:sim": "vitest run -c scripts/sim/sim.config.ts",
     "poc:deno": "vitest run -c scripts/server-poc/poc.config.ts && rolldown scripts/server-poc/server.ts -f esm -p neutral -o scripts/server-poc/out/server.bundle.js && deno run --allow-read --sloppy-imports scripts/server-poc/deno/compare.ts scripts/server-poc/server.ts direct && deno run --allow-read scripts/server-poc/deno/compare.ts scripts/server-poc/out/server.bundle.js bundle",
+    "supabase:check": "node --disable-warning=ExperimentalWarning scripts/supabase-check/rls-check.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -24,6 +25,7 @@
     "@capacitor/app": "~8.1.2",
     "@capacitor/core": "~8.5.3",
     "@capacitor/preferences": "~8.0.1",
+    "@supabase/supabase-js": "2.119.0",
     "phaser": "^3.90.0"
   },
   "devDependencies": {
