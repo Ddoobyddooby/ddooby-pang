@@ -124,7 +124,7 @@ Codex PM은 제품 기획과 독립 최종 리뷰를, 별도 Codex 디자이너�
 
 ### 8.5 Codex PM·디자이너 탭에 맡기기 (Orca)
 
-- 현재 PC에서 Codex PM `orcaTabId`: **`747deb42-3770-4575-8f7c-2bc6d871c397`**, Codex 디자이너 `orcaTabId`: **`a0478108-7896-4df4-9dc2-a69d6cdd583a`** (`CLAUDE.md` 표). 다른 PC·Orca 세션에서는 ID를 다시 확인하고, 바뀌면 `CLAUDE.md` 표를 갱신한다
+- 현재 PC에서 Codex PM `orcaTabId`: **`747deb42-3770-4575-8f7c-2bc6d871c397`**, Codex 디자이너 `orcaTabId`: **`6e8eec75-e415-4178-bed8-83b5e6a11ec1`** (`CLAUDE.md` 표). 다른 PC·Orca 세션에서는 ID를 다시 확인하고, 바뀌면 `CLAUDE.md` 표를 갱신한다
 - 메시지는 Orca CLI로 보낼 수 있다. 터미널 handle은 Orca를 다시 켜면 바뀌므로 맡길 때마다 대상 `tabId`로 다시 찾는다. 연결할 수 없으면 자기완결형 지시문을 사용자에게 전달해 수동 입력할 수 있게 한다:
 
   ```bash
