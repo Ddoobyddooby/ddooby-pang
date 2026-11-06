@@ -43,7 +43,7 @@ npm run supabase:check -- <env 파일 경로> --nickname   # set-nickname 배포
 
 익명 사용자 A·B와 비로그인 anon으로 PLAN2 6.2 시험 ①~④와 anon 쓰기 차단을 표로 출력한다. 모두 PASS면 exit 0, FAIL이 있으면 1, 설정·로그인 오류는 2. 대시보드에서 Anonymous Sign-ins가 켜져 있어야 한다. 시험이 만든 익명 계정, `stage_attempts` 행(`stage_id = 999`), `시험` 접두어 닉네임은 남는다.
 
-`--nickname` 항목: A 정상 설정(응답·profiles 일치), B 금칙어 400, B 짧음 400, B가 A와 같은 이름 → 다른 태그, A 두 번째 설정 409, 토큰 없음·무효 401, 허용 출처 preflight에 Allow-Origin 있음, 허용 안 된 출처 preflight에 없음, profiles 직접 UPDATE 여전히 실패.
+`--nickname` 항목 (익명 사용자 C를 하나 더 만든다): A 정상 설정(응답·profiles 일치), B 금칙어·짧음 400(시험 이름이 현재 규칙에서 그 코드로 거부되는지 먼저 로컬 확인), 닉네임 없는 C가 A와 같은 이름 → 다른 태그, A 두 번째 설정 409, 토큰 없음·무효 401, 허용 출처 preflight에 Allow-Origin 있음, 허용 안 된 출처 preflight에 없음, profiles 직접 UPDATE 여전히 실패.
 
 `runs`는 클라이언트가 만들 수 없어 지금은 "오류 없이 0행"만 본다. 실제 교차 시험(B가 A의 run을 못 읽음)은 `start-run`이 생기는 V2-W3-03에서 추가한다.
 

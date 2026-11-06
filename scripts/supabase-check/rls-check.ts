@@ -8,6 +8,8 @@
 import { readFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+// 함수와 같은 규칙 묶음 (npm run server:shared). 시험 이름이 현재 규칙에서 기대대로 판정되는지 먼저 본다
+import { checkNickname } from '../../supabase/functions/_shared/nicknameRules.js';
 
 const TEST_STAGE_ID = 999;
 const TEST_WEEK_KEY = '2099-W01';
@@ -319,6 +321,10 @@ async function nicknameChecks({ url, key, a, b, idA, check }: NicknameContext): 
   };
   const tokenA = await tokenOf(a);
   const tokenB = await tokenOf(b);
+  // 같은 이름·태그 시험은 앞 항목 결과(B에 닉네임이 생겼는지)에 기대지 않게 닉네임 없는 새 사용자 C로 한다
+  const c = newClient(url, key);
+  await signIn(c, 'C');
+  const tokenC = await tokenOf(c);
   const call = (nickname: string, token: string | null, origin = ALLOWED_ORIGIN) =>
     fetch(endpoint, {
       method: 'POST',
@@ -345,7 +351,7 @@ async function nicknameChecks({ url, key, a, b, idA, check }: NicknameContext): 
     };
   };
 
-  // 실행마다 새 익명 계정이라 닉네임이 겹쳐도 되지만, 태그 시험을 위해 A·B가 같은 이름을 쓴다
+  // 실행마다 새 익명 계정이라 닉네임이 겹쳐도 되지만, 태그 시험을 위해 A·C가 같은 이름을 쓴다
   const name = `시험A${String(Math.floor(Math.random() * 100)).padStart(2, '0')}`;
   let tagA: number | null = null;
 
@@ -361,14 +367,22 @@ async function nicknameChecks({ url, key, a, b, idA, check }: NicknameContext): 
       body.nickname === name && tagA !== null && data.nickname === name && data.tag === tagA;
     return { pass, detail: `200 tag ${String(body.tag)}, profiles ${data.nickname}#${data.tag}` };
   });
-  await check('닉', 'B 금칙어', '400 banned', async () =>
-    expectStatus(await call('시험관리자', tokenB), 400, 'banned'),
-  );
-  await check('닉', 'B 짧음', '400 too-short', async () =>
-    expectStatus(await call('시', tokenB), 400, 'too-short'),
-  );
-  await check('닉', 'B가 A와 같은 이름', '200, A와 다른 태그', async () => {
-    const res = await call(name, tokenB);
+  // 규칙 위반 시험: 이름이 현재 규칙에서 그 코드로 거부되는지 로컬에서 먼저 확인한다 (규칙이 바뀌면 FAIL로 알림)
+  const ruleCheck = async (label: string, nickname: string, code: string) =>
+    check('닉', `B ${label} (${nickname})`, `400 ${code}`, async () => {
+      const local = checkNickname(nickname);
+      if (local.ok || local.code !== code) {
+        return {
+          pass: false,
+          detail: `시험 이름이 현재 규칙에서 ${local.ok ? '통과' : local.code}`,
+        };
+      }
+      return expectStatus(await call(nickname, tokenB), 400, code);
+    });
+  await ruleCheck('금칙어', '관리자시험', 'banned');
+  await ruleCheck('짧음', '시', 'too-short');
+  await check('닉', 'C가 A와 같은 이름', '200, A와 다른 태그', async () => {
+    const res = await call(name, tokenC);
     if (res.status !== 200) return expectStatus(res, 200);
     const body = (await res.json()) as { tag?: unknown };
     const pass = typeof body.tag === 'number' && body.tag !== tagA;
