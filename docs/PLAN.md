@@ -175,6 +175,37 @@ SPEC 4절. v0.1 형식(`layout` 없음) 스테이지와 경쟁 모드는 장애�
 - 이 PC에 Deno·Docker·Supabase CLI가 없다. Edge Function이 `src/core`를 쓰는지 보려면 Deno(로컬 실행)만 있으면 되고, 실제 배포 시험은 ddooby-pang 전용 Supabase 프로젝트가 있어야 한다 (사용자가 만들고 키는 직접 넣음)
 - 1차 PoC는 Deno로 `src/core`를 import해 같은 리플레이 로그의 점수가 Node(Vitest)와 같은지 보는 데까지. 프로젝트 생성은 3주차 시작 때
 
+### 5.8 V2-W2-08 결정 (2026-11-06, PoC 결과 `scripts/server-poc/RESULT.md`)
+
+**core 공유: 빌드 복사.** 리플레이 진입점을 rolldown(vite 8 포함)으로 ESM 한 파일로 묶어 `supabase/functions/_shared/replay.js`에 둔다. Deno의 sloppy import(확장자 없는 import 자동 해석)나 실험 기능(`--use-api`)에 기대지 않고, Supabase 권장 구조(`_shared/`) 그대로 배포된다. src는 고치지 않는다.
+- 코어 `version` = 번들 sha256 앞 12자리. 리플레이에 쓰이는 코드·config 값만 남으므로 화면 값(애니메이션·색)을 바꿔도 버전이 안 바뀐다. 클라이언트 빌드는 같은 값을 상수로 넣는다. `public/stages/timeattack.json`의 보드 값도 번들 입력에 포함한다
+- CI(`pages.yml`)가 번들을 다시 만들어 커밋본과 다르면 실패시킨다
+- 근거: 1000개 랜덤 로그 Node↔Deno 1000/1000 일치(직접 import·번들 둘 다), 실제 브라우저 6판의 화면 점수 = 리플레이 점수(무효 스왑·셔플·타임 업 직전 스왑 포함). 판당 리플레이 1ms 미만
+
+**리플레이 흐름** (`GameScene.trySwap`·`playFinale`와 같다): `createInitialState(seed)` → move마다 `resolveSwap`(무효면 상태·점수 그대로) → 끝에 `resolveFinale` 한 번 → 점수 합. 셔플은 core 안에서 seed RNG로 재현된다.
+
+**클라이언트 기록 (3주차 구현 기준)**
+- `trySwap`이 실제로 처리한 스왑만 기록한다: 유효·무효 모두. 재생 중(busy)이라 막힌 입력은 처리되지 않으므로 기록하지 않는다
+- `t` = 제한 시간 − `timeLeftMs()`, 스왑 시작 때의 **게임 시간**(일시정지 시간 제외, ms 정수)
+- 무효 스왑도 `swap`+`swapBack` 재생(약 240ms) 동안 입력이 막히므로 연속 간격 200ms 하한을 지킨다. 유효 스왑 뒤 실측 최소 간격은 433ms
+
+**서버 판정** (하나라도 어기면 거부. SPEC 5.3·11절 5번)
+
+| 항목 | 기준 |
+|---|---|
+| 서버 시각 하한 | `submit 도착 − start-run 발급` < 58초 → 거부 (게임 타이머는 벽시계보다 빠를 수 없다. 60초 − 오차 2초) |
+| run 유효기간 | 발급 후 30분 이상 → 만료 거부. 30분 안의 일시정지는 허용 (일시정지는 게임 시간만 멈춘다) |
+| move 시각 | 모든 `t`가 유한한 정수, `0 ≤ t < 60000`. 60초 이후 move가 하나라도 있으면 거부 (화면은 이런 move를 만들지 않는다) |
+| move 간격 | 연속 두 move의 `t` 차이 ≥ 200ms (유효·무효 구분 없이). 같은 `t`·역순도 여기서 거부 |
+| move 좌표 | 보드 안의 정수 좌표, 두 칸이 상하좌우로 이웃. 아니면 거부 (화면 입력으로는 만들 수 없다). 개수 상한은 간격 규칙으로 300개 |
+| 점수 | 리플레이 점수 ≠ `clientScore` → 거부 |
+| 버전 | `version` ≠ 서버 번들 버전 → 거부 + 새로고침 안내 |
+| 재제출 | run은 점수 등록에 1회만. 제출 내용(`moves`·`clientScore`·`version`)의 해시를 run에 저장해, 같은 해시면 저장된 이전 결과를 그대로 돌려주고 다른 해시면 거부 |
+
+**닉네임 순서**: 게임이 끝나면 점수를 먼저 제출·검증한다. 닉네임은 그 뒤 별도 요청으로 `profiles`에 저장하므로 입력이 늦어도 run 시간 판정에 영향이 없다. 닉네임이 없는 동안의 랭킹 표시 방식은 V2-W3-02·04에서 정한다.
+
+**남은 확인 (3주차)**: Supabase Edge Runtime의 실제 배포(번들 import), 서버 시각 판정의 실제 지연 분포
+
 ## 6. 3~4주차 큰 틀 (자세한 설계는 그 주 시작 전에)
 
 - **3주차 온라인**: PoC에서 정한 방식을 사용한다. `src/online/`에 인증·랭킹 클라이언트를 모으고, Supabase 마이그레이션은 `supabase/migrations/`에 둔다
