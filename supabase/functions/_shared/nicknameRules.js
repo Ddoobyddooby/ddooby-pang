@@ -4,27 +4,33 @@ const groups = Object.values({
 	profanity: {
 		contains: [
 			"씨발",
+			"시발",
 			"씨빨",
 			"씨팔",
 			"시팔",
 			"쓰발",
 			"병신",
 			"븅신",
-			"개새끼",
+			"개새",
+			"새끼",
 			"좆",
 			"존나",
 			"지랄",
+			"닥쳐",
 			"미친놈",
 			"미친년",
 			"fuck",
 			"shit",
 			"bitch"
 		],
-		exact: [
-			"시발",
-			"개새",
-			"새끼",
-			"닥쳐"
+		exceptions: [
+			"시발점",
+			"시발역",
+			"무지개새",
+			"새끼고양이",
+			"새끼강아지",
+			"새끼손가락",
+			"닥쳐오"
 		],
 		prefix: []
 	},
@@ -32,16 +38,24 @@ const groups = Object.values({
 		contains: [
 			"섹스",
 			"강간",
-			"porn",
-			"slut",
-			"whore"
-		],
-		exact: [
 			"보지",
 			"자지",
 			"야동",
 			"sex",
-			"pussy"
+			"porn",
+			"pussy",
+			"slut",
+			"whore"
+		],
+		exceptions: [
+			"해보지",
+			"보지마",
+			"남자지",
+			"여자지",
+			"야동생",
+			"sussex",
+			"essex",
+			"pussycat"
 		],
 		prefix: []
 	},
@@ -64,12 +78,12 @@ const groups = Object.values({
 			"retard",
 			"hitler"
 		],
-		exact: [],
+		exceptions: [],
 		prefix: []
 	},
 	impersonation: {
 		contains: [],
-		exact: [],
+		exceptions: [],
 		prefix: [
 			"운영자",
 			"운영진",
@@ -81,7 +95,7 @@ const groups = Object.values({
 	}
 });
 const BANNED_CONTAINS = groups.flatMap((g) => g.contains);
-const BANNED_EXACT = groups.flatMap((g) => g.exact);
+const BANNED_EXCEPTIONS = groups.flatMap((g) => g.exceptions);
 const BANNED_PREFIX = groups.flatMap((g) => g.prefix);
 // src/online/nicknameRules.ts
 /** 길이 하한·상한 (코드 포인트 기준. 한글 완성형 1자 = 1) */
@@ -98,13 +112,28 @@ const ALLOWED = /^[가-힣A-Za-z0-9]+$/;
 function normalizeNickname(input) {
 	return input.normalize("NFC").trim();
 }
+/** text 안에서 word가 나오는 모든 시작 위치 */
+function occurrences(text, word) {
+	const found = [];
+	for (let i = text.indexOf(word); i !== -1; i = text.indexOf(word, i + 1)) found.push(i);
+	return found;
+}
 /**
-* 소문자로 바꾸고 숫자를 뺀 문자열(`시1발` → `시발`)을 bannedWords의 세 목록과 맞춘다:
-* 포함(contains) / 전체 일치(exact) / 시작(prefix)
+* 포함 금칙어가 하나라도 예외 말(exceptions) 바깥에 나오면 true.
+* 예외 말을 문자열에서 지우지 않고 "그 자리가 예외 말 안에 덮여 있는지"로 본다.
+* 지우는 방식은 `개새끼고양이`(새끼고양이를 지우면 `개`만 남는다) 같은 구멍이 생긴다
+*/
+function containsBannedWord(folded) {
+	const excused = BANNED_EXCEPTIONS.flatMap((ex) => occurrences(folded, ex).map((start) => [start, start + ex.length]));
+	return BANNED_CONTAINS.some((word) => occurrences(folded, word).some((start) => !excused.some(([s, e]) => s <= start && start + word.length <= e)));
+}
+/**
+* 소문자로 바꾸고 숫자를 뺀 문자열(`시1발` → `시발`)을 bannedWords 목록과 맞춘다:
+* 포함(contains, 예외 말 안은 제외) / 시작(prefix)
 */
 function isBannedNickname(nickname) {
 	const folded = nickname.toLowerCase().replace(/[0-9]/g, "");
-	return BANNED_CONTAINS.some((word) => folded.includes(word)) || BANNED_EXACT.includes(folded) || BANNED_PREFIX.some((word) => folded.startsWith(word));
+	return containsBannedWord(folded) || BANNED_PREFIX.some((word) => folded.startsWith(word));
 }
 function checkNickname(input) {
 	const nickname = normalizeNickname(input);

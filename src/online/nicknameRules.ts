@@ -1,7 +1,7 @@
 // 닉네임 규칙 (SPEC v0.2 5.1, PLAN2 6.3). 클라이언트(즉시 안내)와 set-nickname 함수(최종 판정)가 같이 쓴다.
 // 서버용은 `npm run server:shared`가 이 파일을 supabase/functions/_shared/nicknameRules.js로 묶는다.
 // 그래서 bannedWords 말고는 import하지 않는다 (config.ts를 끌어오면 서버 번들에 화면 값까지 들어간다)
-import { BANNED_CONTAINS, BANNED_EXACT, BANNED_PREFIX } from './bannedWords';
+import { BANNED_CONTAINS, BANNED_EXCEPTIONS, BANNED_PREFIX } from './bannedWords';
 
 /** 길이 하한·상한 (코드 포인트 기준. 한글 완성형 1자 = 1) */
 export const NICKNAME_MIN_LENGTH = 2;
@@ -24,17 +24,36 @@ export function normalizeNickname(input: string): string {
   return input.normalize('NFC').trim();
 }
 
+/** text 안에서 word가 나오는 모든 시작 위치 */
+function occurrences(text: string, word: string): number[] {
+  const found: number[] = [];
+  for (let i = text.indexOf(word); i !== -1; i = text.indexOf(word, i + 1)) found.push(i);
+  return found;
+}
+
 /**
- * 소문자로 바꾸고 숫자를 뺀 문자열(`시1발` → `시발`)을 bannedWords의 세 목록과 맞춘다:
- * 포함(contains) / 전체 일치(exact) / 시작(prefix)
+ * 포함 금칙어가 하나라도 예외 말(exceptions) 바깥에 나오면 true.
+ * 예외 말을 문자열에서 지우지 않고 "그 자리가 예외 말 안에 덮여 있는지"로 본다.
+ * 지우는 방식은 `개새끼고양이`(새끼고양이를 지우면 `개`만 남는다) 같은 구멍이 생긴다
+ */
+function containsBannedWord(folded: string): boolean {
+  const excused = BANNED_EXCEPTIONS.flatMap((ex) =>
+    occurrences(folded, ex).map((start) => [start, start + ex.length] as const),
+  );
+  return BANNED_CONTAINS.some((word) =>
+    occurrences(folded, word).some(
+      (start) => !excused.some(([s, e]) => s <= start && start + word.length <= e),
+    ),
+  );
+}
+
+/**
+ * 소문자로 바꾸고 숫자를 뺀 문자열(`시1발` → `시발`)을 bannedWords 목록과 맞춘다:
+ * 포함(contains, 예외 말 안은 제외) / 시작(prefix)
  */
 export function isBannedNickname(nickname: string): boolean {
   const folded = nickname.toLowerCase().replace(/[0-9]/g, '');
-  return (
-    BANNED_CONTAINS.some((word) => folded.includes(word)) ||
-    BANNED_EXACT.includes(folded) ||
-    BANNED_PREFIX.some((word) => folded.startsWith(word))
-  );
+  return containsBannedWord(folded) || BANNED_PREFIX.some((word) => folded.startsWith(word));
 }
 
 export function checkNickname(input: string): NicknameCheck {

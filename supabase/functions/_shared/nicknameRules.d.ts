@@ -18,8 +18,8 @@ export type NicknameCheck = {
 /** 앞뒤 공백 제거 + NFC 정규화 (조합형으로 들어온 한글을 완성형으로 맞춘다) */
 export declare function normalizeNickname(input: string): string;
 /**
- * 소문자로 바꾸고 숫자를 뺀 문자열(`시1발` → `시발`)을 bannedWords의 세 목록과 맞춘다:
- * 포함(contains) / 전체 일치(exact) / 시작(prefix)
+ * 소문자로 바꾸고 숫자를 뺀 문자열(`시1발` → `시발`)을 bannedWords 목록과 맞춘다:
+ * 포함(contains, 예외 말 안은 제외) / 시작(prefix)
  */
 export declare function isBannedNickname(nickname: string): boolean;
 export declare function checkNickname(input: string): NicknameCheck;

@@ -380,6 +380,7 @@ async function nicknameChecks({ url, key, a, b, idA, check }: NicknameContext): 
       return expectStatus(await call(nickname, tokenB), 400, code);
     });
   await ruleCheck('금칙어', '관리자시험', 'banned');
+  await ruleCheck('금칙어 접미 변형', '시험시발놈', 'banned');
   await ruleCheck('짧음', '시', 'too-short');
   await check('닉', 'C가 A와 같은 이름', '200, A와 다른 태그', async () => {
     const res = await call(name, tokenC);
