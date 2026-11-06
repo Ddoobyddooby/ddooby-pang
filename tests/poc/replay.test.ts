@@ -1,5 +1,5 @@
 // V2-W2-08: 경쟁 모드 리플레이 PoC (SPEC 5.3) — 같은 seed·로그면 같은 점수, 무효 스왑은 점수·상태 그대로,
-// GameScene처럼 스왑들 → 마지막 팡 순서로 합산, 시간이 끝난 뒤의 move는 받지 않는다.
+// GameScene처럼 스왑들 → 마지막 팡 순서로 합산. 시각·간격 판정은 validate.test.ts.
 // 실제 브라우저 기록(fixtures/browser-runs.json)은 리플레이 점수 == 결과 화면 점수 (화면 경로 일치)
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -124,27 +124,8 @@ describe('server-poc/replay (V2-W2-08)', () => {
       expect(got.finaleScore).toBe(finaleScore);
       expect(got.score).toBe(swaps + finaleScore);
       expect(got.validMoves + got.invalidMoves).toBe(log.length);
-      expect(got.lateMoves).toBe(0);
     }
     expect(checkedFinale).toBeGreaterThan(0); // 마지막 팡이 실제로 점수를 낸 판이 있어야 의미가 있다
-  });
-
-  it('시간이 끝난 뒤(t ≥ 제한 시간)의 move는 받지 않는다. 직전 move는 끝까지 더한다', () => {
-    const seed = 3;
-    const log = randomLog(seed);
-    const base = replayTimeAttack(seed, log);
-    const last = log.at(-1)!;
-    // 제한 시간 0.001초 전에 시작한 스왑은 받는다 (게임도 재생 중에 시간이 끝나면 점수를 그대로 더한다)
-    const justBefore = replayTimeAttack(seed, [
-      ...log.slice(0, -1),
-      { ...last, t: TIMEATTACK_BOARD.timeLimitMs - 1 },
-    ]);
-    expect(justBefore).toEqual(base);
-    const late = replayTimeAttack(seed, [
-      ...log.slice(0, -1),
-      { ...last, t: TIMEATTACK_BOARD.timeLimitMs },
-    ]);
-    expect(late).toEqual({ ...replayTimeAttack(seed, log.slice(0, -1)), lateMoves: 1 });
   });
 
   describe('실제 브라우저 기록 (fixtures/browser-runs.json)', () => {
@@ -153,7 +134,6 @@ describe('server-poc/replay (V2-W2-08)', () => {
       (_, run) => {
         const result = replayTimeAttack(run.seed, run.moves);
         expect(result.score).toBe(run.screenScore);
-        expect(result.lateMoves).toBe(0); // 기록기는 게임이 받은 스왑만 남긴다
       },
     );
 
@@ -191,25 +171,18 @@ describe('server-poc/replay (V2-W2-08)', () => {
       }
     });
 
-    it('boundary: 59999에 둔 move는 받고, late: 60000부터의 move는 lateMoves로 센다', () => {
+    it('boundary: 마지막 move를 59999에 두고, late: 60000부터 move를 덧붙인다 (판정은 validate.test.ts)', () => {
       const limit = TIMEATTACK_BOARD.timeLimitMs;
       // 간격 하한 때문에 59999에 못 두는 판도 있어 몇 개 중 하나라도
       const withBoundary = [5, 15, 25, 35]
-        .map((seed) => ({ seed, log: randomLog(seed, seed, { realistic: true, boundary: true }) }))
-        .filter(({ log }) => log.at(-1)!.t === limit - 1);
+        .map((seed) => randomLog(seed, seed, { realistic: true, boundary: true }))
+        .filter((log) => log.at(-1)!.t === limit - 1);
       expect(withBoundary.length).toBeGreaterThan(0);
-      for (const { seed, log } of withBoundary) {
-        const result = replayTimeAttack(seed, log);
-        expect(result.lateMoves).toBe(0);
-        expect(result.validMoves + result.invalidMoves).toBe(log.length);
-      }
 
       const late = randomLog(10, 10, { realistic: true, late: 3 });
-      const inTime = late.filter((m) => m.t < limit);
-      expect(late.length - inTime.length).toBe(3);
-      expect(late.find((m) => m.t >= limit)!.t).toBeGreaterThanOrEqual(limit);
-      const result = replayTimeAttack(10, late);
-      expect(result).toEqual({ ...replayTimeAttack(10, inTime), lateMoves: 3 });
+      const lateMoves = late.filter((m) => m.t >= limit);
+      expect(lateMoves).toHaveLength(3);
+      expect(late.slice(-3)).toEqual(lateMoves); // 늦은 move는 끝에만 붙는다
     });
 
     it('rngValid: SHUFFLE_SEEDS 보드는 적힌 순번에서 셔플이 일어난다', () => {

@@ -1,7 +1,7 @@
 // V2-W2-08 리뷰 반영: 경쟁 모드 한 판의 실제 입력 기록기. dev 서버(`npm run dev`) 페이지에 Playwright
 // `page.addInitScript({ path })`로 넣는다. src는 고치지 않고, 앱과 같은 URL로 GameScene 모듈을 가져와(같은 인스턴스)
 // trySwap·finish를 감싼다. 결과는 `window.__rec`:
-// - moves: 게임이 받은 스왑만 { from, to, t } (t = 제한 시간 − timeLeftMs(), trySwap 시작 순간. 리플레이 입력 형식)
+// - moves: 게임이 받은 스왑만 { from, to, t } (t = 제한 시간 − timeLeftMs()를 내림한 정수 ms, trySwap 시작 순간)
 // - rejected: busy·시간 종료로 게임이 무시한 입력 수 / inFlightAtTimeUp: 재생 중에 시간이 끝난 스왑의 순번
 // - screenScore: 결과 화면으로 넘긴 점수 (GameScene.finish → mode.result().score)
 // - scene: GameScene 인스턴스 (driver가 칸 좌표를 구할 때 쓴다)
@@ -54,7 +54,7 @@
         rec.moves.push({
           from: { r: a.r, c: a.c },
           to: { r: b.r, c: b.c },
-          t: rec.limitMs - this.mode.timeLeftMs(),
+          t: Math.floor(rec.limitMs - this.mode.timeLeftMs()), // 정수 ms (PLAN2 5.8)
         });
         return trySwap.call(this, a, b).then((v) => {
           if (this.mode.timeLeftMs() === 0) rec.inFlightAtTimeUp.push(index);

@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "fonts:subset": "node scripts/subset-font.mjs",
     "stages:sim": "vitest run -c scripts/sim/sim.config.ts",
-    "poc:deno": "vitest run -c scripts/server-poc/poc.config.ts && rolldown scripts/server-poc/replay.ts -f esm -p neutral -o scripts/server-poc/out/replay.bundle.js && deno run --allow-read --sloppy-imports scripts/server-poc/deno/compare.ts scripts/server-poc/replay.ts direct && deno run --allow-read scripts/server-poc/deno/compare.ts scripts/server-poc/out/replay.bundle.js bundle",
+    "poc:deno": "vitest run -c scripts/server-poc/poc.config.ts && rolldown scripts/server-poc/server.ts -f esm -p neutral -o scripts/server-poc/out/server.bundle.js && deno run --allow-read --sloppy-imports scripts/server-poc/deno/compare.ts scripts/server-poc/server.ts direct && deno run --allow-read scripts/server-poc/deno/compare.ts scripts/server-poc/out/server.bundle.js bundle",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
