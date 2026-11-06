@@ -167,7 +167,7 @@ function drawArtBlock(ctx: Ctx, { image, place }: Art, face: Face): void {
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(image, -half, -half, half * 2, half * 2);
   ctx.save();
-  ctx.translate(0, place.faceDy);
+  ctx.translate(place.faceDx ?? 0, place.faceDy);
   ctx.scale(place.faceScale, place.faceScale);
   drawFace(ctx, face);
   ctx.restore();

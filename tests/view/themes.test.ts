@@ -47,6 +47,27 @@ describe('view/theme/themes 목록', () => {
     expect(files).toEqual([0, 2, 3, 4, 5, 1, 6]);
   });
 
+  it.each(['space', 'ocean'] as const)(
+    '%s: 색마다 다른 모양 그림(block-0~5)이 게임 색 번호 순서로 놓이고 배치 값이 상식 범위',
+    (id) => {
+      const { blocks } = getTheme(id);
+      // 게임 색 빨·노·초·파·보·주 ↔ 파일 0·2·3·4·5·1, 마지막은 무지개(6)
+      expect(blocks.map((b) => b.url)).toEqual(
+        [0, 2, 3, 4, 5, 1, 6].map((n) => `themes/${id}/block-${n}.png`),
+      );
+      blocks.forEach((b) => {
+        for (const v of [b.scale, b.faceScale]) expect(Number.isFinite(v) && v > 0).toBe(true);
+        expect(Number.isFinite(b.faceDy)).toBe(true);
+        expect(Number.isFinite(b.faceDx ?? 0)).toBe(true);
+        expect(Math.abs(b.faceDx ?? 0)).toBeLessThanOrEqual(15);
+      });
+      // 색마다 배치를 따로 맞췄다 (7장 공통 배치가 아니다)
+      expect(
+        new Set(blocks.slice(0, 6).map((b) => `${b.faceDx ?? 0}/${b.faceDy}/${b.faceScale}`)).size,
+      ).toBeGreaterThan(3);
+    },
+  );
+
   it('모든 테마 그림 경로가 서로 다르다 (읽을 때 키가 겹치지 않게)', () => {
     const urls = THEMES.flatMap((t) => [t.background.url, ...t.blocks.map((b) => b.url)]);
     expect(new Set(urls).size).toBe(urls.length);

@@ -7,10 +7,11 @@ import { DEFAULT_THEME, isThemeId, type ThemeId } from '../../data/themeIds';
 
 export { DEFAULT_THEME, isThemeId, parseThemeId, type ThemeId } from '../../data/themeIds';
 
-/** 몸통 그림 한 장: 경로, 시안 좌표 100칸 대비 크기 배율, 얼굴을 내리는 정도와 줄이는 배율 (DECOR.blockArt와 같은 뜻) */
+/** 몸통 그림 한 장: 경로, 시안 좌표 100칸 대비 크기 배율, 얼굴을 내리는 정도와 줄이는 배율 (DECOR.blockArt와 같은 뜻). faceDx는 몸통이 한쪽으로 치우친 모양만 쓴다 (없으면 0) */
 export interface BlockArt {
   url: string;
   scale: number;
+  faceDx?: number;
   faceDy: number;
   faceScale: number;
 }
@@ -25,16 +26,38 @@ export interface Theme {
   background: { url: string; band: { top: number; bottom: number } };
 }
 
-/** 새 테마의 파일은 빨·주·노·초·파·보·무지개 순(block-0~6). 게임의 색 번호(빨·노·초·파·보·주)에 맞춰 늘어놓는다 */
+/** 새 테마의 파일은 빨·주·노·초·파·보·무지개 순(block-0~6). 배치 값(art)도 파일 순서로 받아, 게임의 색 번호(빨·노·초·파·보·주)에 맞춰 늘어놓는다 */
 const byColor = (dir: string, art: Omit<BlockArt, 'url'>[]): BlockArt[] =>
-  [0, 2, 3, 4, 5, 1, 6].map((file, color) => ({
+  [0, 2, 3, 4, 5, 1, 6].map((file) => ({
     url: `themes/${dir}/block-${file}.png`,
-    ...art[color]!,
+    ...art[file]!,
   }));
 
-/** 그림이 비슷한 모양이라 일단 같은 배치. 눈으로 보고 테마마다 맞춘다 */
+/** 사탕처럼 그림이 비슷한 모양이면 7장 모두 같은 배치 */
 const same = (scale: number, faceDy: number, faceScale: number): Omit<BlockArt, 'url'>[] =>
   Array.from({ length: 7 }, () => ({ scale, faceDy, faceScale }));
+
+/** 우주: 혜성·태양·별·UFO·고리 행성·달(파일 순서) + 무지개. 얼굴이 몸통(혜성 머리·UFO 접시·달 두꺼운 쪽) 안에 들어가게 맞춘다 */
+const SPACE_ART: Omit<BlockArt, 'url'>[] = [
+  { scale: 1, faceDx: 7, faceDy: 9, faceScale: 0.68 },
+  { scale: 1, faceDy: 1, faceScale: 0.78 },
+  { scale: 1, faceDy: 5, faceScale: 0.62 },
+  { scale: 1, faceDy: 6, faceScale: 0.62 },
+  { scale: 1, faceDy: 2, faceScale: 0.7 },
+  { scale: 1, faceDx: -8, faceDy: 6, faceScale: 0.62 },
+  { scale: 1, faceDy: 0, faceScale: 0.85 },
+];
+
+/** 바다: 게·조개·불가사리·거북·물고기·해파리(파일 순서) + 무지개 */
+const OCEAN_ART: Omit<BlockArt, 'url'>[] = [
+  { scale: 1, faceDy: 3, faceScale: 0.7 },
+  { scale: 1, faceDy: 5, faceScale: 0.72 },
+  { scale: 1, faceDy: 4, faceScale: 0.62 },
+  { scale: 1, faceDx: -2, faceDy: 0, faceScale: 0.7 },
+  { scale: 1, faceDx: -8, faceDy: 2, faceScale: 0.62 },
+  { scale: 1, faceDy: -6, faceScale: 0.7 },
+  { scale: 1, faceDy: 7, faceScale: 0.8 },
+];
 
 export const THEMES: readonly Theme[] = [
   { id: 'storybook', name: '그림책', blocks: DECOR.blockArt, background: DECOR.storybook },
@@ -47,13 +70,13 @@ export const THEMES: readonly Theme[] = [
   {
     id: 'space',
     name: '우주',
-    blocks: byColor('space', same(1, 0, 0.85)),
+    blocks: byColor('space', SPACE_ART),
     background: { url: 'themes/space/bg.jpg', band: { top: 260, bottom: 1230 } },
   },
   {
     id: 'ocean',
     name: '바다',
-    blocks: byColor('ocean', same(1, 7, 0.8)),
+    blocks: byColor('ocean', OCEAN_ART),
     background: { url: 'themes/ocean/bg.jpg', band: { top: 300, bottom: 1040 } },
   },
 ];
