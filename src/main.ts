@@ -12,11 +12,22 @@ import { renderAppIconPage } from './dev/appIcon';
 if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('icon')) {
   renderAppIconPage();
 } else {
-  startGame();
+  const game = startGame();
+  // DEV ?nickname=<ok|오류 code>: 닉네임 입력 창 미리보기. 배포 빌드에서는 분기째 빠진다
+  const nickname = import.meta.env.DEV
+    ? new URLSearchParams(window.location.search).get('nickname')
+    : null;
+  if (nickname !== null) {
+    game.events.once(Phaser.Core.Events.READY, () => {
+      void import('./dev/nicknamePreview').then((m) =>
+        m.openNicknamePreview(game.canvas, nickname),
+      );
+    });
+  }
 }
 
-function startGame(): void {
-  new Phaser.Game({
+function startGame(): Phaser.Game {
+  return new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'game',
     width: GAME.width,
