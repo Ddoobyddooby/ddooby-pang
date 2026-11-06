@@ -37,6 +37,7 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 | `npm run android:sync` | 웹 빌드 후 `android/` 앱에 복사 (`cap sync`). 웹 코드를 고친 뒤 Android Studio에서 ▶ 하기 전에 실행 |
 | `npm run icons` | `assets/app-icon/`의 원본 그림으로 Android 앱 아이콘(mipmap-*)을 다시 만든다 |
 | `npm run stages:sim` | 스토리 스테이지마다 자동 플레이를 300판씩 돌려 클리어율·점수·별 비율 표를 찍는다. `SIM_GAMES=1000`(판 수), `SIM_STAGES=11-20`(일부만)을 앞에 붙일 수 있다. `story.json`을 고친 뒤 난이도를 잴 때 |
+| `npm run poc:deno` | (V2-W2-08 서버 PoC) 랜덤 로그 1000개와 실제 게임 기록 6판을 Node와 Deno로 다시 계산해 점수·판정·해시가 같은지 비교. Deno 필요 (`brew install deno`). 결과 `scripts/server-poc/RESULT.md` |
 
 ## 3. 게임 화면 확인하기
 
@@ -651,6 +652,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 4. `?theme=space&specials`, `?theme=ocean&specials`: 줄·폭탄·무지개 배지가 읽힌다. 무지개 블록은 예전 그림 그대로
 5. 메뉴에서 그림책·사탕을 고르면 예전과 같다
 
+### V2-W2-08 랭킹 서버 PoC (core 공유·시간 판정)
+1. `deno --version`으로 Deno가 있는지 확인 (없으면 `brew install deno`)
+2. `npm run poc:deno`. 마지막에 "1000/1000 일치", 늦은 move 100판 거부, 브라우저 기록 6/6 일치·판정 통과가 나온다
+3. `npx vitest run tests/poc`: 리플레이와 서버 판정 테스트(시각 0~60초, 간격 200ms, 58초·30분, 재제출, 잘못된 형식)
+4. 결정 내용은 `docs/PLAN.md` 5.8절, 실측·비교표는 `scripts/server-poc/RESULT.md`
+
 ## 5. 문제 해결
 
 | 증상 | 해결 |
@@ -1205,3 +1212,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **색 + 모양 이중 부호화**: 작은 화면에서는 색만으로 구분하기 어렵다. 색마다 다른 실루엣을 주면 한눈에 구분되고 색약에도 유리하다 (`public/themes/space|ocean/block-0~5.png`)
 - **그림마다 배치 값**: 모양이 달라 얼굴 크기·위치를 블록별로 둔다. 치우친 모양은 `faceDx`로 가로 이동, 없는 테마는 `?? 0`으로 예전 결과 유지 (`src/view/theme/themes.ts`, `textures.ts`)
 - **파일 순서 ↔ 게임 색 번호 매핑**: 그림 파일은 빨·주·노·초·파·보, 게임 색은 빨·노·초·파·보·주라 `byColor`가 순서를 바꿔 잇는다 (`themes.ts`)
+
+### V2-W2-08 랭킹 서버 PoC (core 공유·시간 판정)
+- **리플레이 검증**: 서버는 클라이언트 점수를 믿지 않고 seed + 수 기록으로 게임을 다시 돌려 점수를 계산한다. 순수 core라 가능하다 (`scripts/server-poc/replay.ts`)
+- **같은 코드를 두 런타임에서**: Node(Vitest)와 Deno에서 같은 결과인지 대조. Deno는 확장자 없는 import를 기본으로 못 읽어 번들(rolldown)로 한 파일을 만든다 (`scripts/server-poc/deno/compare.ts`)
+- **번들 해시를 버전으로**: 점수에 쓰이는 코드만 남은 번들의 sha256 → 규칙이 바뀔 때만 버전이 바뀐다 (PLAN 5.8)
+- **점수로 못 막는 조작은 규칙으로**: 시각을 모두 0으로 바꿔도 점수는 같다. 그래서 시각 범위·간격·좌표를 따로 검사한다 (`scripts/server-poc/validate.ts` `validateMoves`)
+- **멱등 재제출**: 제출 내용을 정규화 JSON sha256으로 저장해 같은 내용이면 이전 결과 반환, 다르면 거부. 형식 검사를 해시보다 먼저 해야 잘못된 입력에서 예외가 안 난다 (`judgeSubmission`)
+- **게임 시간 vs 벽시계**: 일시정지는 게임 시간만 멈춘다. 그래서 서버 벽시계는 하한(58초)만 엄격하고 상한은 넉넉하게(30분) 둔다
