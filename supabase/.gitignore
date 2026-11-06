@@ -6,3 +6,6 @@
 .env.keys
 .env.local
 .env.*.local
+
+# deno check가 만드는 잠금 파일 (로컬 Deno와 Edge Runtime의 lock 형식이 다를 수 있어 커밋하지 않는다)
+functions/**/deno.lock

@@ -28,6 +28,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      # Edge Function용 묶음(supabase/functions/_shared/)이 src와 같은지 (PLAN2 5.8·6.3)
+      - run: npm run server:shared:check
       - run: npm test
       # 온라인 기능 키 (저장소 Variables, PLAN2 6.1). 없으면 빈 값으로 빌드되고 온라인 기능만 꺼진다
       - run: npm run build

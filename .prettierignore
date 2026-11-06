@@ -10,3 +10,6 @@ package-lock.json
 
 # 실제 브라우저 기록 (한 수 한 줄, V2-W2-08)
 scripts/server-poc/fixtures/
+
+# npm run server:shared가 만드는 파일
+supabase/functions/_shared/

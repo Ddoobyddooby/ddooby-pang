@@ -4,7 +4,17 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist/', 'coverage/', 'android/', '.omc/', '.playwright-mcp/'] },
+  {
+    ignores: [
+      'dist/',
+      'coverage/',
+      'android/',
+      '.omc/',
+      '.playwright-mcp/',
+      // npm run server:shared가 만드는 파일
+      'supabase/functions/_shared/',
+    ],
+  },
   js.configs.recommended,
   tseslint.configs.recommended,
   {
@@ -162,6 +172,57 @@ export default tseslint.config(
         { name: 'window', message: 'storage는 전역을 직접 만지지 않는다. BootScene이 넘겨준다.' },
         { name: 'document', message: 'storage에서 DOM을 쓰지 않는다.' },
         { name: 'localStorage', message: 'localStorage는 BootScene이 어댑터에 넘겨준다.' },
+      ],
+    },
+  },
+  // online은 Supabase 연결만 맡는다: 게임 계층(core·view·scenes 등)과 Phaser를 모른다 (PLAN2 6.3)
+  {
+    files: ['src/online/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [{ name: 'phaser', message: 'online은 Phaser를 import하지 않는다.' }],
+          patterns: [
+            {
+              group: ['@capacitor/*'],
+              message: '네이티브 기능(Capacitor)은 scenes(와 W4-08의 storage)에서만 쓴다.',
+            },
+            {
+              group: [
+                '**/core',
+                '**/core/**',
+                '**/view',
+                '**/view/**',
+                '**/scenes',
+                '**/scenes/**',
+                '**/modes/**',
+                '**/data/**',
+                '**/storage/**',
+                '**/config',
+              ],
+              message: 'online은 다른 게임 계층에 의존하지 않는다 (scenes → online).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // 서버와 같이 쓰는 닉네임 규칙은 bannedWords 말고는 import하지 않는다 (server:shared 번들)
+  {
+    files: ['src/online/nicknameRules.ts', 'src/online/bannedWords.ts'],
+    languageOptions: { globals: {} },
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^(?!\\./bannedWords$)',
+              message: '서버 번들에 들어가는 파일: bannedWords만 import한다.',
+            },
+          ],
+        },
       ],
     },
   },

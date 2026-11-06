@@ -1,9 +1,10 @@
 // V2-W3-01 권한(RLS·GRANT) 시험: 원격 개발 프로젝트에 익명 사용자 A·B와 비로그인 anon으로 접속해
 // PLAN2 6.2 시험 ①~④와 anon 쓰기 차단을 확인한다. publishable key만 쓴다 (npm test에 넣지 않음).
 //
-//   npm run supabase:check [-- <env 파일 경로>]   (기본값 .env.local)
+//   npm run supabase:check [-- <env 파일 경로>] [--nickname]   (기본값 .env.local)
 //
-// 시험이 만든 익명 계정과 stage_attempts 행(stage_id 999)은 개발 프로젝트에 남는다.
+// --nickname: Edge Function set-nickname 시험을 더한다 (V2-W3-02, 함수 배포 뒤에만).
+// 시험이 만든 익명 계정, stage_attempts 행(stage_id 999), `시험` 접두어 닉네임은 개발 프로젝트에 남는다.
 import { readFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -11,6 +12,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 const TEST_STAGE_ID = 999;
 const TEST_WEEK_KEY = '2099-W01';
 const NIL_UUID = '00000000-0000-0000-0000-000000000000';
+const ALLOWED_ORIGIN = 'https://ddoobyddooby.github.io';
+const DISALLOWED_ORIGIN = 'https://evil.example';
 
 interface Outcome {
   pass: boolean;
@@ -92,7 +95,9 @@ async function signIn(client: SupabaseClient, name: string): Promise<string> {
 }
 
 async function main(): Promise<number> {
-  const envPath = process.argv[2] ?? '.env.local';
+  const args = process.argv.slice(2);
+  const envPath = args.find((arg) => !arg.startsWith('--')) ?? '.env.local';
+  const withNickname = args.includes('--nickname');
   const { url, key } = loadEnv(envPath);
 
   const anon = newClient(url, key);
@@ -281,6 +286,8 @@ async function main(): Promise<number> {
     denied(await anon.from('stage_attempts').select('*').limit(5)),
   );
 
+  if (withNickname) await nicknameChecks({ url, key, a, b, idA, check });
+
   console.log('| # | 항목 | 기대 | 결과 | 상세 |');
   console.log('|---|---|---|---|---|');
   for (const r of rows) {
@@ -291,6 +298,118 @@ async function main(): Promise<number> {
   const failCount = rows.filter((r) => !r.outcome.pass).length;
   console.log(`\n${rows.length}개 중 PASS ${rows.length - failCount}, FAIL ${failCount}`);
   return failCount === 0 ? 0 : 1;
+}
+
+interface NicknameContext {
+  url: string;
+  key: string;
+  a: SupabaseClient;
+  b: SupabaseClient;
+  idA: string;
+  check: (id: string, label: string, expect: string, run: () => Promise<Outcome>) => Promise<void>;
+}
+
+/** set-nickname 시험 (PLAN2 6.3). 상태 코드·CORS 헤더를 보려고 supabase-js 대신 fetch로 부른다 */
+async function nicknameChecks({ url, key, a, b, idA, check }: NicknameContext): Promise<void> {
+  const endpoint = `${url}/functions/v1/set-nickname`;
+  const tokenOf = async (client: SupabaseClient) => {
+    const { data } = await client.auth.getSession();
+    if (!data.session) throw new Error('세션 없음');
+    return data.session.access_token;
+  };
+  const tokenA = await tokenOf(a);
+  const tokenB = await tokenOf(b);
+  const call = (nickname: string, token: string | null, origin = ALLOWED_ORIGIN) =>
+    fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        'Content-Type': 'application/json',
+        Origin: origin,
+        ...(token === null ? {} : { Authorization: `Bearer ${token}` }),
+      },
+      body: JSON.stringify({ nickname }),
+    });
+  const expectStatus = async (res: Response, status: number, code?: string): Promise<Outcome> => {
+    const text = await res.text();
+    let body: { code?: unknown } = {};
+    try {
+      body = JSON.parse(text) as { code?: unknown };
+    } catch {
+      // 게이트웨이 응답은 JSON이 아닐 수 있다
+    }
+    const pass = res.status === status && (code === undefined || body.code === code);
+    return {
+      pass,
+      detail: `${res.status} ${typeof body.code === 'string' ? body.code : ''}`.trim(),
+    };
+  };
+
+  // 실행마다 새 익명 계정이라 닉네임이 겹쳐도 되지만, 태그 시험을 위해 A·B가 같은 이름을 쓴다
+  const name = `시험A${String(Math.floor(Math.random() * 100)).padStart(2, '0')}`;
+  let tagA: number | null = null;
+
+  await check('닉', `A 정상 설정 (${name})`, '200, profiles에 저장', async () => {
+    const res = await call(name, tokenA);
+    if (res.status !== 200) return expectStatus(res, 200);
+    const body = (await res.json()) as { nickname?: unknown; tag?: unknown };
+    const { data, error } = await a.from('profiles').select('nickname, tag').eq('id', idA).single();
+    if (error)
+      return { pass: false, detail: `profiles 조회: ${error.code ?? ''} ${error.message}` };
+    tagA = typeof body.tag === 'number' ? body.tag : null;
+    const pass =
+      body.nickname === name && tagA !== null && data.nickname === name && data.tag === tagA;
+    return { pass, detail: `200 tag ${String(body.tag)}, profiles ${data.nickname}#${data.tag}` };
+  });
+  await check('닉', 'B 금칙어', '400 banned', async () =>
+    expectStatus(await call('시험관리자', tokenB), 400, 'banned'),
+  );
+  await check('닉', 'B 짧음', '400 too-short', async () =>
+    expectStatus(await call('시', tokenB), 400, 'too-short'),
+  );
+  await check('닉', 'B가 A와 같은 이름', '200, A와 다른 태그', async () => {
+    const res = await call(name, tokenB);
+    if (res.status !== 200) return expectStatus(res, 200);
+    const body = (await res.json()) as { tag?: unknown };
+    const pass = typeof body.tag === 'number' && body.tag !== tagA;
+    return { pass, detail: `200 tag ${String(body.tag)} (A ${String(tagA)})` };
+  });
+  await check('닉', 'A 두 번째 설정', '409 already-set', async () =>
+    expectStatus(await call('시험A다시', tokenA), 409, 'already-set'),
+  );
+  await check('닉', '토큰 없음', '401', async () =>
+    expectStatus(await call('시험무토큰', null), 401),
+  );
+  await check('닉', '무효 토큰', '401', async () =>
+    expectStatus(await call('시험가짜', 'not-a-jwt'), 401),
+  );
+
+  const preflight = (origin: string) =>
+    fetch(endpoint, {
+      method: 'OPTIONS',
+      headers: {
+        Origin: origin,
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'authorization, apikey, content-type, x-client-info',
+      },
+    });
+  await check('닉', '허용 출처 preflight', 'Allow-Origin = 출처', async () => {
+    const res = await preflight(ALLOWED_ORIGIN);
+    const allow = res.headers.get('access-control-allow-origin');
+    return {
+      pass: allow === ALLOWED_ORIGIN,
+      detail: `${res.status}, Allow-Origin ${allow ?? '없음'}`,
+    };
+  });
+  await check('닉', '허용 안 된 출처 preflight', 'Allow-Origin 없음', async () => {
+    const res = await preflight(DISALLOWED_ORIGIN);
+    const allow = res.headers.get('access-control-allow-origin');
+    const pass = allow !== DISALLOWED_ORIGIN && allow !== '*';
+    return { pass, detail: `${res.status}, Allow-Origin ${allow ?? '없음'}` };
+  });
+  await check('닉', 'A profiles 직접 UPDATE', '실패', async () =>
+    denied(await a.from('profiles').update({ nickname: '시험직접' }).eq('id', idA).select()),
+  );
 }
 
 main().then(

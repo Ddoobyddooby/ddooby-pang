@@ -4,6 +4,8 @@ ddooby-pang 전용 Supabase 프로젝트의 설정과 DB 마이그레이션 (SPE
 
 - `config.toml`: `supabase init`으로 만든 CLI 설정. 로컬 Docker 스택은 쓰지 않으므로 원격 적용에는 영향이 없다 (`enable_anonymous_sign_ins = true`는 의도 기록용)
 - `migrations/`: 스키마·RLS·GRANT. 파일명 타임스탬프 순서로 적용된다
+- `functions/<이름>/`: Edge Function. `index.ts`(Deno 진입점, 환경 변수·DB 연결) + 순수 처리 로직(`handler.ts`, Vitest 대상) + 함수별 `deno.json`
+- `functions/_shared/`: `npm run server:shared`가 src에서 묶어 만드는 파일 (직접 고치지 않는다). CI가 `npm run server:shared:check`로 커밋본과 대조한다
 - `.temp/`·`.branches/`: CLI가 만드는 링크 정보. 커밋하지 않는다 (`supabase/.gitignore`)
 
 ## 원격 적용 (PL이 사용자 확인을 받은 뒤에만)
@@ -19,14 +21,29 @@ supabase db push
 
 worktree에서 실행할 때는 `--workdir <worktree 경로>`를 붙인다 (그 아래 `supabase/`를 쓴다). `link`도 같은 `--workdir`로 해야 `.temp/`에 링크가 남는다.
 
+## Edge Function 배포 (PL이 한다)
+
+```sh
+npm run server:shared:check                      # _shared 묶음이 src와 같은지
+npm run functions:check                          # deno check
+supabase functions deploy set-nickname --use-api --workdir <worktree 경로>
+```
+
+- `--use-api`: Docker 없이 서버에서 묶는다. 빼면 로컬 Docker로 묶는다
+- JWT 확인: `config.toml`의 `[functions.set-nickname] verify_jwt = true`(기본값). 게이트웨이가 먼저 사용자 JWT를 보고, 함수 안에서 `auth.getUser(token)`으로 한 번 더 본다. `--no-verify-jwt`는 쓰지 않는다
+- 키: 함수는 Supabase가 주입하는 `SUPABASE_URL`, `SUPABASE_SECRET_KEYS`(없으면 구형 `SUPABASE_SERVICE_ROLE_KEY`)만 읽는다. `supabase secrets set`은 필요 없다
+
 ## 권한 시험
 
 ```sh
 npm run supabase:check                           # 기본 .env.local
 npm run supabase:check -- <env 파일 경로>         # 예: 메인 저장소의 .env.local
+npm run supabase:check -- <env 파일 경로> --nickname   # set-nickname 배포 뒤: 닉네임 항목 추가
 ```
 
-익명 사용자 A·B와 비로그인 anon으로 PLAN2 6.2 시험 ①~④와 anon 쓰기 차단을 표로 출력한다. 모두 PASS면 exit 0, FAIL이 있으면 1, 설정·로그인 오류는 2. 대시보드에서 Anonymous Sign-ins가 켜져 있어야 한다. 시험이 만든 익명 계정과 `stage_attempts` 행(`stage_id = 999`)은 남는다.
+익명 사용자 A·B와 비로그인 anon으로 PLAN2 6.2 시험 ①~④와 anon 쓰기 차단을 표로 출력한다. 모두 PASS면 exit 0, FAIL이 있으면 1, 설정·로그인 오류는 2. 대시보드에서 Anonymous Sign-ins가 켜져 있어야 한다. 시험이 만든 익명 계정, `stage_attempts` 행(`stage_id = 999`), `시험` 접두어 닉네임은 남는다.
+
+`--nickname` 항목: A 정상 설정(응답·profiles 일치), B 금칙어 400, B 짧음 400, B가 A와 같은 이름 → 다른 태그, A 두 번째 설정 409, 토큰 없음·무효 401, 허용 출처 preflight에 Allow-Origin 있음, 허용 안 된 출처 preflight에 없음, profiles 직접 UPDATE 여전히 실패.
 
 `runs`는 클라이언트가 만들 수 없어 지금은 "오류 없이 0행"만 본다. 실제 교차 시험(B가 A의 run을 못 읽음)은 `start-run`이 생기는 V2-W3-03에서 추가한다.
 
