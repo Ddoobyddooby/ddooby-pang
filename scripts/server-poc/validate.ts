@@ -1,5 +1,5 @@
 // V2-W2-08 PoC: submit-score 서버 판정 (SPEC 5.3·11절 5번, PLAN2 5.8 "서버 판정" 표). 순수 함수만 둔다.
-// 서버 순서: resubmitDecision(저장된 해시) → 'same'이면 저장된 결과 반환 / 'conflict'면 거부 / 'new'면 verifySubmission.
+// 서버 진입점은 judgeSubmission 하나: 형식 검사 → 해시·재제출 판단(same이면 저장된 결과, conflict면 거부) → 새 제출이면 verifySubmission.
 // replay.ts를 거쳐 src/core·src/modes·src/config만 쓴다. 해시는 Web Crypto라 Node·Deno 둘 다 돈다.
 
 import type { Pos } from '../../src/core/types';
@@ -27,7 +27,11 @@ export type RejectReason =
   | 'gap-too-short'
   | 'pos-invalid'
   | 'not-adjacent'
-  | 'score-mismatch';
+  | 'score-mismatch'
+  | 'payload-invalid'
+  | 'client-score-invalid'
+  | 'version-invalid'
+  | 'resubmit-conflict';
 
 export type Verdict = { ok: true } | { ok: false; reason: RejectReason; index?: number };
 
@@ -83,7 +87,10 @@ export interface SubmissionPayload {
   version: string;
 }
 
-/** moves·clientScore·version을 키 순서를 고정한 JSON으로 만든 sha256 (hex). 다른 필드는 무시한다 */
+/**
+ * moves·clientScore·version을 키 순서를 고정한 JSON으로 만든 sha256 (hex). 다른 필드는 무시한다.
+ * 형식 검사(checkPayload)를 통과한 payload만 넣는다 (잘못된 moves면 예외가 난다)
+ */
 export async function submissionHash(payload: SubmissionPayload): Promise<string> {
   const canonical = JSON.stringify({
     clientScore: payload.clientScore,
@@ -107,6 +114,24 @@ export function resubmitDecision(
   return storedHash === newHash ? 'same' : 'conflict';
 }
 
+/**
+ * 제출 형식: 객체, moves는 validateMoves 통과, clientScore는 0 이상 정수, version은 빈 문자열이 아닌 문자열.
+ * 통과하면 submissionHash에 넣어도 안전하다
+ */
+export function checkPayload(payload: unknown): Verdict {
+  if (typeof payload !== 'object' || payload === null)
+    return { ok: false, reason: 'payload-invalid' };
+  const { moves, clientScore, version } = payload as Record<string, unknown>;
+  const checked = validateMoves(moves, TIMEATTACK_BOARD);
+  if (!checked.ok) return checked;
+  if (!Number.isInteger(clientScore) || (clientScore as number) < 0) {
+    return { ok: false, reason: 'client-score-invalid' };
+  }
+  if (typeof version !== 'string' || version === '')
+    return { ok: false, reason: 'version-invalid' };
+  return { ok: true };
+}
+
 export type SubmissionResult =
   | { ok: true; score: number; replay: ReplayResult }
   | { ok: false; reason: RejectReason; index?: number };
@@ -127,4 +152,40 @@ export function verifySubmission(
   const replay = replayTimeAttack(submission.seed, submission.moves as ReplayMove[]);
   if (replay.score !== submission.clientScore) return { ok: false, reason: 'score-mismatch' };
   return { ok: true, score: replay.score, replay };
+}
+
+export type Judgement =
+  /** 형식이 잘못돼 해시를 만들지 않았다 (run에 아무것도 저장하지 않는다) */
+  | { decision: 'invalid'; result: SubmissionResult }
+  /** 같은 내용 재제출: 저장된 이전 결과를 그대로 돌려준다 */
+  | { decision: 'same'; hash: string; result: SubmissionResult }
+  /** 다른 내용으로 run 재사용: 거부 */
+  | { decision: 'conflict'; hash: string; result: SubmissionResult }
+  /** 첫 제출: 판정 결과와 hash를 run에 저장한다 */
+  | { decision: 'new'; hash: string; result: SubmissionResult };
+
+/**
+ * submit-score 서버 판정 진입점 (PLAN2 5.8): 형식 검사 → 해시·재제출 판단 → 새 제출이면 verifySubmission.
+ * run: runs 기록 (서버 발급 seed, 저장된 해시·결과. 처음이면 storedHash null).
+ * 잘못된 형식은 해시를 만들기 전에 구조화된 거부로 돌려준다 (예외 없음)
+ */
+export async function judgeSubmission(
+  run: { seed: number; storedHash: string | null; storedResult: SubmissionResult | null },
+  payload: unknown,
+  server: { version: string; issuedAtMs: number; submittedAtMs: number },
+): Promise<Judgement> {
+  const format = checkPayload(payload);
+  if (!format.ok) return { decision: 'invalid', result: format };
+  const submission = payload as SubmissionPayload;
+  const hash = await submissionHash(submission);
+  const decision = resubmitDecision(run.storedHash, hash);
+  if (decision === 'conflict') {
+    return { decision, hash, result: { ok: false, reason: 'resubmit-conflict' } };
+  }
+  // 해시와 결과는 함께 저장한다. 결과가 없으면(저장 도중 실패 등) 같은 내용이므로 다시 판정한다
+  const result =
+    decision === 'same' && run.storedResult
+      ? run.storedResult
+      : verifySubmission({ seed: run.seed, ...submission }, server);
+  return { decision, hash, result };
 }

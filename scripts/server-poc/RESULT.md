@@ -6,7 +6,7 @@
 | 파일 | 역할 |
 |---|---|
 | `scripts/server-poc/replay.ts` | `replayTimeAttack(seed, moves)` 리플레이 시제품. `src/core`·`src/modes`만 import |
-| `scripts/server-poc/validate.ts` | 서버 판정: `validateMoves`·`checkServerTiming`·`submissionHash`·`resubmitDecision`·`verifySubmission`. 기준값은 `JUDGE` 한곳 |
+| `scripts/server-poc/validate.ts` | 서버 판정. 진입점 `judgeSubmission`(형식 검사 → 해시·재제출 → `verifySubmission`). 기준값은 `JUDGE` 한곳 |
 | `scripts/server-poc/server.ts` | Edge Function 진입점 시제품 (replay + validate 재수출). rolldown 번들 입력 |
 | `scripts/server-poc/logs.ts` | seed RNG(`core/rng.ts`)로 만드는 결정적 랜덤 로그. 현실 간격·경계·늦은 move·셔플 재현 옵션 |
 | `scripts/server-poc/node-scores.poc.ts` | Node(Vitest)에서 1000개 로그의 리플레이 결과·판정·제출 해시를 `out/node-scores.json`에 쓴다 |
@@ -16,7 +16,7 @@
 | `scripts/server-poc/fixtures/browser-runs.json` | 브라우저에서 기록한 6판 (move·t·결과 화면 점수). t는 정수 ms로 내림 |
 | `scripts/server-poc/browser/probe.js` | D 실측 프로브 (dev 페이지에 넣는다) |
 | `tests/poc/replay.test.ts` | `npm test`에서 도는 리플레이 테스트 14개 |
-| `tests/poc/validate.test.ts` | `npm test`에서 도는 서버 판정 테스트 23개 |
+| `tests/poc/validate.test.ts` | `npm test`에서 도는 서버 판정 테스트 39개 |
 
 실행: `npm run poc:deno` (Node 기록 → rolldown으로 `server.ts` 번들 → Deno 직접 import 비교 → Deno 번들 비교, 각각 브라우저 기록 대조 포함). 결과물 `scripts/server-poc/out/`은 커밋하지 않는다.
 
@@ -94,7 +94,7 @@
 - 브라우저 기록 6판 각각 리플레이 점수 == 화면 점수 / 5판 이상·셔플 판(적힌 순번)·무효 스왑이 있는 손 흉내 판·재생 중 타임 업이 들어 있다
 - `realistic` 간격 하한 / `boundary`(마지막 move 59999)·`late`(끝에 60000 이후 move) / `rngValid`가 4860·16824에서 적힌 순번에 셔플
 
-`tests/poc/validate.test.ts` (23개): E절 표의 거부 사유마다 경계 양쪽, codex 재현 로그, 늦은 move·경계 로그, 브라우저 6판 통과
+`tests/poc/validate.test.ts` (39개): E절 표의 거부 사유마다 경계 양쪽, codex 재현 로그, 늦은 move·경계 로그, 브라우저 6판 통과, `judgeSubmission`의 new·same·conflict와 잘못된 형식 12가지(첫 제출·재제출 경로 모두)
 
 ## C. Deno에서 `src/core`를 가져오는 방식
 
@@ -171,9 +171,14 @@
 | move 간격 | 연속 차이 ≥ 200ms (같은 `t`·역순 포함) | `validateMoves` | `gap-too-short` | 199 거부 / 200 통과, 같은 t, 역순, 300개(최대) 통과 |
 | move 좌표 | 보드 안 정수, 상하좌우 이웃 | `validateMoves` | `pos-invalid`, `not-adjacent` | 보드 밖·음수·0.5·문자열·없음 / 대각선·두 칸·같은 칸 |
 | 점수 | 리플레이 점수 ≠ `clientScore` → 거부 | `verifySubmission` | `score-mismatch` | +1점, 문자열 점수 |
-| 재제출 | 제출 내용 해시를 run에 저장. 같으면 이전 결과 반환, 다르면 거부 | `submissionHash` + `resubmitDecision` | `same` / `conflict` | 키 순서·다른 필드만 다르면 same, 점수·버전·move 하나 다르면 conflict |
+| 제출 형식 | 객체, `moves` 배열(각 move는 위 시각·간격·좌표), `clientScore` 0 이상 정수, `version` 빈 문자열이 아닌 문자열 | `checkPayload` | `payload-invalid`, `moves-not-array`, `pos-invalid` 등, `client-score-invalid`, `version-invalid` | `moves: null`, `moves: [{t:0}]`, moves·version 없음, 점수 문자열·NaN·1.5·-1, 버전 숫자·빈 문자열, payload null·문자열 |
+| 재제출 | 제출 내용 해시를 run에 저장. 같으면 이전 결과 반환, 다르면 거부 | `submissionHash` + `resubmitDecision` | `same` / `conflict`(`resubmit-conflict`) | 키 순서·다른 필드만 다르면 same, 점수·버전·move 하나 다르면 conflict |
 
-- 서버 순서: `resubmitDecision`(저장된 해시) → `same`이면 저장된 결과 반환, `conflict`면 거부, `new`면 `verifySubmission`(버전 → 서버 시각 → `validateMoves` → `replayTimeAttack` → 점수 비교). 첫 거부 사유와 move 번호(`index`)를 돌려준다
+- 서버 순서는 진입점 `judgeSubmission(run, payload, server)` 하나로 묶었다:
+  1. **형식 검사** `checkPayload`: 잘못된 형식이면 해시를 만들지 않고 `{ decision: 'invalid', result: { ok: false, reason, index? } }`를 돌려준다 (run에 저장하지 않음, 예외 없음)
+  2. **해시·재제출 판단** `submissionHash` → `resubmitDecision`(run에 저장된 해시): `same`이면 저장된 이전 결과를 그대로, `conflict`면 `resubmit-conflict` 거부
+  3. **새 제출 판정** `verifySubmission`: 버전 → 서버 시각 → `validateMoves` → `replayTimeAttack` → 점수 비교. 첫 거부 사유와 move 번호(`index`)를 돌려준다. 서버는 `hash`와 `result`를 함께 run에 저장한다
+- 재리뷰 1 반영: 예전 순서(해시 → 판정)에서는 `moves: null`, `moves: [{t:0}]`이 `submissionHash` 안에서 `TypeError`를 냈다. 이제 각각 `moves-not-array`, `pos-invalid`로 거부된다. 시각·간격 규칙 위반도 형식 검사에서 걸리므로, 저장된 run이 있어도 규칙 위반 제출은 `conflict`가 아니라 `invalid`로 거부된다 (어느 쪽이든 거부)
 - 해시: `moves`(from·to·t만)·`clientScore`·`version`을 키 순서를 고정한 JSON으로 만든 sha256 (Web Crypto `crypto.subtle`). Node·Deno 값이 1000판 모두 같다 (B.1)
 - **codex 재현 사례**: seed 1 로그의 `t`를 모두 0으로 바꾸면 리플레이 점수는 원래와 같지만 `gap-too-short`(move 1)로, 모두 -1로 바꾸면 `t-out-of-range`(move 0)로 거부된다
 - 늦은 move가 든 랜덤 로그 100판은 Node·Deno 모두 `t-out-of-range`로 거부, t=59999 경계 로그와 브라우저 기록 6판은 통과

@@ -12,8 +12,10 @@ import {
 import {
   checkServerTiming,
   JUDGE,
+  judgeSubmission,
   resubmitDecision,
   submissionHash,
+  type SubmissionResult,
   validateMoves,
   verifySubmission,
 } from '../../scripts/server-poc/validate';
@@ -235,5 +237,89 @@ describe('server-poc/validate 판정 기준 (PLAN2 5.8)', () => {
         expect(verdict).toMatchObject({ ok: true, score: run.screenScore });
       },
     );
+  });
+
+  describe('judgeSubmission: 형식 검사 → 해시·재제출 판단 → 판정 (재리뷰 1)', () => {
+    const seed = 1;
+    const moves = randomLog(seed, seed, { realistic: true });
+    const score = replayTimeAttack(seed, moves).score;
+    const good = { moves, clientScore: score, version: SERVER.version };
+    const fresh = { seed, storedHash: null, storedResult: null };
+
+    it('첫 제출은 new: 판정 결과와 저장할 해시를 돌려준다', async () => {
+      const judged = await judgeSubmission(fresh, good, SERVER);
+      expect(judged).toMatchObject({ decision: 'new', result: { ok: true, score } });
+      expect(judged.decision !== 'invalid' && judged.hash).toBe(await submissionHash(good));
+    });
+
+    it('같은 내용 재제출은 same: 저장된 이전 결과 그대로 (서버 시각이 지나도)', async () => {
+      const first = await judgeSubmission(fresh, good, SERVER);
+      if (first.decision !== 'new') throw new Error('첫 제출이 new가 아니다');
+      const stored = { seed, storedHash: first.hash, storedResult: first.result };
+      const late = { ...SERVER, submittedAtMs: SERVER.issuedAtMs + JUDGE.runTtlMs + 1 };
+      expect(await judgeSubmission(stored, { ...good, extra: 1 }, late)).toEqual({
+        decision: 'same',
+        hash: first.hash,
+        result: first.result,
+      });
+    });
+
+    it('다른 내용으로 run 재사용은 conflict 거부', async () => {
+      const stored = {
+        seed,
+        storedHash: await submissionHash(good),
+        storedResult: { ok: true, score } as SubmissionResult,
+      };
+      expect(
+        await judgeSubmission(stored, { ...good, clientScore: score + 10 }, SERVER),
+      ).toMatchObject({ decision: 'conflict', result: { ok: false, reason: 'resubmit-conflict' } });
+    });
+
+    // 재리뷰 재현 입력: 예전에는 submissionHash가 TypeError를 냈다
+    const malformed: [string, unknown, string][] = [
+      ['moves: null', { ...good, moves: null }, 'moves-not-array'],
+      ['moves: [{ t: 0 }]', { ...good, moves: [{ t: 0 }] }, 'pos-invalid'],
+      ['moves 없음', { clientScore: score, version: SERVER.version }, 'moves-not-array'],
+      ['clientScore 문자열', { ...good, clientScore: String(score) }, 'client-score-invalid'],
+      ['clientScore NaN', { ...good, clientScore: NaN }, 'client-score-invalid'],
+      ['clientScore 소수', { ...good, clientScore: 1.5 }, 'client-score-invalid'],
+      ['clientScore 음수', { ...good, clientScore: -1 }, 'client-score-invalid'],
+      ['version 숫자', { ...good, version: 123 }, 'version-invalid'],
+      ['version 없음', { moves, clientScore: score }, 'version-invalid'],
+      ['version 빈 문자열', { ...good, version: '' }, 'version-invalid'],
+      ['payload null', null, 'payload-invalid'],
+      ['payload 문자열', 'moves', 'payload-invalid'],
+    ];
+
+    it.each(malformed)(
+      '%s: 해시 전에 형식 거부 (첫 제출·재제출 모두, 예외 없음)',
+      async (_, payload, reason) => {
+        const stored = {
+          seed,
+          storedHash: await submissionHash(good),
+          storedResult: { ok: true, score } as SubmissionResult,
+        };
+        for (const run of [fresh, stored]) {
+          const judged = await judgeSubmission(run, payload, SERVER);
+          expect(judged.decision).toBe('invalid');
+          expect(judged.result).toMatchObject({ ok: false, reason });
+          expect(judged).not.toHaveProperty('hash');
+        }
+      },
+    );
+
+    it('브라우저 기록 6판은 첫 제출로 통과', async () => {
+      for (const run of browserRuns) {
+        const judged = await judgeSubmission(
+          { seed: run.seed, storedHash: null, storedResult: null },
+          { moves: run.moves, clientScore: run.screenScore, version: SERVER.version },
+          SERVER,
+        );
+        expect(judged).toMatchObject({
+          decision: 'new',
+          result: { ok: true, score: run.screenScore },
+        });
+      }
+    });
   });
 });
