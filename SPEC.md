@@ -419,7 +419,7 @@ stage_attempts (id bigserial PK, user_id, stage_id int, result text,
                 moves_left int, score int, stars int, attempt_no int, created_at)
 ```
 
-- RLS: `profiles`는 본인만 수정, 전체 읽기 가능(닉네임 표시용). `weekly_scores`는 전체 읽기, 클라이언트 쓰기 금지. `runs`는 서버가 생성·사용 처리하며 타인의 run은 읽을 수 없다. `stage_attempts`는 본인 INSERT만 허용한다
+- RLS: `profiles`는 전체 읽기 가능(닉네임 표시용), 클라이언트 쓰기 금지. 닉네임은 금칙어 검사를 우회하지 못하게 Edge Function `set-nickname`만 저장한다 (2026-11-06 사용자 결정). `weekly_scores`는 전체 읽기, 클라이언트 쓰기 금지. `runs`는 서버가 생성·사용 처리하며 타인의 run은 읽을 수 없다. `stage_attempts`는 본인 INSERT만 허용한다
 - 인덱스: `weekly_scores (week_key, best_score DESC)`
 - 스키마는 레포의 `supabase/migrations/`로 관리한다
 - 공개 스키마의 모든 테이블에 RLS를 켠다. Data API 노출·권한 설정은 프로젝트 설정에 맞춰 PLAN에서 정한다

@@ -209,6 +209,28 @@ SPEC 4절. v0.1 형식(`layout` 없음) 스테이지와 경쟁 모드는 장애�
 ## 6. 3~4주차 큰 틀 (자세한 설계는 그 주 시작 전에)
 
 - **3주차 온라인**: PoC에서 정한 방식을 사용한다. `src/online/`에 인증·랭킹 클라이언트를 모으고, Supabase 마이그레이션은 `supabase/migrations/`에 둔다
+
+### 6.1 3주차 준비 결정 (2026-11-06 사용자)
+
+- 도구: Supabase CLI(Homebrew, 3.0.0)만 쓴다. 마이그레이션은 전용 프로젝트에 `supabase db push`로 올리고, 권한(RLS) 시험도 그 프로젝트에서 한다 (아직 사용자 없는 개발용). 로컬 Docker 스택은 쓰지 않는다
+- 키: 개발은 `.env.local`(gitignore)에 `VITE_SUPABASE_URL`·`VITE_SUPABASE_PUBLISHABLE_KEY`를 사용자가 직접 넣는다. 배포 빌드는 GitHub 저장소 Variables의 같은 이름을 `pages.yml`이 읽는다. secret·service_role 키는 저장소·클라이언트·채팅에 두지 않는다 (Edge Function은 Supabase가 주입하는 환경 변수만 쓴다)
+- 키가 없으면(로컬 빌드·포크) 온라인 기능만 꺼지고 게임은 그대로 된다
+- 닉네임이 없는 사용자의 기록은 저장하되 랭킹에 보이지 않는다. 닉네임을 정하면 그때부터 보인다
+
+### 6.2 V2-W3-01 스키마·RLS (`supabase/migrations/`)
+
+| 테이블 | 열 (요지) | 클라이언트 권한 (anon·authenticated) |
+|---|---|---|
+| `profiles` | `id uuid PK → auth.users on delete cascade`, `nickname text null (2~10자)`, `tag int null (0~9999)`, `created_at`, `updated_at`. `unique (nickname, tag)` | SELECT 전체. **쓰기 없음** (닉네임은 금칙어 검사를 우회하지 못하게 Edge Function `set-nickname`만 쓴다, V2-W3-02) |
+| `runs` | `id uuid PK default gen_random_uuid()`, `user_id → auth.users`, `seed int`, `mode text check ('timeattack')`, `version text`, `week_key text`, `created_at timestamptz default now()`, `submitted_at`, `submission_hash text`, `result jsonb` | SELECT 본인 것만. 쓰기 없음 (`start-run`·`submit-score`만) |
+| `weekly_scores` | `user_id`, `week_key`, `best_score int ≥ 0`, `run_id → runs`, `updated_at`, `PK (user_id, week_key)`. 인덱스 `(week_key, best_score desc)` | SELECT 전체. **INSERT·UPDATE·DELETE 불가** |
+| `stage_attempts` | `id bigserial`, `user_id default auth.uid()`, `stage_id int 1~999`, `result text check ('clear','fail')`, `moves_left int ≥ 0`, `score int ≥ 0`, `stars int 0~3`, `attempt_no int ≥ 1`, `created_at` | INSERT 본인(`user_id = auth.uid()`)만, SELECT 본인만 |
+
+- 모든 public 테이블에 RLS를 켜고, 테이블 권한은 `revoke all` 뒤 위 표만 `grant`한다 (RLS와 GRANT 이중으로 막는다)
+- 서버 쓰기는 Edge Function의 service role 연결로만 한다 (RLS 우회). 3주차 함수는 V2-W3-02·03에서 만든다
+- 시험 (`scripts/supabase-check/`, `npm test`에 넣지 않음): 익명 로그인한 두 사용자 A·B로 ① `weekly_scores` INSERT·UPDATE·DELETE 실패 ② `profiles` UPDATE 실패, SELECT 성공 ③ B가 A의 `runs`를 못 읽음 ④ `stage_attempts`는 자기 것 INSERT 성공, 남의 `user_id`로 INSERT 실패, 남의 것 SELECT 0행. 비로그인(anon)은 쓰기 전부 실패. 시험이 만든 계정·행은 끝나면 남겨도 되는 개발 프로젝트지만 `stage_attempts` 시험 행에는 `stage_id = 999`를 써서 구분한다
+- 사용자가 할 일: 대시보드에서 Anonymous Sign-ins 켜기, `.env.local`에 URL·publishable key 넣기, 터미널에서 `supabase login`·`supabase link --project-ref <ref>`(DB 비밀번호 입력)
+
 - **4주차 재조정**: 1~30 데이터(이동·장애물·색), `npm run stages:sim`에 장애물 반영, **별 3개 기준 상향 (FEEDBACK R6)**, 플레이 로그 → 조카 2차 테스트
 
 ## 7. 리스크
