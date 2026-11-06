@@ -60,8 +60,9 @@
 
 ## 3주차 — Supabase + 랭킹 (큰 틀, V2-W2-08 완료 후)
 
-- [ ] **V2-W3-01** 🧪 전용 Supabase 프로젝트 스키마·RLS 마이그레이션 (SPEC 7절)
+- [x] **V2-W3-01** 🧪 전용 Supabase 프로젝트 스키마·RLS 마이그레이션 (SPEC 7절)
   - 완료 기준: 테이블·인덱스 생성, 본인 데이터 권한과 `weekly_scores` 클라이언트 INSERT·UPDATE 차단을 검증한다
+  - 2026-11-07 메인 확인: `b564a1e`, 696 테스트. 원격 프로젝트(`jvapewenhoevfggoxpjd`)에 `supabase db push --remote` 적용, `npm run supabase:check` 33/33 PASS (점수 표 쓰기·남의 기록 읽기·anon 쓰기 차단). Codex 리뷰는 한도로 생략(사용자 결정), PL이 SQL 검토. 남의 run 교차 읽기 실험은 start-run이 생기는 V2-W3-03에서
 - [ ] **V2-W3-02** 👀🧪 익명 로그인·닉네임 (SPEC 5.1) ⛓ V2-W3-01
   - 완료 기준: 첫 온라인 진입 시 계정을 만들고 첫 기록 등록 시 닉네임을 받으며, 길이·금칙어·태그 규칙을 검증한다
 - [ ] **V2-W3-03** 🧪 `start-run`·`submit-score`와 서버 리플레이 (SPEC 5.3) ⛓ V2-W2-08, V2-W3-01~02

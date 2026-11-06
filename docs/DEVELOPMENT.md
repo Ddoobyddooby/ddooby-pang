@@ -38,6 +38,7 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 | `npm run icons` | `assets/app-icon/`의 원본 그림으로 Android 앱 아이콘(mipmap-*)을 다시 만든다 |
 | `npm run stages:sim` | 스토리 스테이지마다 자동 플레이를 300판씩 돌려 클리어율·점수·별 비율 표를 찍는다. `SIM_GAMES=1000`(판 수), `SIM_STAGES=11-20`(일부만)을 앞에 붙일 수 있다. `story.json`을 고친 뒤 난이도를 잴 때 |
 | `npm run poc:deno` | (V2-W2-08 서버 PoC) 랜덤 로그 1000개와 실제 게임 기록 6판을 Node와 Deno로 다시 계산해 점수·판정·해시가 같은지 비교. Deno 필요 (`brew install deno`). 결과 `scripts/server-poc/RESULT.md` |
+| `npm run supabase:check` | Supabase 권한(RLS) 시험. 익명 사용자 둘과 비로그인으로 점수 표 쓰기·남의 기록 읽기가 막히는지 표로 보여 준다. `.env.local`과 대시보드 Anonymous Sign-ins가 필요 |
 
 ## 3. 게임 화면 확인하기
 
@@ -652,6 +653,13 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 4. `?theme=space&specials`, `?theme=ocean&specials`: 줄·폭탄·무지개 배지가 읽힌다. 무지개 블록은 예전 그림 그대로
 5. 메뉴에서 그림책·사탕을 고르면 예전과 같다
 
+### V2-W3-01 Supabase 스키마·권한
+1. 처음 한 번: 프로젝트 폴더에 `.env.local`을 만들고 `VITE_SUPABASE_URL`·`VITE_SUPABASE_PUBLISHABLE_KEY`를 넣는다 (`.env.example` 참고, secret 키는 넣지 않는다). 대시보드에서 Anonymous Sign-ins를 켠다
+2. 별도 터미널에서 `supabase login` → `supabase link --project-ref <20자 ID>` (DB 비밀번호 입력). 이 PC의 main 폴더는 이미 연결되어 있다
+3. `supabase migration list --remote`: 로컬과 원격에 `20261106150000`이 둘 다 보인다
+4. `npm run supabase:check`: 33개 항목이 모두 PASS
+5. 대시보드 Table Editor에서 4개 표(`profiles`·`runs`·`weekly_scores`·`stage_attempts`)에 RLS 켜짐 표시가 있다
+
 ### V2-W2-08 랭킹 서버 PoC (core 공유·시간 판정)
 1. `deno --version`으로 Deno가 있는지 확인 (없으면 `brew install deno`)
 2. `npm run poc:deno`. 마지막에 "1000/1000 일치", 늦은 move 100판 거부, 브라우저 기록 6/6 일치·판정 통과가 나온다
@@ -1212,6 +1220,14 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **색 + 모양 이중 부호화**: 작은 화면에서는 색만으로 구분하기 어렵다. 색마다 다른 실루엣을 주면 한눈에 구분되고 색약에도 유리하다 (`public/themes/space|ocean/block-0~5.png`)
 - **그림마다 배치 값**: 모양이 달라 얼굴 크기·위치를 블록별로 둔다. 치우친 모양은 `faceDx`로 가로 이동, 없는 테마는 `?? 0`으로 예전 결과 유지 (`src/view/theme/themes.ts`, `textures.ts`)
 - **파일 순서 ↔ 게임 색 번호 매핑**: 그림 파일은 빨·주·노·초·파·보, 게임 색은 빨·노·초·파·보·주라 `byColor`가 순서를 바꿔 잇는다 (`themes.ts`)
+
+### V2-W3-01 Supabase 스키마·권한
+- **RLS(행 단위 보안)**: 정책이 "어느 행을 볼·쓸 수 있는지"를 정한다. `auth.uid()`로 로그인한 사용자를 알아낸다 (`supabase/migrations/20261106150000_v2_w3_01_schema_rls.sql`)
+- **GRANT + RLS 두 겹**: 테이블 권한을 모두 걷고 필요한 것만 준 뒤 RLS로 행을 거른다. 하나를 실수해도 다른 하나가 막는다
+- **익명 로그인도 authenticated 역할**: 익명 사용자도 로그인 사용자로 취급되므로 정책을 그 기준으로 짠다
+- **클라이언트는 공개 키만**: publishable key는 브라우저에 공개돼도 되고, 보안은 RLS·서버 검증이 맡는다. 점수 쓰기는 서버 함수(service role)만
+- **마이그레이션으로 스키마 관리**: SQL 파일을 저장소에 두고 `supabase db push --remote`로 올린다. CLI 3은 기본 대상이 로컬이라 `--remote`가 필요하다
+- **열 단위 권한**: `stage_attempts`는 `id`·`created_at`을 클라이언트가 못 정하게 열만 골라 INSERT를 준다
 
 ### V2-W2-08 랭킹 서버 PoC (core 공유·시간 판정)
 - **리플레이 검증**: 서버는 클라이언트 점수를 믿지 않고 seed + 수 기록으로 게임을 다시 돌려 점수를 계산한다. 순수 core라 가능하다 (`scripts/server-poc/replay.ts`)
