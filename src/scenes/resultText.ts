@@ -58,6 +58,8 @@ export interface ResultView {
   newBest: boolean;
   /** 스토리 클리어의 "남은 이동 보너스 +N" 줄 (보너스 0이면 null) */
   bonus: string | null;
+  /** 경쟁의 랭킹 등록 상태 줄 처음 글자 (없으면 null: 줄 없음) */
+  rankLine: string | null;
   /** 마지막 스테이지 클리어: [다음 스테이지] 대신 "모든 스테이지 클리어!" */
   allClear: boolean;
   /** 위에서부터 놓을 버튼 */
@@ -67,7 +69,11 @@ export interface ResultView {
 /** unlocked = 저장된 열린 번호 (결과 화면 전에 저장이 반영된다) */
 export function resultView(
   result: ModeResult,
-  { stageCount, unlocked }: { stageCount: number; unlocked: number },
+  {
+    stageCount,
+    unlocked,
+    rankLine = null,
+  }: { stageCount: number; unlocked: number; rankLine?: string | null },
 ): ResultView {
   const t = RESULT.text;
   if (result.kind === 'timeattack') {
@@ -77,6 +83,7 @@ export function resultView(
       best: `${t.best} ${formatScore(Math.max(result.bestScore, result.score))}`,
       newBest: result.newBest,
       bonus: null,
+      rankLine,
       allClear: false,
       buttons: ['retry', 'menu'],
     };
@@ -90,12 +97,14 @@ export function resultView(
     best: null,
     newBest: false,
     bonus: result.cleared && result.bonus > 0 ? `${t.bonus} +${formatScore(result.bonus)}` : null,
+    rankLine: null,
     allClear: result.cleared && result.stageId >= stageCount,
     buttons: hasNext ? ['next', 'retry', 'map'] : ['retry', 'map'],
   };
 }
 
-export type ResultRow = 'title' | 'stars' | 'scoreLabel' | 'score' | 'line' | 'badge' | 'allClear';
+export type ResultRow =
+  'title' | 'stars' | 'scoreLabel' | 'score' | 'line' | 'badge' | 'rank' | 'allClear';
 
 export interface ResultLayout {
   /** 있는 줄의 가운데 y (화면 가운데 기준) */
@@ -119,6 +128,7 @@ export function resultLayout(view: ResultView): ResultLayout {
   present.push('scoreLabel', 'score');
   if (view.best ?? view.bonus) present.push('line');
   if (view.newBest) present.push('badge');
+  if (view.rankLine) present.push('rank');
   if (view.allClear) present.push('allClear');
 
   // 위(0)에서부터 쌓아 가운데 y를 적고, 나중에 전체 높이의 절반만큼 올린다

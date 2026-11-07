@@ -12,6 +12,11 @@ import { renderAppIconPage } from './dev/appIcon';
 if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('icon')) {
   renderAppIconPage();
 } else {
+  // DEV ?fakerun=<ok|rejected|outdated|failed|null|slow>: 서버 없는 랭킹 등록 흐름 확인
+  const fakeRun = import.meta.env.DEV
+    ? new URLSearchParams(window.location.search).get('fakerun')
+    : null;
+  if (fakeRun !== null) void import('./dev/fakeRun').then((m) => m.installFakeRun(fakeRun));
   const game = startGame();
   // DEV ?nickname=<ok|오류 code>: 닉네임 입력 창 미리보기. 배포 빌드에서는 분기째 빠진다
   const nickname = import.meta.env.DEV

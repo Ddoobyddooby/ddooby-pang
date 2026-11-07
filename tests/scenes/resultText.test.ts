@@ -87,6 +87,7 @@ describe('scenes/resultText: resultView (설계 4절 표)', () => {
       best: '최고 점수 900',
       newBest: false,
       bonus: null,
+      rankLine: null,
       allClear: false,
       buttons: ['retry', 'menu'],
     });
@@ -101,6 +102,7 @@ describe('scenes/resultText: resultView (설계 4절 표)', () => {
       best: null,
       newBest: false,
       bonus: '남은 이동 보너스 +900',
+      rankLine: null,
       allClear: false,
       buttons: ['next', 'retry', 'map'],
     });
@@ -129,6 +131,7 @@ describe('scenes/resultText: resultView (설계 4절 표)', () => {
       best: null,
       newBest: false,
       bonus: null,
+      rankLine: null,
       allClear: false,
       buttons: ['retry', 'map'],
     });

@@ -394,7 +394,16 @@ export const RESULT = {
     gap: 26,
     scoreGap: 6,
     beforeButtons: 44,
-    h: { title: 104, stars: 84, scoreLabel: 40, score: 104, line: 40, badge: 64, allClear: 44 },
+    h: {
+      title: 104,
+      stars: 84,
+      scoreLabel: 40,
+      score: 104,
+      line: 40,
+      badge: 64,
+      rank: 36,
+      allClear: 44,
+    },
   },
   title: { fontSize: 96, strokeThickness: 12 },
   /** 스토리 별 3칸: 받은 만큼 하나씩 차오른다 */
@@ -420,7 +429,21 @@ export const RESULT = {
     bounceMs: 420,
   },
   allClear: { fontSize: 40 },
+  /** 경쟁: 랭킹 등록 상태 줄 (V2-W3-03). 판 폭 안에서 줄바꿈 */
+  rank: { fontSize: 28, wrapWidth: 520 },
   button: { step: 116, width: 340, height: 96, fontSize: 44 },
+} as const;
+
+/** 경쟁 시작 (V2-W3-03, PLAN2 6.4): 서버 run을 받는 동안의 "준비 중…" 덮개 */
+export const RUN = {
+  /** startRun을 기다리는 최대 시간. 넘으면 랭킹 없이 바로 시작 */
+  startTimeoutMs: 2500,
+  dim: { color: 0x4a3a5c, alpha: 0.45 },
+  fontSize: 48,
+  pillWidth: 380,
+  pillHeight: 112,
+  /** 씬의 다른 그림보다 위 */
+  overlayDepth: 1000,
 } as const;
 
 /** 일시정지 창 (PLAN 6.6). dy = 화면 가운데 기준 세로 위치(px). 판·버튼 모양은 결과 화면과 같다 */

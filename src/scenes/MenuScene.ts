@@ -15,7 +15,7 @@ import { Music } from '../view/Music';
 import { musicFor } from './musicRules';
 import { addSceneMusicButton, addSceneMuteButton } from './muteToggle';
 import { commitSave, getSave } from './saveRegistry';
-import type { GameData } from './sceneData';
+import { startTimeAttack } from './startTimeAttack';
 import { getStages } from './stageRegistry';
 
 /** 테마 버튼 (MENU와 같은 방식, 2주차 config.ts는 장애물 태스크만 고쳐서 여기 둔다) */
@@ -71,7 +71,7 @@ export class MenuScene extends Phaser.Scene {
       cx,
       cy + MENU.timeattack.dy,
       { ...spec, label: MENU.timeattack.text, sub: timeAttackLabel(save.timeattack.bestScore) },
-      () => this.scene.start('Game', { mode: 'timeattack' } satisfies GameData),
+      () => startTimeAttack(this),
       lock,
     );
     this.addThemeButton(cx, cy + THEME_BUTTON.dy, lock);

@@ -10,7 +10,7 @@ const base: NicknameGateInput = {
   kind: 'timeattack',
   status: 'ready',
   profile: null,
-  devRanking: true,
+  submitted: true,
 };
 
 describe('닉네임 입력 창을 띄울지', () => {
@@ -18,8 +18,8 @@ describe('닉네임 입력 창을 띄울지', () => {
     expect(shouldAskNickname(base)).toBe(true);
   });
 
-  it('?ranking 없이는 (배포 게이트) 띄우지 않는다', () => {
-    expect(shouldAskNickname({ ...base, devRanking: false })).toBe(false);
+  it('점수 제출이 성공하지 못했으면 띄우지 않는다', () => {
+    expect(shouldAskNickname({ ...base, submitted: false })).toBe(false);
   });
 
   it('스토리 결과에서는 묻지 않는다', () => {
@@ -41,7 +41,7 @@ describe('닉네임 입력 창을 띄울지', () => {
   it('프로필을 읽기 전 조건: 조건이 안 맞으면 요청 자체를 하지 않는다', () => {
     expect(mayCheckProfile(base)).toBe(true);
     expect(mayCheckProfile({ ...base, status: 'offline' })).toBe(false);
-    expect(mayCheckProfile({ ...base, devRanking: false })).toBe(false);
+    expect(mayCheckProfile({ ...base, submitted: false })).toBe(false);
     expect(mayCheckProfile({ ...base, kind: 'story' })).toBe(false);
   });
 });

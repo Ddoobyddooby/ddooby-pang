@@ -8,6 +8,7 @@ import { drawCreamPanel } from '../view/ui/Panel';
 import { addSceneMusicButton, addSceneMuteButton } from './muteToggle';
 import { pauseButtons, type PauseButton } from './pauseRules';
 import type { GameData, PauseData } from './sceneData';
+import { startTimeAttack } from './startTimeAttack';
 
 export class PauseScene extends Phaser.Scene {
   private from: GameData = { mode: 'timeattack' };
@@ -80,7 +81,9 @@ export class PauseScene extends Phaser.Scene {
         this.resumeGame();
         break;
       case 'retry':
-        this.scene.start('Game', this.from); // 멈춘 Game을 처음부터 다시, 이 씬은 끝난다
+        // 멈춘 Game을 처음부터 다시, 이 씬은 끝난다. 경쟁은 버린 run 대신 새 run을 받는다
+        if (this.from.mode === 'timeattack') startTimeAttack(this);
+        else this.scene.start('Game', this.from);
         break;
       case 'map':
       case 'menu':

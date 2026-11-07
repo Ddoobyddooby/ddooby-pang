@@ -13,6 +13,8 @@ import { addSceneBackground } from '../view/theme/sceneBackground';
 import { addButton, type PressLock } from '../view/ui/Button';
 import { drawCreamPanel } from '../view/ui/Panel';
 import { musicFor } from './musicRules';
+import { initialRankLine, rankLineFor, type RankInfo } from './rankStatus';
+import { startTimeAttack } from './startTimeAttack';
 import { mayCheckProfile, shouldAskNickname, toPromptResult } from './nicknameGate';
 import {
   formatScore,
@@ -28,6 +30,7 @@ import { getStages } from './stageRegistry';
 
 export class ResultScene extends Phaser.Scene {
   private result!: ModeResult;
+  private rank: RankInfo = { kind: 'none' };
 
   /** Android 뒤로 가기가 스토리면 지도, 경쟁이면 메뉴로 보낸다 (backButton.ts) */
   get resultKind(): ModeResult['kind'] {
@@ -42,6 +45,7 @@ export class ResultScene extends Phaser.Scene {
 
   init(data: ResultData): void {
     this.result = data.result;
+    this.rank = data.rank ?? { kind: 'none' };
   }
 
   create(): void {
@@ -52,6 +56,7 @@ export class ResultScene extends Phaser.Scene {
     const view = resultView(this.result, {
       stageCount: getStages(this.registry).story.length,
       unlocked: getSave(this.registry).story.unlocked,
+      rankLine: initialRankLine(this.rank),
     });
 
     // 게임 곡을 줄여 끝낸다. 결과 화면은 음악 없이 결과 소리만
@@ -95,6 +100,10 @@ export class ResultScene extends Phaser.Scene {
     const line = view.best ?? view.bonus;
     if (line) this.label(cx, at('line'), line, RESULT.line.fontSize, THEME.info.text);
     if (view.newBest) this.addBadge(cx, at('badge'));
+    const rankText = view.rankLine
+      ? this.label(cx, at('rank'), view.rankLine, RESULT.rank.fontSize, THEME.info.text)
+      : null;
+    rankText?.setWordWrapWidth(RESULT.rank.wrapWidth).setAlign('center');
     if (view.allClear) {
       this.label(
         cx,
@@ -118,20 +127,27 @@ export class ResultScene extends Phaser.Scene {
       );
     });
 
-    this.askNickname();
+    // 제출 결과가 오면 등록 줄을 바꾸고, 성공했을 때만 닉네임을 묻는다 (PLAN2 6.4)
+    if (this.rank.kind === 'submitting') {
+      void this.rank.outcome.then((outcome) => {
+        if (!this.scene.isActive()) return; // 기다리는 사이 다른 화면으로 갔다
+        rankText?.setText(rankLineFor(outcome));
+        if (outcome.kind === 'ok') this.askNickname();
+      });
+    }
     // 씬이 끝나거나 바뀔 때 입력 창의 DOM을 지운다
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.closeNicknamePrompt());
   }
 
   /**
-   * 경쟁 결과에서 닉네임이 없으면 입력 창을 띄운다 (DEV ?ranking일 때만, PLAN2 6.3 배포 게이트).
+   * 경쟁 점수 제출이 성공한 뒤 닉네임이 없으면 입력 창을 띄운다 (PLAN2 6.3·6.4).
    * 창이 DOM으로 화면 전체를 덮어 결과 화면 버튼은 눌리지 않는다. 오프라인·오류면 묻지 않는다
    */
   private askNickname(): void {
     const gate = {
       kind: this.result.kind,
       status: onlineStatus(),
-      devRanking: import.meta.env.DEV && new URLSearchParams(window.location.search).has('ranking'),
+      submitted: true, // 제출이 성공했을 때만 부른다
     };
     if (!mayCheckProfile(gate)) return;
     void getMyProfile().then((profile) => {
@@ -156,12 +172,11 @@ export class ResultScene extends Phaser.Scene {
     const result = this.result;
     switch (button) {
       case 'retry':
-        this.scene.start(
-          'Game',
-          (result.kind === 'story'
-            ? { mode: 'story', stageId: result.stageId }
-            : { mode: 'timeattack' }) satisfies GameData,
-        );
+        if (result.kind === 'story') {
+          this.scene.start('Game', { mode: 'story', stageId: result.stageId } satisfies GameData);
+        } else {
+          startTimeAttack(this); // 새 run을 받아 시작
+        }
         break;
       case 'next':
         if (result.kind === 'story') {

@@ -1,13 +1,14 @@
 // GameScene: 보드 표시 + 입력 + resolve + 애니메이션 재생 + 모드(타임어택 또는 스토리) + HUD.
-// 시작 데이터: { mode: 'timeattack' } | { mode: 'story', stageId } (없으면 타임어택).
+// 시작 데이터: { mode: 'timeattack', run? } | { mode: 'story', stageId } (없으면 타임어택).
+// 경쟁에 서버 run이 있으면 그 seed로 보드를 만들고 스왑을 기록해, 끝나면 점수를 제출한다 (PLAN2 6.4).
 // 매 프레임 mode.tick, 스왑 전에 mode.canInput, 재생이 끝난 뒤 mode.isOver면 결과 화면('Result')으로 간다.
 // 경쟁 모드는 그 전에 "타임 업!"과 남은 특수 블록 자동 발동(마지막 팡, PLAN 6.14)을 보여 준다.
 // 화면 배치는 screenLayout(this.scale.height). 폭이 720보다 넓은 화면은 카메라로 가운데에 맞춘다.
 //
 // URL 옵션 (개발용)
-//   ?seed=1234  같은 시작 보드 재현 (패널 구석에 seed가 표시된다)
+//   ?seed=1234  같은 시작 보드 재현 (패널 구석에 seed가 표시된다). 랭킹 대상이 아니다
 //   ?demo       힌트 수를 자동으로 둔다 (시간이 끝나면 마지막 팡 뒤 결과 화면으로)
-//   ?time=15    (개발 모드) 제한 시간을 15초로 줄인다 (없으면 stages/timeattack.json의 timeLimit)
+//   ?time=15    (개발 모드) 제한 시간을 15초로 줄인다 (없으면 stages/timeattack.json의 timeLimit). 랭킹 대상이 아니다
 //   ?specials   (개발 모드) 시작 보드에 특수 블록 5종을 하나씩 놓는다
 //   ?specials=combo (개발 모드) 무지개 블록 옆에 줄·폭탄·슈퍼를 하나씩 놓는다 (조합 확인, PLAN 6.18)
 //   ?obstacles  (개발 모드) 장애물 시험 스테이지 (PLAN2 5.4). 결과는 저장하지 않는다
@@ -32,11 +33,15 @@ import { BoardInput } from '../view/input';
 import { createLayout, screenLayout, type Layout, type ScreenLayout } from '../view/layout';
 import { missionCardLines } from '../view/missionCardLines';
 import { addRoundButton, drawPauseIcon } from '../view/ui/RoundButton';
+import { MoveLog } from '../view/moveLog';
 import { applyModeResult } from '../storage/progress';
 import { commitSave, getSave } from './saveRegistry';
 import { musicFor } from './musicRules';
 import { canPause } from './pauseRules';
+import { getRunClient, SUBMIT_VERSION, type RunInfo } from './runClient';
+import type { RankInfo } from './rankStatus';
 import type { GameData, PauseData } from './sceneData';
+import { hasRankBlockingOption } from './timeAttackStart';
 import { getDevStage, getStages } from './stageRegistry';
 import type { StageDef } from '../data/stageSchema';
 import type { GameMode } from '../modes/GameMode';
@@ -102,13 +107,18 @@ export class GameScene extends Phaser.Scene {
   private missionCard?: MissionCard;
   /** DEV ?obstacles 시험 스테이지: 결과를 저장하지 않는다 */
   private devStage = false;
+  /** 랭킹에 올릴 서버 run (없으면 로컬 판) */
+  private run: RunInfo | null = null;
+  /** 이 판에서 처리한 스왑 기록 (run이 있을 때 제출) */
+  private moveLog = new MoveLog();
 
   constructor() {
     super('Game');
   }
 
   init(data?: GameData): void {
-    this.startData = data?.mode === 'story' ? data : { mode: 'timeattack' };
+    this.startData =
+      data?.mode === 'story' || data?.mode === 'timeattack' ? data : { mode: 'timeattack' };
   }
 
   create(): void {
@@ -126,7 +136,16 @@ export class GameScene extends Phaser.Scene {
     }
     // 보드 모양과 seed는 스테이지(스토리) 또는 timeattack.json(타임어택)에서 온다
     const setting = stage ?? stages.timeattack;
-    this.seed = Number(params.get('seed')) || setting.seed || Date.now() % 1_000_000;
+    // 경쟁의 서버 run: 보드·시간을 바꾸는 옵션(?seed·DEV ?time·?specials)이 있으면 랭킹 대상이 아니다
+    this.run =
+      !stage &&
+      this.startData.mode === 'timeattack' &&
+      !hasRankBlockingOption(window.location.search, import.meta.env.DEV)
+        ? (this.startData.run ?? null)
+        : null;
+    this.moveLog = new MoveLog();
+    this.seed =
+      this.run?.seed ?? (Number(params.get('seed')) || setting.seed || Date.now() % 1_000_000);
     this.storyMode = undefined;
     this.timePanel = undefined;
     this.storyPanel = undefined;
@@ -343,18 +362,42 @@ export class GameScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     const result = this.mode.result();
+    const rank = this.submitRun(result.score);
     // 결과 화면이 열린 스테이지를 보고 버튼을 정하므로 registry 갱신(commitSave)이 Result 시작보다 먼저다
     const stageCount = getStages(this.registry).story.length;
     if (!this.devStage) {
       commitSave(this.registry, applyModeResult(getSave(this.registry), result, stageCount));
     }
-    this.scene.start('Result', { result });
+    this.scene.start('Result', { result, rank });
+  }
+
+  /** 서버 run이 있으면 점수 제출을 시작한다 (기다리지 않고 Promise를 결과 화면에 넘긴다) */
+  private submitRun(score: number): RankInfo {
+    if (this.run) {
+      const { runId } = this.run;
+      const payload = {
+        moves: this.moveLog.entries(),
+        clientScore: score,
+        version: SUBMIT_VERSION,
+      };
+      const outcome = Promise.resolve()
+        .then(() => getRunClient().submitScore(runId, payload))
+        .catch(() => ({ kind: 'failed' as const }));
+      return { kind: 'submitting', outcome };
+    }
+    return this.startData.mode === 'timeattack' && this.startData.unranked
+      ? { kind: 'unranked' }
+      : { kind: 'none' };
   }
 
   private async trySwap(a: Pos, b: Pos): Promise<void> {
     if (this.busy || this.finished || !this.mode.canInput()) return;
     this.clearHint(); // 재생 전에 원래 크기로 (트윈 대상이 사라질 수 있다)
     this.setBusy(true);
+    // 처리하는 스왑은 유효·무효 모두 기록한다. t는 스왑 시작 때의 게임 시간
+    if (this.mode instanceof TimeAttackMode) {
+      this.moveLog.record(a, b, this.timeLimitMs, this.mode.timeLeftMs());
+    }
 
     const result = resolveSwap(this.state, a, b);
     this.sfx.play(result.valid ? 'swap' : 'bad');
