@@ -6,7 +6,7 @@ import { createInitialState, resolveSwap } from '../../src/core/engine';
 import { findHint, isValidSwap } from '../../src/core/moves';
 import { createRng, nextInt, type RngState } from '../../src/core/rng';
 import type { Board, Pos } from '../../src/core/types';
-import { TIMEATTACK_BOARD, type ReplayMove } from './replay';
+import { TIMEATTACK_BOARD, type ReplayMove } from '../../src/replay/replay';
 
 const DIRS: readonly Pos[] = [
   { r: -1, c: 0 },

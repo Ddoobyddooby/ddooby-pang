@@ -424,3 +424,10 @@ enabled = true
 # V2-W3-02 닉네임 저장 (PLAN2 6.3). 게이트웨이가 사용자 JWT를 먼저 확인하고, 함수 안에서도 토큰을 다시 확인한다
 [functions.set-nickname]
 verify_jwt = true
+
+# V2-W3-03 경쟁 모드 run 발급·점수 제출 (PLAN2 6.4). set-nickname과 같이 함수 안에서도 토큰을 다시 확인한다
+[functions.start-run]
+verify_jwt = true
+
+[functions.submit-score]
+verify_jwt = true

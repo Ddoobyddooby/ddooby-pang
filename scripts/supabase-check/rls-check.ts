@@ -1,15 +1,26 @@
 // V2-W3-01 권한(RLS·GRANT) 시험: 원격 개발 프로젝트에 익명 사용자 A·B와 비로그인 anon으로 접속해
 // PLAN2 6.2 시험 ①~④와 anon 쓰기 차단을 확인한다. publishable key만 쓴다 (npm test에 넣지 않음).
 //
-//   npm run supabase:check [-- <env 파일 경로>] [--nickname]   (기본값 .env.local)
+//   npm run supabase:check [-- <env 파일 경로>] [--nickname] [--scores]   (기본값 .env.local)
 //
 // --nickname: Edge Function set-nickname 시험을 더한다 (V2-W3-02, 함수 배포 뒤에만).
-// 시험이 만든 익명 계정, stage_attempts 행(stage_id 999), `시험` 접두어 닉네임은 개발 프로젝트에 남는다.
+// --scores: start-run·submit-score 시험 ①~⑪을 더한다 (V2-W3-03, 마이그레이션·함수 배포 뒤에만. 약 70초).
+// 시험이 만든 익명 계정, stage_attempts 행(stage_id 999), `시험` 접두어 닉네임, 이번 주 runs·weekly_scores 행
+// (닉네임 없는 시험 계정이라 랭킹에는 보이지 않는다)은 개발 프로젝트에 남는다.
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { parseEnv } from 'node:util';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 // 함수와 같은 규칙 묶음 (npm run server:shared). 시험 이름이 현재 규칙에서 기대대로 판정되는지 먼저 본다
 import { checkNickname } from '../../supabase/functions/_shared/nicknameRules.js';
+// 함수와 같은 리플레이 번들. 제출할 점수를 서버와 같은 코드로 계산하고 같은 CORE_VERSION을 보낸다
+import {
+  CORE_VERSION,
+  JUDGE,
+  replayTimeAttack,
+  type ReplayMove,
+} from '../../supabase/functions/_shared/replay.js';
 
 const TEST_STAGE_ID = 999;
 const TEST_WEEK_KEY = '2099-W01';
@@ -100,6 +111,7 @@ async function main(): Promise<number> {
   const args = process.argv.slice(2);
   const envPath = args.find((arg) => !arg.startsWith('--')) ?? '.env.local';
   const withNickname = args.includes('--nickname');
+  const withScores = args.includes('--scores');
   const { url, key } = loadEnv(envPath);
 
   const anon = newClient(url, key);
@@ -289,6 +301,7 @@ async function main(): Promise<number> {
   );
 
   if (withNickname) await nicknameChecks({ url, key, a, b, idA, check });
+  if (withScores) await scoreChecks({ url, key, a, b, idA, check, anon });
 
   console.log('| # | 항목 | 기대 | 결과 | 상세 |');
   console.log('|---|---|---|---|---|');
@@ -425,6 +438,215 @@ async function nicknameChecks({ url, key, a, b, idA, check }: NicknameContext): 
   await check('닉', 'A profiles 직접 UPDATE', '실패', async () =>
     denied(await a.from('profiles').update({ nickname: '시험직접' }).eq('id', idA).select()),
   );
+}
+
+interface ScoreContext extends Omit<NicknameContext, 'key'> {
+  key: string;
+  anon: SupabaseClient;
+}
+
+interface FnResult {
+  status: number;
+  body: Record<string, unknown>;
+}
+
+/**
+ * start-run·submit-score 시험 (PLAN2 6.4 ①~⑪). A의 run 넷(정상·점수 조작·낮은 점수·버전 다름)을 먼저 발급받고
+ * 서버 시각 하한(58초)이 지나도록 60초 기다린 뒤 한꺼번에 제출한다. 만료(30분)는 단위 테스트로만 본다
+ */
+async function scoreChecks({ url, key, a, b, idA, check, anon }: ScoreContext): Promise<void> {
+  const tokenOf = async (client: SupabaseClient) => {
+    const { data } = await client.auth.getSession();
+    if (!data.session) throw new Error('세션 없음');
+    return data.session.access_token;
+  };
+  const tokenA = await tokenOf(a);
+  const tokenB = await tokenOf(b);
+  const call = async (name: string, body: unknown, token: string): Promise<FnResult> => {
+    const res = await fetch(`${url}/functions/v1/${name}`, {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        'Content-Type': 'application/json',
+        Origin: ALLOWED_ORIGIN,
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+    let parsed: unknown = null;
+    try {
+      parsed = await res.json();
+    } catch {
+      // 게이트웨이 응답은 JSON이 아닐 수 있다
+    }
+    const obj = typeof parsed === 'object' && parsed !== null ? parsed : {};
+    return { status: res.status, body: obj as Record<string, unknown> };
+  };
+  const show = (r: FnResult) => `${r.status} ${JSON.stringify(r.body)}`;
+  const expectCode = (r: FnResult, status: number, code: string): Outcome => ({
+    pass: r.status === status && r.body.code === code,
+    detail: show(r),
+  });
+
+  // 실제 브라우저 기록 한 판의 move를 서버 seed에 그대로 둔다 (판정 기준을 지키는 시각·간격)
+  const fixture = JSON.parse(
+    readFileSync(join(import.meta.dirname, '../server-poc/fixtures/browser-runs.json'), 'utf8'),
+  ) as { runs: { moves: ReplayMove[] }[] };
+  const moves = fixture.runs[0]!.moves;
+
+  interface Started {
+    runId: string;
+    seed: number;
+  }
+  const runs: Record<'main' | 'tamper' | 'low' | 'old', Started | null> = {
+    main: null,
+    tamper: null,
+    low: null,
+    old: null,
+  };
+  await check('점①', 'A start-run 4번', '200 {runId, seed} ×4', async () => {
+    const details: string[] = [];
+    let pass = true;
+    for (const name of Object.keys(runs) as (keyof typeof runs)[]) {
+      const r = await call('start-run', { version: CORE_VERSION }, tokenA);
+      const { runId, seed } = r.body;
+      const ok = r.status === 200 && typeof runId === 'string' && Number.isInteger(seed);
+      if (ok) runs[name] = { runId: runId as string, seed: seed as number };
+      pass &&= ok;
+      details.push(ok ? `${name} seed ${String(seed)}` : `${name} ${show(r)}`);
+    }
+    return { pass, detail: details.join(', ') };
+  });
+  const startedAt = Date.now();
+  const need = (run: Started | null): Started => {
+    if (!run) throw new Error('start-run 실패로 시험 불가');
+    return run;
+  };
+  const payload = (run: Started, over: Record<string, unknown> = {}) => ({
+    runId: run.runId,
+    moves,
+    clientScore: replayTimeAttack(run.seed, moves).score,
+    version: CORE_VERSION,
+    ...over,
+  });
+
+  await check('점③', 'A 본인 run SELECT·B는 0행', 'A 1행, B 0행', async () => {
+    const run = need(runs.main);
+    const own = await a.from('runs').select('id').eq('id', run.runId);
+    const other = await b.from('runs').select('id').eq('id', run.runId);
+    const pass = !own.error && own.data.length === 1 && !other.error && other.data.length === 0;
+    return { pass, detail: `A ${rowsOf(own).length}행, B ${rowsOf(other).length}행` };
+  });
+  await check('점⑦', 'start-run 버전 다름', '409 version-mismatch', async () =>
+    expectCode(
+      await call('start-run', { version: 'old000000000' }, tokenA),
+      409,
+      'version-mismatch',
+    ),
+  );
+  await check('점②', '발급 직후 제출', '400 too-fast (저장 안 함)', async () =>
+    expectCode(await call('submit-score', payload(need(runs.main)), tokenA), 400, 'too-fast'),
+  );
+
+  const waitMs = JUDGE.minServerElapsedMs + 2_000 - (Date.now() - startedAt);
+  if (waitMs > 0) {
+    console.error(`서버 시각 하한을 넘기려고 ${Math.ceil(waitMs / 1000)}초 기다린다…`);
+    await sleep(waitMs);
+  }
+
+  let first: FnResult | null = null;
+  await check('점③', '60초 뒤 정상 제출', '200, weekly_scores 반영', async () => {
+    const run = need(runs.main);
+    const expected = replayTimeAttack(run.seed, moves).score;
+    const r = await call('submit-score', payload(run), tokenA);
+    first = r;
+    if (r.status !== 200 || r.body.score !== expected) return { pass: false, detail: show(r) };
+    const row = await a
+      .from('weekly_scores')
+      .select('best_score, run_id')
+      .eq('user_id', idA)
+      .eq('week_key', r.body.weekKey as string)
+      .single();
+    if (row.error) return { pass: false, detail: `${show(r)} / weekly_scores ${errText(row)}` };
+    const pass = row.data.best_score === r.body.best && r.body.best === expected;
+    return { pass, detail: `${show(r)} / weekly_scores ${row.data.best_score}` };
+  });
+  await check('점④', '같은 내용 재제출', '같은 200', async () => {
+    const r = await call('submit-score', payload(need(runs.main)), tokenA);
+    const pass =
+      first !== null &&
+      r.status === 200 &&
+      JSON.stringify(r.body) === JSON.stringify((first as FnResult).body);
+    return { pass, detail: show(r) };
+  });
+  await check('점⑤', '다른 내용 재제출', '409 resubmit-conflict', async () =>
+    expectCode(
+      await call('submit-score', payload(need(runs.main), { moves: moves.slice(0, -1) }), tokenA),
+      409,
+      'resubmit-conflict',
+    ),
+  );
+  await check('점⑥', '점수 +10 조작 (새 run)', '400 score-mismatch', async () => {
+    const run = need(runs.tamper);
+    const score = replayTimeAttack(run.seed, moves).score + 10;
+    return expectCode(
+      await call('submit-score', payload(run, { clientScore: score }), tokenA),
+      400,
+      'score-mismatch',
+    );
+  });
+  await check('점⑦', '제출 버전 다름', '409 version-mismatch', async () =>
+    expectCode(
+      await call('submit-score', payload(need(runs.old), { version: 'old000000000' }), tokenA),
+      409,
+      'version-mismatch',
+    ),
+  );
+  await check('점⑧', 'B가 A의 runId로 제출', '404', async () => {
+    const r = await call('submit-score', payload(need(runs.low)), tokenB);
+    return { pass: r.status === 404, detail: show(r) };
+  });
+  await check('점⑨', '낮은 점수 새 run', '200, best 그대로·isNewBest false', async () => {
+    const run = need(runs.low);
+    const low = replayTimeAttack(run.seed, []).score;
+    const best = (first as FnResult | null)?.body.best;
+    if (typeof best !== 'number' || low >= best) {
+      return { pass: false, detail: `시험 불가: 낮은 점수 ${low}, 기존 best ${String(best)}` };
+    }
+    const r = await call('submit-score', payload(run, { moves: [], clientScore: low }), tokenA);
+    const pass = r.status === 200 && r.body.best === best && r.body.isNewBest === false;
+    return { pass, detail: show(r) };
+  });
+
+  const week = (first as FnResult | null)?.body.weekKey;
+  const mainRun = runs.main?.runId ?? NIL_UUID;
+  await check('점⑩', 'A weekly_scores 직접 INSERT', '실패', async () =>
+    denied(
+      await a
+        .from('weekly_scores')
+        .insert({ user_id: idA, week_key: TEST_WEEK_KEY, best_score: 999999, run_id: mainRun })
+        .select(),
+    ),
+  );
+  await check('점⑩', 'A weekly_scores 직접 UPDATE', '실패', async () =>
+    denied(
+      await a
+        .from('weekly_scores')
+        .update({ best_score: 999999 })
+        .eq('user_id', idA)
+        .eq('week_key', typeof week === 'string' ? week : TEST_WEEK_KEY)
+        .select(),
+    ),
+  );
+  const rpcArgs = { p_user: idA, p_week: TEST_WEEK_KEY, p_score: 999999, p_run: mainRun };
+  await check('점⑪', 'A record_weekly_best RPC', '실패', async () => {
+    const res = await a.rpc('record_weekly_best', rpcArgs);
+    return { pass: res.error !== null, detail: res.error ? errText(res) : '호출됨' };
+  });
+  await check('점⑪', 'anon record_weekly_best RPC', '실패', async () => {
+    const res = await anon.rpc('record_weekly_best', rpcArgs);
+    return { pass: res.error !== null, detail: res.error ? errText(res) : '호출됨' };
+  });
 }
 
 main().then(

@@ -1,24 +1,21 @@
-// V2-W2-08: submit-score 서버 판정 (PLAN2 5.8 표) — move 시각·간격·좌표, 서버 시각, 재제출, 점수.
+// submit-score 서버 판정 (V2-W2-08 PoC에서 옮김) (PLAN2 5.8 표) — move 시각·간격·좌표, 서버 시각, 재제출, 점수.
 // 경계값 양쪽(통과/거부)과 codex 리뷰가 재현한 "모든 t를 0 또는 -1로 바꾼 로그", 실제 브라우저 기록 6판을 본다
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { randomLog } from '../../scripts/server-poc/logs';
-import {
-  replayTimeAttack,
-  TIMEATTACK_BOARD,
-  type ReplayMove,
-} from '../../scripts/server-poc/replay';
+import { replayTimeAttack, TIMEATTACK_BOARD, type ReplayMove } from '../../src/replay/replay';
 import {
   checkServerTiming,
   JUDGE,
   judgeSubmission,
   resubmitDecision,
+  shouldStore,
   submissionHash,
   type SubmissionResult,
   validateMoves,
   verifySubmission,
-} from '../../scripts/server-poc/validate';
+} from '../../src/replay/judge';
 
 const BOARD = TIMEATTACK_BOARD;
 const move = (t: number, from = { r: 0, c: 0 }, to = { r: 0, c: 1 }): ReplayMove => ({
@@ -38,7 +35,7 @@ const browserRuns = (
   ) as { runs: { seed: number; kind: string; screenScore: number; moves: ReplayMove[] }[] }
 ).runs;
 
-describe('server-poc/validate 판정 기준 (PLAN2 5.8)', () => {
+describe('replay/judge 판정 기준 (PLAN2 5.8)', () => {
   it('기준값은 PLAN 표와 같다', () => {
     expect(JUDGE).toEqual({
       limitMs: 60000,
@@ -237,6 +234,21 @@ describe('server-poc/validate 판정 기준 (PLAN2 5.8)', () => {
         expect(verdict).toMatchObject({ ok: true, score: run.screenScore });
       },
     );
+  });
+
+  describe('shouldStore: 판정 저장 (PLAN2 6.4)', () => {
+    it('too-fast만 저장하지 않는다 (같은 내용의 정상 재시도가 막히지 않게)', () => {
+      const replay = { score: 10, validMoves: 1, invalidMoves: 0, finaleScore: 0 };
+      expect(shouldStore({ ok: true, score: 10, replay })).toBe(true);
+      expect(shouldStore({ ok: false, reason: 'too-fast' })).toBe(false);
+      for (const reason of [
+        'expired',
+        'score-mismatch',
+        'gap-too-short',
+        'version-mismatch',
+      ] as const)
+        expect(shouldStore({ ok: false, reason })).toBe(true);
+    });
   });
 
   describe('judgeSubmission: 형식 검사 → 해시·재제출 판단 → 판정 (재리뷰 1)', () => {

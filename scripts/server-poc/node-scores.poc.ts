@@ -10,8 +10,8 @@ import { join } from 'node:path';
 import { expect, test } from 'vitest';
 import { createInitialState, resolveSwap } from '../../src/core/engine';
 import { MIN_GAP_MS, randomLog, SHUFFLE_SEEDS, type LogOptions } from './logs';
-import { replayTimeAttack, TIMEATTACK_BOARD, type ReplayMove } from './replay';
-import { submissionHash, verifySubmission } from './validate';
+import { replayTimeAttack, TIMEATTACK_BOARD, type ReplayMove } from '../../src/replay/replay';
+import { submissionHash, verifySubmission } from '../../src/replay/judge';
 
 /** 서버 쪽 값 (version·시각). JSON에 같이 써서 compare.ts가 같은 값으로 판정한다 */
 const POC_SERVER = { version: 'poc', issuedAtMs: 0, submittedAtMs: 65_000 } as const;

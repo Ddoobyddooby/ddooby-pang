@@ -17,5 +17,9 @@ describe('키 없는 빌드 (.env.local 없음)', () => {
     expect(await online.setNickname('이안')).toEqual({ ok: false, code: 'network' });
     expect(await online.setNickname('가')).toEqual({ ok: false, code: 'too-short' });
     expect(online.formatTag(427)).toBe('#0427');
+    expect(await online.startRun()).toBeNull();
+    expect(await online.submitScore('run-1', { moves: [], clientScore: 0, version: 'v' })).toEqual({
+      kind: 'failed',
+    });
   });
 });

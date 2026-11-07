@@ -1,15 +1,11 @@
-// V2-W2-08: 경쟁 모드 리플레이 PoC (SPEC 5.3) — 같은 seed·로그면 같은 점수, 무효 스왑은 점수·상태 그대로,
-// GameScene처럼 스왑들 → 마지막 팡 순서로 합산. 시각·간격 판정은 validate.test.ts.
+// 경쟁 모드 리플레이 (SPEC 5.3, PLAN2 5.8·6.4. V2-W2-08 PoC에서 옮김) — 같은 seed·로그면 같은 점수, 무효 스왑은 점수·상태 그대로,
+// GameScene처럼 스왑들 → 마지막 팡 순서로 합산. 시각·간격 판정은 judge.test.ts.
 // 실제 브라우저 기록(fixtures/browser-runs.json)은 리플레이 점수 == 결과 화면 점수 (화면 경로 일치)
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MIN_GAP_MS, randomLog, SHUFFLE_SEEDS } from '../../scripts/server-poc/logs';
-import {
-  replayTimeAttack,
-  TIMEATTACK_BOARD,
-  type ReplayMove,
-} from '../../scripts/server-poc/replay';
+import { replayTimeAttack, TIMEATTACK_BOARD, type ReplayMove } from '../../src/replay/replay';
 import { createInitialState, resolveFinale, resolveSwap } from '../../src/core/engine';
 import type { GameState, Pos } from '../../src/core/types';
 
@@ -57,19 +53,7 @@ function invalidSwapOn(state: GameState): { from: Pos; to: Pos } {
   throw new Error('무효 스왑이 없다');
 }
 
-describe('server-poc/replay (V2-W2-08)', () => {
-  it('TIMEATTACK_BOARD는 public/stages/timeattack.json과 같다', () => {
-    const json = JSON.parse(
-      readFileSync(join(__dirname, '../../public/stages/timeattack.json'), 'utf8'),
-    ) as { rows: number; cols: number; colors: number; timeLimit: number };
-    expect(TIMEATTACK_BOARD).toEqual({
-      rows: json.rows,
-      cols: json.cols,
-      colors: json.colors,
-      timeLimitMs: json.timeLimit * 1000,
-    });
-  });
-
+describe('replay/replayTimeAttack', () => {
   it('같은 seed의 로그는 항상 같고, 같은 로그의 리플레이 점수도 항상 같다', () => {
     for (const seed of [1, 2, 397, 1000]) {
       const log = randomLog(seed);
@@ -171,7 +155,7 @@ describe('server-poc/replay (V2-W2-08)', () => {
       }
     });
 
-    it('boundary: 마지막 move를 59999에 두고, late: 60000부터 move를 덧붙인다 (판정은 validate.test.ts)', () => {
+    it('boundary: 마지막 move를 59999에 두고, late: 60000부터 move를 덧붙인다 (판정은 judge.test.ts)', () => {
       const limit = TIMEATTACK_BOARD.timeLimitMs;
       // 간격 하한 때문에 59999에 못 두는 판도 있어 몇 개 중 하나라도
       const withBoundary = [5, 15, 25, 35]

@@ -1,20 +1,31 @@
-// V2-W2-08 PoC: 경쟁(타임어택) 모드 리플레이 (SPEC 5.3, PLAN2 5.8). 서버(Deno Edge Function)가 이 흐름으로 점수를 다시 계산한다.
+// 경쟁(타임어택) 모드 리플레이 (SPEC 5.3, PLAN2 5.8·6.4). 서버(Edge Function submit-score)가 이 흐름으로 점수를 다시 계산한다.
 // GameScene.trySwap·playFinale와 TimeAttackMode를 그대로 따른다:
 // createInitialState → move마다 resolveSwap(무효면 상태·점수 그대로) → 끝에 resolveFinale 한 번 → 점수 합.
-// 시각·간격·좌표 판정은 validate.ts(validateMoves)가 먼저 한다. 여기서는 t를 보지 않는다.
-// src/core·src/modes·src/config만 import한다 (phaser·view·scenes·DOM 없음). 서버로 옮길 때도 이 조건을 지킨다.
+// 시각·간격·좌표 판정은 judge.ts(validateMoves)가 먼저 한다. 여기서는 t를 보지 않는다.
+// src/core·src/modes·보드 JSON만 import한다 (phaser·view·scenes·DOM 없음). 서버 번들(_shared/replay.js)에 들어간다.
 
-import { createInitialState, resolveFinale, resolveSwap } from '../../src/core/engine';
-import type { Pos } from '../../src/core/types';
-import { TimeAttackMode } from '../../src/modes/TimeAttackMode';
+import { createInitialState, resolveFinale, resolveSwap } from '../core/engine';
+import { TimeAttackMode } from '../modes/TimeAttackMode';
+import timeattack from '../../public/stages/timeattack.json';
 
-/** public/stages/timeattack.json과 같은 값 (tests/poc/replay.test.ts가 대조한다) */
-export const TIMEATTACK_BOARD = { rows: 8, cols: 8, colors: 5, timeLimitMs: 60000 } as const;
+/** 경쟁 모드 보드. 화면이 읽는 public/stages/timeattack.json을 그대로 번들에 넣는다 (값을 따로 두지 않는다) */
+export const TIMEATTACK_BOARD = {
+  rows: timeattack.rows,
+  cols: timeattack.cols,
+  colors: timeattack.colors,
+  timeLimitMs: timeattack.timeLimit * 1000,
+} as const;
+
+/** 보드 칸 (core Pos와 같은 모양. 서버 선언 파일이 core 타입에 기대지 않게 따로 둔다) */
+export interface Cell {
+  r: number;
+  c: number;
+}
 
 /** t: 게임 시작부터 그 스왑을 입력한 순간까지의 게임 시간(ms 정수, 일시정지 제외). 오름차순 */
 export interface ReplayMove {
-  from: Pos;
-  to: Pos;
+  from: Cell;
+  to: Cell;
   t: number;
 }
 

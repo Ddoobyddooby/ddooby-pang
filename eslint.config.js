@@ -102,6 +102,44 @@ export default tseslint.config(
       ],
     },
   },
+  // replay는 서버 번들(supabase/functions/_shared/replay.js)에 들어가므로 modes처럼 순수 TS:
+  // core·modes와 보드 JSON에만 의존한다 (PLAN2 6.4)
+  {
+    files: ['src/replay/**/*.ts'],
+    languageOptions: { globals: {} },
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [{ name: 'phaser', message: 'replay는 Phaser를 import하지 않는다.' }],
+          patterns: [
+            {
+              group: ['@capacitor/*', '@supabase/*'],
+              message: 'replay는 서버 번들에 들어간다. 외부 패키지를 쓰지 않는다.',
+            },
+            {
+              group: ['**/view', '**/view/**', '**/scenes', '**/scenes/**'],
+              message: 'replay는 view / scenes에 의존하지 않는다.',
+            },
+            {
+              group: ['**/data/**', '**/storage/**', '**/online/**'],
+              message: 'replay는 core·modes에만 의존한다.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-properties': [
+        'error',
+        { object: 'Math', property: 'random', message: '랜덤은 core/rng.ts의 seed RNG만 쓴다.' },
+      ],
+      'no-restricted-globals': [
+        'error',
+        { name: 'window', message: 'replay에서 DOM을 쓰지 않는다.' },
+        { name: 'document', message: 'replay에서 DOM을 쓰지 않는다.' },
+        { name: 'fetch', message: 'replay는 네트워크를 쓰지 않는다.' },
+      ],
+    },
+  },
   // data도 순수 TS: core와 config에만 의존한다 (PLAN 7.1)
   {
     files: ['src/data/**/*.ts'],
@@ -200,8 +238,11 @@ export default tseslint.config(
                 '**/data/**',
                 '**/storage/**',
                 '**/config',
+                '**/replay/*',
+                '!**/replay/coreVersion',
               ],
-              message: 'online은 다른 게임 계층에 의존하지 않는다 (scenes → online).',
+              message:
+                'online은 다른 게임 계층에 의존하지 않는다 (scenes → online). replay는 coreVersion만.',
             },
           ],
         },

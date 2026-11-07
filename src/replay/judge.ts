@@ -1,9 +1,14 @@
-// V2-W2-08 PoC: submit-score 서버 판정 (SPEC 5.3·11절 5번, PLAN2 5.8 "서버 판정" 표). 순수 함수만 둔다.
+// submit-score 서버 판정 (SPEC 5.3·11절 5번, PLAN2 5.8 "서버 판정" 표, 6.4 "판정 저장"). 순수 함수만 둔다.
 // 서버 진입점은 judgeSubmission 하나: 형식 검사 → 해시·재제출 판단(same이면 저장된 결과, conflict면 거부) → 새 제출이면 verifySubmission.
-// replay.ts를 거쳐 src/core·src/modes·src/config만 쓴다. 해시는 Web Crypto라 Node·Deno 둘 다 돈다.
+// 저장 여부는 shouldStore가 정한다. replay.ts를 거쳐 src/core·src/modes만 쓴다. 해시는 Web Crypto라 Node·Deno 둘 다 돈다.
 
-import type { Pos } from '../../src/core/types';
-import { replayTimeAttack, TIMEATTACK_BOARD, type ReplayMove, type ReplayResult } from './replay';
+import {
+  replayTimeAttack,
+  TIMEATTACK_BOARD,
+  type Cell,
+  type ReplayMove,
+  type ReplayResult,
+} from './replay';
 
 /** PLAN2 5.8 판정 기준 (한곳에 모은다) */
 export const JUDGE = {
@@ -35,7 +40,7 @@ export type RejectReason =
 
 export type Verdict = { ok: true } | { ok: false; reason: RejectReason; index?: number };
 
-const isPos = (p: unknown, board: { rows: number; cols: number }): p is Pos => {
+const isPos = (p: unknown, board: { rows: number; cols: number }): p is Cell => {
   if (typeof p !== 'object' || p === null) return false;
   const { r, c } = p as Record<string, unknown>;
   return (
@@ -154,6 +159,15 @@ export function verifySubmission(
   return { ok: true, score: replay.score, replay };
 }
 
+/**
+ * 새 제출(decision = new)의 해시·결과를 run에 저장할지 (PLAN2 6.4 "판정 저장").
+ * too-fast는 내용이 아니라 도착 시각 때문의 거부라 저장하지 않는다: 저장하면 같은 내용의 정상 재시도까지 영구히 막힌다.
+ * 통과·expired·내용 거부(점수 불일치 등)는 저장해 같은 내용이면 같은 결과를 돌려준다
+ */
+export function shouldStore(result: SubmissionResult): boolean {
+  return result.ok || result.reason !== 'too-fast';
+}
+
 export type Judgement =
   /** 형식이 잘못돼 해시를 만들지 않았다 (run에 아무것도 저장하지 않는다) */
   | { decision: 'invalid'; result: SubmissionResult }
@@ -161,7 +175,7 @@ export type Judgement =
   | { decision: 'same'; hash: string; result: SubmissionResult }
   /** 다른 내용으로 run 재사용: 거부 */
   | { decision: 'conflict'; hash: string; result: SubmissionResult }
-  /** 첫 제출: 판정 결과와 hash를 run에 저장한다 */
+  /** 첫 제출: 판정 결과와 hash를 run에 저장한다 (shouldStore가 false면 저장하지 않는다) */
   | { decision: 'new'; hash: string; result: SubmissionResult };
 
 /**

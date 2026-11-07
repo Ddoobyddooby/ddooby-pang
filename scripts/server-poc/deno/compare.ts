@@ -2,7 +2,7 @@
 // 대조한다 (런타임 이식성). 이어서 실제 브라우저 기록 fixtures/browser-runs.json을 리플레이해 결과 화면 점수와
 // 대조하고 서버 판정 통과를 본다 (화면 경로 일치).
 // 사용: deno run --allow-read [--sloppy-imports] scripts/server-poc/deno/compare.ts <server 모듈 경로> [이름]
-// server 모듈은 replayTimeAttack·verifySubmission·submissionHash를 export한다 (원본 server.ts, 번들 .js 등).
+// server 모듈은 replayTimeAttack·verifySubmission·submissionHash를 export한다 (배포 번들 supabase/functions/_shared/replay.js).
 
 declare const Deno: {
   args: string[];
