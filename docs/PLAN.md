@@ -268,6 +268,51 @@ SPEC 4절. v0.1 형식(`layout` 없음) 스테이지와 경쟁 모드는 장애�
 
 **분담**: claude-1 = `src/online/*`, `supabase/functions/*`, `scripts/` 묶음·원격 시험, package.json, CI. claude-2 = `src/view/NicknamePrompt.ts`(주입식) → claude-1 반영 뒤 `BootScene`·`ResultScene` 연결
 
+### 6.4 V2-W3-03 `start-run`·`submit-score`와 서버 리플레이 (SPEC 5.2·5.3)
+
+PoC(PLAN2 5.8, `scripts/server-poc/`)의 리플레이·판정을 src로 옮겨 실제 Edge Function 두 개를 만든다. 판정 기준(58초·30분·0~60초·200ms·좌표·점수·버전·재제출)은 5.8 표 그대로다.
+
+**구조** (의존 방향: `scenes → replay → modes → core`, `scenes → online`. `online`은 여전히 core를 모른다)
+
+| 파일 | 하는 일 |
+|---|---|
+| `src/replay/replay.ts` | PoC `replay.ts` 이동. `replayTimeAttack(seed, moves)`. 보드 값은 `public/stages/timeattack.json`을 import해 번들에 넣는다 (PoC의 `TIMEATTACK_BOARD` 상수와 대조 테스트를 없앤다) |
+| `src/replay/judge.ts` | PoC `validate.ts` 이동. `judgeSubmission`·`JUDGE`·`RejectReason`. 아래 "판정 저장" 변경 하나만 더한다 |
+| `src/replay/weekKey.ts` | `weekKey(ms) → '2026-W45'`: KST(UTC+9, 서머타임 없음) 날짜의 ISO 8601 주차. 월요일 00:00 KST에 바뀐다. import 없음 (V2-W3-04 랭킹 화면도 쓴다) |
+| `src/replay/index.ts` | 서버 번들 진입점: 위 셋을 다시 내보낸다 |
+| `src/replay/coreVersion.ts` | **자동 생성** `export const CORE_VERSION = '<12자>'`. 클라이언트가 제출에 넣는다. 번들 입력에 넣지 않는다 (자기 해시를 품을 수 없어서) |
+| `scripts/server-shared/build.ts` | TARGETS에 `src/replay/index.ts → supabase/functions/_shared/replay.js` 추가. 묶은 코드의 sha256 앞 12자를 `CORE_VERSION`으로 번들 끝에 `export`로 붙이고 `src/replay/coreVersion.ts`도 쓴다. `:check`는 세 파일 모두 대조 |
+| `supabase/migrations/<시각>_v2_w3_03_weekly_best.sql` | 함수 `public.record_weekly_best(p_user uuid, p_week text, p_score int, p_run uuid) returns int`: `insert … on conflict (user_id, week_key) do update set best_score = excluded.best_score, run_id = excluded.run_id where excluded.best_score > weekly_scores.best_score`, 그 주 최고 점수를 돌려준다. `security invoker`, `set search_path = ''`, execute는 `service_role`만 (PUBLIC·anon·authenticated revoke). 동시 제출에도 최고 점수만 남는다 |
+| `supabase/functions/start-run/` | `index.ts`(Deno·DB) + `handler.ts`(순수, Vitest). 토큰 확인 → body `{version}`이 `CORE_VERSION`과 다르면 409 → seed = `crypto.getRandomValues` 0~999,999 → `runs` insert(`user_id, seed, mode 'timeattack', version, week_key = weekKey(now)`) → `200 {runId, seed}` |
+| `supabase/functions/submit-score/` | 같은 나눔. 토큰 확인 → `runs`에서 `id = runId`·`user_id = 본인` 조회(없으면 404, 남의 run도 404) → `judgeSubmission(run, payload, {version: CORE_VERSION, issuedAtMs: created_at, submittedAtMs: now})` → 판정 저장 → 통과면 `record_weekly_best(user, run.week_key, score, run.id)` → 응답 |
+| `src/online/runs.ts` | `startRun() → {runId, seed} \| null`(키 없음·오프라인·계정 없음·오류·**2.5초 초과**면 null), `submitScore(runId, {moves, clientScore, version}) → SubmitOutcome`. account·client 주입식 (`profile.ts`와 같은 모양) |
+| `src/scenes/GameScene.ts` | 경쟁 모드에 run이 있으면 그 seed로 보드를 만들고, `trySwap`이 실제로 처리한 스왑(유효·무효)마다 `{from, to, t}` 기록. `t = timeLimitMs − timeLeftMs()`를 스왑 시작 때 정수 ms로. `finish()`에서 `submitScore`를 시작해 그 Promise를 Result에 넘긴다 (기다리지 않는다) |
+| 경쟁 시작 경로 | `MenuScene`(경쟁 버튼)·`ResultScene`(다시하기)·`PauseScene`(다시하기)이 공통 함수 `startTimeAttack(scene)`을 쓴다: 버튼을 잠그고 "준비 중…"을 띄운 뒤 `startRun()`(최대 2.5초) → `scene.start('Game', {mode:'timeattack', run})`. null이면 run 없이(지금처럼 로컬 seed) 시작 |
+| `src/scenes/ResultScene.ts` | 경쟁 결과에 등록 상태 한 줄: "랭킹에 올리는 중…" → 성공 "이번 주 최고 N점" / 실패 "랭킹에 올리지 못했어요 (점수는 저장됐어요)" / run 없음이면 줄 없음. **닉네임 입력 창은 제출 성공 뒤에만** 연다 (V2-W3-02의 DEV `?ranking` 게이트를 이것으로 바꾼다 → 배포본에서도 켜진다) |
+
+**판정 저장** (5.8에서 한 가지만 바꾼다): 새 제출의 해시·결과·`submitted_at`은 `update runs … where id = ? and submission_hash is null`로 한 번만 쓴다 (0행이면 다른 요청이 먼저 썼으므로 다시 읽어 same/conflict 판정). 단 **`too-fast`는 저장하지 않는다**: 내용이 아니라 시각 때문의 거부라, 저장하면 같은 내용의 정상 재시도까지 영구히 막힌다. `expired`·내용 거부(점수 불일치 등)는 저장해 같은 내용이면 같은 거부를 돌려준다.
+
+**submit-score 응답**: 통과 `200 {ok:true, score, best, weekKey, isNewBest}` (재제출 same이면 저장된 결과) / 판정 거부 `400 {ok:false, code: RejectReason}` (`version-mismatch`만 `409`, 클라이언트는 "새 버전이 있어요. 새로고침해 주세요") / `resubmit-conflict` `409` / run 없음·남의 run `404` / 토큰 `401` / `500 {code:'server'}`. CORS·토큰 검사는 set-nickname과 같다 (허용 출처 3개). 클라이언트 `SubmitOutcome` = `{kind:'ok', best, isNewBest} | {kind:'rejected', code} | {kind:'outdated'} | {kind:'failed'}`(네트워크·5xx·10초 초과)
+
+**랭킹 대상이 아닌 판** (run 없이 로컬 seed): 오프라인·키 없음·`startRun` 실패·시간 초과, DEV `?seed`·`?time`·`?specials`(보드·시간이 서버와 다르다). 게임과 로컬 최고 점수는 지금처럼 저장된다 (SPEC 5.2)
+
+**결정 필요 (PM 확인 대상, 기본값)**
+- 주차: run **발급 시각**의 주에 넣는다. 일요일 23:59에 시작해 월요일 00:01에 제출한 판은 지난주 기록
+- 메뉴에서 경쟁을 누르면 최대 2.5초 "준비 중…" 뒤 시작. 넘으면 랭킹 없이 바로 시작하고 결과 화면에서 "이번 판은 랭킹에 안 올라가요"
+- 일시정지 → [다시하기]·[나가기]로 버린 run은 제출하지 않는다 (30분 뒤 만료). 하루 run 수 제한은 두지 않는다
+- 결과 화면 문구 3가지(위 표)
+
+**검증**
+- Vitest: `tests/poc/*`를 `tests/replay/*`로 옮겨 그대로 통과. **SPEC 10절 1000개 랜덤 로그**: `randomLog(1~1000)`을 src `replayTimeAttack`과 배포 번들 `supabase/functions/_shared/replay.js`(Node에서 import)로 각각 돌려 점수·판정이 모두 같은지 새 테스트로 확인. Deno 쪽은 `npm run poc:deno`가 번들을 쓰도록 바꿔 1000/1000을 유지한다. `weekKey`(일 23:59:59 KST ↔ 월 00:00 KST 경계, 연말 W52/W53/W01, UTC 일요일 15:00 = KST 월요일). start-run·submit-score 처리 로직(가짜 DB: 정상·버전 불일치·남의 run·same·conflict·too-fast 미저장 뒤 재시도 통과·expired·점수 조작·최고 점수 아닐 때 best 유지). `runs.ts`(시간 초과·오프라인 null). GameScene 기록은 순수 함수로 빼서(`moveLog.ts`) t 계산·무효 스왑 포함 테스트
+- `npm run functions:check`가 세 함수 모두 `deno check`. CI `server:shared:check`가 `replay.js`·`coreVersion.ts`까지 대조
+- 원격 `npm run supabase:check -- .env.local --scores` (새 항목, 약 70초): ① start-run 200 ② 바로 제출 → too-fast ③ 60초 기다린 뒤 PoC 고정 로그를 그 seed로 리플레이한 점수로 제출 → 200, `weekly_scores` 반영 ④ 같은 내용 재제출 → 같은 200 ⑤ 다른 내용 → 409 ⑥ 점수 +10 조작(새 run) → score-mismatch ⑦ 버전 다름 → 409 ⑧ B가 A의 runId → 404 ⑨ 낮은 점수 새 run → best 그대로 ⑩ 클라이언트 `weekly_scores` 직접 INSERT·UPDATE 여전히 실패 ⑪ 클라이언트가 `record_weekly_best` RPC 호출 → 실패. 만료(30분)는 단위 테스트로만
+- 브라우저 390×844 (DEV, `.env.local` 있음): 메뉴 → 경쟁 60초 한 판 → 결과에 "이번 주 최고 N점", 닉네임 없으면 입력 창. 대시보드 `weekly_scores`에 행. Network Offline으로 경쟁 → 바로 시작, 결과에 등록 줄 없음·로컬 최고 점수 갱신. `?seed=1`이면 랭킹 대상 아님
+
+**분담** (파일이 겹치지 않게)
+- claude-1: `src/replay/*`(PoC 이동, `scripts/server-poc`는 import만 바꿔 남긴다), `scripts/server-shared/build.ts`, 마이그레이션, `supabase/functions/start-run`·`submit-score`, `src/online/runs.ts`, `scripts/supabase-check/`, `tests/replay`·`tests/online`, ESLint(`src/replay/**`를 modes와 같은 순수 규칙으로), CI·package.json(`functions:check`)
+- claude-2: `src/scenes/GameScene.ts`·`MenuScene`·`ResultScene`·`PauseScene`, 새 `src/scenes/startTimeAttack.ts`, `src/view/moveLog.ts`(또는 `src/modes/`), 결과 문구(`src/view/` 텍스트 파일). `runs.ts`는 위 시그니처로 가짜를 주입해 먼저 만들고, claude-1 반영 뒤 연결
+- 원격 적용(마이그레이션 `db push`·함수 배포 2개)은 사용자 승인 뒤 PL이 한다
+
 - **4주차 재조정**: 1~30 데이터(이동·장애물·색), `npm run stages:sim`에 장애물 반영, **별 3개 기준 상향 (FEEDBACK R6)**, 플레이 로그 → 조카 2차 테스트
 
 ## 7. 리스크
