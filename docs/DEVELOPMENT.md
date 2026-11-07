@@ -39,6 +39,8 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 | `npm run stages:sim` | 스토리 스테이지마다 자동 플레이를 300판씩 돌려 클리어율·점수·별 비율 표를 찍는다. `SIM_GAMES=1000`(판 수), `SIM_STAGES=11-20`(일부만)을 앞에 붙일 수 있다. `story.json`을 고친 뒤 난이도를 잴 때 |
 | `npm run poc:deno` | (V2-W2-08 서버 PoC) 랜덤 로그 1000개와 실제 게임 기록 6판을 Node와 Deno로 다시 계산해 점수·판정·해시가 같은지 비교. Deno 필요 (`brew install deno`). 결과 `scripts/server-poc/RESULT.md` |
 | `npm run supabase:check` | Supabase 권한(RLS) 시험. 익명 사용자 둘과 비로그인으로 점수 표 쓰기·남의 기록 읽기가 막히는지 표로 보여 준다. `.env.local`과 대시보드 Anonymous Sign-ins가 필요 |
+| `npm run server:shared` | 닉네임 규칙(`src/online/nicknameRules.ts`·`bannedWords.ts`)을 서버 함수용 한 파일(`supabase/functions/_shared/nicknameRules.js`)로 다시 묶는다. 금칙어·규칙을 고친 뒤 꼭 실행하고 같이 커밋 (`:check`는 커밋본과 같은지만 본다, CI도 실행) |
+| `npm run functions:check` | Edge Function `set-nickname` 타입 검사 (`deno check`). Deno 필요 |
 
 ## 3. 게임 화면 확인하기
 
@@ -660,6 +662,15 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 4. `npm run supabase:check`: 33개 항목이 모두 PASS
 5. 대시보드 Table Editor에서 4개 표(`profiles`·`runs`·`weekly_scores`·`stage_attempts`)에 RLS 켜짐 표시가 있다
 
+### V2-W3-02 익명 로그인·닉네임
+1. `npm run dev` → 메뉴가 바로 뜬다 (계정 만들기를 기다리지 않는다). Supabase 대시보드 Authentication → Users에 익명 사용자가 하나 생긴다 (`.env.local` 키가 없으면 온라인 기능이 꺼지고 아무것도 생기지 않는다)
+2. `?time=5&ranking` → 경쟁 모드 → 결과 화면 뒤에 "랭킹에 쓸 이름을 정해 주세요" 창과 "한 번 정하면 바꿀 수 없어요" 안내가 뜬다 (닉네임이 아직 없는 브라우저일 때)
+3. `시`("두 글자 이상 써 주세요"), `이안!`("한글·영문·숫자만 쓸 수 있어요"), `시발놈`("쓸 수 없는 말이 들어 있어요")을 넣으면 입력칸 아래에 이유가 나온다. 정상 이름을 넣으면 "이름#0427 으로 정했어요" 후 닫힌다. 다음 판부터는 창이 안 뜬다
+4. 새 시크릿 창에서 [나중에] → "이름을 정하기 전까지 기록이 랭킹에 보이지 않아요". 다음 경쟁 결과 때 다시 묻는다
+5. 개발자 도구 Network를 Offline으로 → 경쟁 한 판: 창이 안 뜨고 게임·결과 화면은 정상
+6. `?ranking` 없이(배포본과 같음) 경쟁 결과: 창이 뜨지 않는다
+7. 서버: `npm run supabase:check -- .env.local --nickname` → 44개 모두 PASS (금칙어·짧음 400, 같은 이름 다른 태그, 두 번째 설정 409, 토큰 없음 401, 허용 안 된 출처 차단)
+
 ### V2-W2-08 랭킹 서버 PoC (core 공유·시간 판정)
 1. `deno --version`으로 Deno가 있는지 확인 (없으면 `brew install deno`)
 2. `npm run poc:deno`. 마지막에 "1000/1000 일치", 늦은 move 100판 거부, 브라우저 기록 6/6 일치·판정 통과가 나온다
@@ -1228,6 +1239,16 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **클라이언트는 공개 키만**: publishable key는 브라우저에 공개돼도 되고, 보안은 RLS·서버 검증이 맡는다. 점수 쓰기는 서버 함수(service role)만
 - **마이그레이션으로 스키마 관리**: SQL 파일을 저장소에 두고 `supabase db push --remote`로 올린다. CLI 3은 기본 대상이 로컬이라 `--remote`가 필요하다
 - **열 단위 권한**: `stage_attempts`는 `id`·`created_at`을 클라이언트가 못 정하게 열만 골라 INSERT를 준다
+
+### V2-W3-02 익명 로그인·닉네임
+- **익명 로그인**: 가입 화면 없이 `signInAnonymously()`로 계정을 만들고 세션을 브라우저에 둔다. 실패·오프라인이면 조용히 넘어가고 `online` 이벤트 때 다시 시도한다. 게임은 기다리지 않는다 (`src/online/account.ts` `createAccount`, `BootScene`의 `void ensureAccount()`)
+- **의존성 주입으로 네트워크 테스트**: supabase-js를 직접 부르지 않고 `OnlineBackend` 인터페이스를 받아, 테스트는 가짜 백엔드로 세션 있음·오프라인·실패 후 재시도를 재현한다 (`src/online/client.ts`, `tests/online/account.test.ts`)
+- **클라이언트·서버가 같은 규칙 파일**: `nicknameRules.ts`는 import를 금칙어 목록 하나로 제한하고, rolldown으로 묶어 Deno 함수가 같은 코드를 쓴다. 커밋본과 다시 묶은 결과가 다르면 CI가 실패한다 (`scripts/server-shared/build.ts`)
+- **금칙어: 포함 + 예외 자리 덮기**: 숫자를 빼고(`시1발`→`시발`) 포함 검사를 하되, 그 자리가 `시발점`·`해보지` 같은 예외 말 안에 덮여 있을 때만 봐준다. 예외 말을 지우는 방식은 `개새끼고양이`에서 구멍이 생긴다. 사칭은 접두 일치 (`src/online/nicknameRules.ts` `containsBannedWord`, `bannedWords.ts`)
+- **Edge Function과 권한**: 함수가 사용자 토큰을 `auth.getUser`로 확인한 뒤 service role로 `profiles`를 쓴다. `UPDATE … WHERE nickname IS NULL`로 한 번만 정하게 하고, `(nickname, tag)` unique 충돌이면 태그를 다시 뽑는다 (`supabase/functions/set-nickname/handler.ts`)
+- **CORS는 인증이 아니다**: 허용 출처만 브라우저 응답을 읽게 할 뿐, 토큰 검사는 따로 한다
+- **캔버스 위 HTML 입력**: Phaser에는 글자 입력이 없어 `<input>`을 덮는다. 한글 조합 중 Enter(`isComposing`)는 제출하지 않는다. 씬이 끝나면 DOM·리스너·타이머를 지운다 (`src/view/NicknamePrompt.ts`, `nicknamePromptState.ts` `shouldSubmitOnEnter`)
+- **배포 게이트**: 아직 점수 제출이 없어 창이 랭킹 등록으로 오해될 수 있으므로 `import.meta.env.DEV && ?ranking`일 때만 연결. 빌드에서 이 분기는 통째로 빠진다 (`ResultScene.askNickname`)
 
 ### V2-W2-08 랭킹 서버 PoC (core 공유·시간 판정)
 - **리플레이 검증**: 서버는 클라이언트 점수를 믿지 않고 seed + 수 기록으로 게임을 다시 돌려 점수를 계산한다. 순수 core라 가능하다 (`scripts/server-poc/replay.ts`)

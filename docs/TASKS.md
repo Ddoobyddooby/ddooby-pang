@@ -63,8 +63,9 @@
 - [x] **V2-W3-01** 🧪 전용 Supabase 프로젝트 스키마·RLS 마이그레이션 (SPEC 7절)
   - 완료 기준: 테이블·인덱스 생성, 본인 데이터 권한과 `weekly_scores` 클라이언트 INSERT·UPDATE 차단을 검증한다
   - 2026-11-07 메인 확인: `b564a1e`, 696 테스트. 원격 프로젝트(`jvapewenhoevfggoxpjd`)에 `supabase db push --remote` 적용, `npm run supabase:check` 33/33 PASS (점수 표 쓰기·남의 기록 읽기·anon 쓰기 차단). Codex 리뷰는 한도로 생략(사용자 결정), PL이 SQL 검토. 남의 run 교차 읽기 실험은 start-run이 생기는 V2-W3-03에서
-- [ ] **V2-W3-02** 👀🧪 익명 로그인·닉네임 (SPEC 5.1) ⛓ V2-W3-01
+- [x] **V2-W3-02** 👀🧪 익명 로그인·닉네임 (SPEC 5.1) ⛓ V2-W3-01
   - 완료 기준: 첫 온라인 진입 시 계정을 만들고 첫 기록 등록 시 닉네임을 받으며, 길이·금칙어·태그 규칙을 검증한다
+  - 2026-11-07 메인 확인: main `23b35d1`~`9acafee`(온라인 계정·set-nickname, claude-1), `5b8f593`·`51ef006`(입력 창·결과 화면 연결, claude-2). 68파일 867 테스트. `set-nickname`을 `9acafee` 내용(원래 `c8fa8ca`)으로 재배포, `npm run supabase:check -- .env.local --nickname` 44/44 PASS. Codex 리뷰 1차·재리뷰 1(오탐 → 접미 우회) 반영. 재리뷰 2는 Codex 한도로 PL이 대신 판정(사용자 지시, `.codex-out/V2-W3-02-review.md`): 통과. 결과 화면 입력 창은 DEV `?ranking`에서만 뜬다(배포 게이트, V2-W3-03에서 제출 성공 뒤로 연결)
 - [ ] **V2-W3-03** 🧪 `start-run`·`submit-score`와 서버 리플레이 (SPEC 5.3) ⛓ V2-W2-08, V2-W3-01~02
   - 완료 기준: 1000개 랜덤 로그 점수 일치, 조작 점수·재사용 run·시간 초과·버전 불일치 거부를 검증한다
 - [ ] **V2-W3-04** 👀🧪 주간 랭킹 화면과 오프라인 플레이 (SPEC 5.2, 10절) ⛓ V2-W3-03
