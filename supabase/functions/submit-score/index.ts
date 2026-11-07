@@ -60,9 +60,16 @@ const deps: SubmitScoreDeps = {
     return data.length > 0;
   },
 
-  async saveResult(runId, result) {
-    const { error } = await admin.from('runs').update({ result }).eq('id', runId);
+  async saveResult(runId, hash, result) {
+    const { data, error } = await admin
+      .from('runs')
+      .update({ result })
+      .eq('id', runId)
+      .eq('submission_hash', hash)
+      .is('result->>best', null)
+      .select('id');
     if (error) throw error;
+    return data.length > 0;
   },
 
   async recordWeeklyBest(userId, weekKey, score, runId) {

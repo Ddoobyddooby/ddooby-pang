@@ -77,15 +77,20 @@ function fakeDeps() {
         return true;
       },
     ),
-    saveResult: vi.fn(async (runId: string, result: StoredResult) => {
-      runs.get(runId)!.result = structuredClone(result);
+    // 해시가 같고 결과에 best가 아직 없을 때만 쓴다 (index.ts의 조건부 update)
+    saveResult: vi.fn(async (runId: string, hash: string, result: StoredResult) => {
+      const row = runs.get(runId)!;
+      if (row.submissionHash !== hash || row.result?.best !== undefined) return false;
+      row.result = structuredClone(result);
+      return true;
     }),
+    // record_weekly_best: 더 높을 때만 바꾸고, isNewBest는 기록 뒤 최고 점수가 이 run의 것인지 (멱등)
     recordWeeklyBest: vi.fn(async (userId: string, week: string, score: number, runId: string) => {
       const key = `${userId}/${week}`;
       const cur = weekly.get(key);
-      const isNewBest = !cur || score > cur.best;
-      if (isNewBest) weekly.set(key, { best: score, runId });
-      return { best: weekly.get(key)!.best, isNewBest };
+      if (!cur || score > cur.best) weekly.set(key, { best: score, runId });
+      const row = weekly.get(key)!;
+      return { best: row.best, isNewBest: row.runId === runId };
     }),
   } satisfies SubmitScoreDeps;
   return { deps, runs, weekly, setNow: (ms: number) => (now = ms), addRun };
@@ -255,17 +260,67 @@ describe('handleSubmitScore', () => {
     expect(runs.get(RUN_A)!.result).toMatchObject({ ok: true });
   });
 
-  it('기록 뒤 결과 저장이 실패하면 500, 같은 내용 재시도는 다시 기록해(바뀌지 않음) 200', async () => {
-    const { deps, weekly } = fakeDeps();
+  it('기록 뒤 결과 저장이 실패하면 500, 같은 내용 재시도는 다시 기록해도 isNewBest true 유지', async () => {
+    const { deps, runs, weekly } = fakeDeps();
     deps.saveResult.mockRejectedValueOnce(new Error('db down'));
     expect(await submit(deps, { runId: RUN_A, ...GOOD })).toEqual({
       status: 500,
       body: { code: 'server' },
     });
     expect(weekly.get(`user-a/${WEEK}`)?.best).toBe(SCORE);
-    const retry = await submit(deps, { runId: RUN_A, ...GOOD });
-    expect(retry).toMatchObject({ status: 200, body: { ok: true, best: SCORE } });
+    expect(await submit(deps, { runId: RUN_A, ...GOOD })).toEqual({
+      status: 200,
+      body: { ok: true, score: SCORE, best: SCORE, weekKey: WEEK, isNewBest: true },
+    });
     expect(deps.recordWeeklyBest).toHaveBeenCalledTimes(2);
+    expect(runs.get(RUN_A)!.result).toMatchObject({ best: SCORE, isNewBest: true });
+  });
+
+  describe('같은 run·같은 본문 동시 제출 (리뷰 지적 1)', () => {
+    const okBody = { ok: true, score: SCORE, best: SCORE, weekKey: WEEK, isNewBest: true };
+
+    it('첫 요청의 claimRun 뒤·기록 전에 두 번째가 끝까지 처리돼도 두 응답이 같다', async () => {
+      const { deps, runs } = fakeDeps();
+      const claim = deps.claimRun.getMockImplementation()!;
+      let second: Awaited<ReturnType<typeof submit>> | null = null;
+      deps.claimRun.mockImplementationOnce(async (...args) => {
+        const claimed = await claim(...args);
+        second = await submit(deps, { runId: RUN_A, ...GOOD });
+        return claimed;
+      });
+      const first = await submit(deps, { runId: RUN_A, ...GOOD });
+      expect(second).toEqual({ status: 200, body: okBody });
+      expect(first).toEqual({ status: 200, body: okBody });
+      // 두 요청 모두 기록했지만 결과는 먼저 쓴 쪽(두 번째 요청) 하나로 확정됐다
+      expect(deps.recordWeeklyBest).toHaveBeenCalledTimes(2);
+      expect(deps.saveResult).toHaveBeenCalledTimes(2);
+      expect(runs.get(RUN_A)!.result).toMatchObject({ best: SCORE, isNewBest: true });
+    });
+
+    it('두 요청이 모두 기록한 뒤 늦게 끝난 쪽은 결과를 덮어쓰지 않고 확정된 결과로 답한다', async () => {
+      const { deps, runs, weekly } = fakeDeps();
+      const record = deps.recordWeeklyBest.getMockImplementation()!;
+      let second: Awaited<ReturnType<typeof submit>> | null = null;
+      deps.recordWeeklyBest.mockImplementationOnce(async (...args) => {
+        const best = await record(...args);
+        second = await submit(deps, { runId: RUN_A, ...GOOD });
+        return best;
+      });
+      const first = await submit(deps, { runId: RUN_A, ...GOOD });
+      expect(second).toEqual({ status: 200, body: okBody });
+      expect(first).toEqual(second);
+      expect(deps.recordWeeklyBest).toHaveBeenCalledTimes(2);
+      expect(weekly.get(`user-a/${WEEK}`)).toEqual({ best: SCORE, runId: RUN_A });
+      // 이후 재제출도 같은 답
+      expect(await submit(deps, { runId: RUN_A, ...GOOD })).toEqual(first);
+      expect(runs.get(RUN_A)!.result).toMatchObject({ best: SCORE, isNewBest: true });
+    });
+
+    it('늦게 끝난 쪽이 다시 읽었는데 확정된 결과가 없으면 500', async () => {
+      const { deps } = fakeDeps();
+      deps.saveResult.mockResolvedValueOnce(false);
+      expect((await submit(deps, { runId: RUN_A, ...GOOD })).status).toBe(500);
+    });
   });
 
   it('토큰 없음·무효 → 401, run을 읽지 않는다', async () => {

@@ -56,9 +56,15 @@ export interface SubmitScoreDeps {
     result: StoredResult,
     submittedAtMs: number,
   ): Promise<boolean>;
-  /** 이미 저장한 결과에 주간 최고 점수를 더해 다시 쓴다 */
-  saveResult(runId: string, result: StoredResult): Promise<void>;
-  /** record_weekly_best: 더 높은 점수일 때만 바꾸고 그 주 최고 점수를 돌려준다 */
+  /**
+   * 저장한 결과에 주간 최고 점수를 더해 쓴다. 해시가 hash이고 결과에 best가 아직 없을 때만 쓴다
+   * (먼저 끝난 요청이 확정한 결과를 덮어쓰지 않는다). 썼으면 true
+   */
+  saveResult(runId: string, hash: string, result: StoredResult): Promise<boolean>;
+  /**
+   * record_weekly_best: 더 높은 점수일 때만 바꾸고 그 주 최고 점수를 돌려준다.
+   * isNewBest는 그 주 최고 기록이 이 run의 것인지라 같은 run으로 다시 불러도 같다 (멱등)
+   */
   recordWeeklyBest(
     userId: string,
     weekKey: string,
@@ -124,13 +130,22 @@ export async function handleSubmitScore(deps: SubmitScoreDeps, req: Request): Pr
 
     if (!stored.ok) return rejected(stored.reason, cors);
     // 통과: 저장된 최고 점수가 있으면(같은 내용 재제출) 그대로, 없으면 기록하고 결과에 더해 둔다.
-    // 기록은 같은 run·점수로 다시 불러도 안전하다 (더 높을 때만 바뀐다)
+    // 같은 run이 동시에 들어와 둘 다 기록해도 기록은 멱등이고, 결과는 먼저 쓴 쪽 하나로 확정된다.
+    // 응답은 항상 run에 확정된 결과를 쓴다
     let best: WeeklyBest;
     if (stored.best !== undefined && stored.isNewBest !== undefined) {
       best = { best: stored.best, isNewBest: stored.isNewBest };
     } else {
       best = await deps.recordWeeklyBest(userId, run.weekKey, stored.score, run.id);
-      await deps.saveResult(run.id, { ...stored, ...best });
+      if (!(await deps.saveResult(run.id, judged.hash, { ...stored, ...best }))) {
+        // 다른 요청이 먼저 확정했다: 그 결과를 쓴다
+        const latest = (await deps.getRun(run.id, userId))?.result;
+        if (!latest?.ok || latest.best === undefined || latest.isNewBest === undefined) {
+          return json(500, { code: 'server' }, cors);
+        }
+        stored = latest;
+        best = { best: latest.best, isNewBest: latest.isNewBest };
+      }
     }
     return json(
       200,
