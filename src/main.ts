@@ -7,11 +7,25 @@ import { PauseScene } from './scenes/PauseScene';
 import { ResultScene } from './scenes/ResultScene';
 import { StageMapScene } from './scenes/StageMapScene';
 import { renderAppIconPage } from './dev/appIcon';
+import { onlineStatus, startRun, submitScore } from './online';
+import { setRunClient } from './scenes/runClient';
 
 // DEV ?icon: 게임 대신 앱 아이콘 원본을 받는 페이지 (assets/app-icon/README.md)
 if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('icon')) {
   renderAppIconPage();
 } else {
+  // 경쟁 run: 키가 있고 온라인이며 계정이 준비됐거나 로그인 중일 때만 서버 run을 받는다 (startRun이 로그인까지 기다린다)
+  setRunClient({
+    startRun,
+    submitScore,
+    canRank: () => {
+      const status = onlineStatus();
+      return (
+        (status === 'ready' || status === 'signing-in') &&
+        (typeof navigator === 'undefined' || navigator.onLine)
+      );
+    },
+  });
   // DEV ?fakerun=<ok|rejected|outdated|failed|null|slow>: 서버 없는 랭킹 등록 흐름 확인
   const fakeRun = import.meta.env.DEV
     ? new URLSearchParams(window.location.search).get('fakerun')

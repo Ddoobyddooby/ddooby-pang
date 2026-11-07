@@ -436,8 +436,11 @@ export const RESULT = {
 
 /** 경쟁 시작 (V2-W3-03, PLAN2 6.4): 서버 run을 받는 동안의 "준비 중…" 덮개 */
 export const RUN = {
-  /** startRun을 기다리는 최대 시간. 넘으면 랭킹 없이 바로 시작 */
-  startTimeoutMs: 2500,
+  /**
+   * startRun을 기다리는 최대 시간(안전망). src/online/runs.ts가 2.5초(START_RUN_TIMEOUT_MS)에 먼저 null을 돌려주므로
+   * 그보다 조금 길게 둔다. 넘으면 랭킹 없이 바로 시작
+   */
+  startTimeoutMs: 3000,
   dim: { color: 0x4a3a5c, alpha: 0.45 },
   fontSize: 48,
   pillWidth: 380,

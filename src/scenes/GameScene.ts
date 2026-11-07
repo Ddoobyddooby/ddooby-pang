@@ -38,7 +38,8 @@ import { applyModeResult } from '../storage/progress';
 import { commitSave, getSave } from './saveRegistry';
 import { musicFor } from './musicRules';
 import { canPause } from './pauseRules';
-import { getRunClient, SUBMIT_VERSION, type RunInfo } from './runClient';
+import { CORE_VERSION } from '../replay/coreVersion';
+import { getRunClient, type RunInfo } from './runClient';
 import type { RankInfo } from './rankStatus';
 import type { GameData, PauseData } from './sceneData';
 import { hasRankBlockingOption } from './timeAttackStart';
@@ -378,7 +379,7 @@ export class GameScene extends Phaser.Scene {
       const payload = {
         moves: this.moveLog.entries(),
         clientScore: score,
-        version: SUBMIT_VERSION,
+        version: CORE_VERSION,
       };
       const outcome = Promise.resolve()
         .then(() => getRunClient().submitScore(runId, payload))
