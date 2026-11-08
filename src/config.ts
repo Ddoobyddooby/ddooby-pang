@@ -384,7 +384,13 @@ export const RESULT = {
     allClear: '모든 스테이지 클리어!',
   },
   /** 버튼 글자 (resultView의 버튼 id → 글자) */
-  buttons: { next: '다음 스테이지', retry: '다시하기', map: '지도', menu: '메뉴' },
+  buttons: {
+    next: '다음 스테이지',
+    retry: '다시하기',
+    ranking: '랭킹 보기',
+    map: '지도',
+    menu: '메뉴',
+  },
   panel: { width: 580, alpha: 0.92, padTop: 44, padBottom: 44 },
   /**
    * 줄 쌓기 (W4-14): 있는 줄만 위에서부터 gap 간격으로 쌓고 묶음 전체를 화면 가운데에 둔다 (resultLayout).
@@ -514,7 +520,58 @@ export const MENU = {
   },
   story: { text: '스토리', dy: 0 },
   timeattack: { text: '경쟁 60초', dy: 190 },
+  /** 주간 랭킹 (V2-W3-04): 테마 버튼 아래. 기존 addButton 스타일 */
+  ranking: { text: '주간 랭킹', dy: 480, width: 340, height: 110, fontSize: 44 },
   button: { width: 440, height: 150, fontSize: 56, subFontSize: 28 },
+} as const;
+
+/**
+ * 주간 랭킹 화면 (V2-W3-04, PLAN2 6.5). 좌표는 폭 720 기준, 시간은 ms.
+ * 390×844에서 줄 약 44px = 게임 좌표 약 82. 10자 닉네임 + #0000 + 6자리 점수가 한 줄에 들어간다
+ */
+export const RANKING = {
+  title: { y: 100, fontSize: 64, strokeThickness: 10 },
+  week: { y: 172, fontSize: 32 },
+  /** 요청이 이 시간을 넘길 때만 "불러오는 중…"을 보인다 */
+  loadingMs: 300,
+  /** 목록: top = 목록 칸 맨 위 y, bottom = 칸 맨 아래에서 화면 아래까지 남기는 거리(하단 고정 줄과 버튼 자리) */
+  list: { top: 220, bottomReserve: 270, x: 36, width: 648, rowH: 84, rowGap: 8, gapH: 52, pad: 8 },
+  row: {
+    radius: 22,
+    /** 순위는 오른쪽 정렬(이 x), 닉네임은 왼쪽 정렬(이 x), 점수는 오른쪽 정렬(이 x) */
+    rankRight: 112,
+    nameLeft: 128,
+    scoreRight: 668,
+    fontSize: 32,
+    tagFontSize: 24,
+    tagGap: 8,
+    fill: 0xffffff,
+    fillAlpha: 0.85,
+    me: { fill: 0xfff3a8, stroke: 0xe8b622 },
+  },
+  /** 글자 색 */
+  color: {
+    rank: '#8a7aa8',
+    name: '#8a5a24',
+    tag: '#8a7aa8',
+    score: '#e45a6b',
+    /** 1~3위 순위 숫자: 금·은·동 */
+    medal: { 1: '#d99a00', 2: '#8f9bb0', 3: '#c9783a' },
+  },
+  gapDot: { r: 5, spacing: 22, color: 0xb9a9d6 },
+  /** 안내 문구 (연결 불가·오류·빈 주·불러오는 중) */
+  message: { fontSize: 38, wrapWidth: 560 },
+  /** 하단 고정 줄 */
+  footer: {
+    height: 96,
+    bottomY: 204,
+    fontSize: 34,
+    subFontSize: 28,
+    textWrap: 380,
+    button: { width: 220, height: 72, fontSize: 32 },
+  },
+  /** 아래 버튼 두 개 (터치 영역 44px 이상 = 게임 좌표 약 82) */
+  button: { bottomY: 100, width: 300, height: 88, fontSize: 40, dx: 170 },
 } as const;
 
 /** 저장 (PLAN 7.2) */

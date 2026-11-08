@@ -86,7 +86,7 @@ export class BootScene extends Phaser.Scene {
         }
         // 기본은 메뉴. 개발 주소(?demo, ?stage=N, ?result=N 등)는 해당 화면으로 바로 (bootRoute.ts)
         const route = bootRoute(window.location.search, import.meta.env.DEV);
-        if (route.scene === 'Menu') this.scene.start('Menu');
+        if (route.scene === 'Menu' || route.scene === 'Ranking') this.scene.start(route.scene);
         else this.scene.start(route.scene, route.data);
       },
     );

@@ -80,7 +80,7 @@ describe('scenes/resultText: resultView (설계 4절 표)', () => {
   });
   const ta: ModeResult = { kind: 'timeattack', score: 500, bestScore: 900, newBest: false };
 
-  it('경쟁: 끝!, 별 없음, 최고 점수 줄, [다시하기] [메뉴]', () => {
+  it('경쟁: 끝!, 별 없음, 최고 점수 줄, [다시하기] [랭킹 보기] [메뉴]', () => {
     expect(resultView(ta, { stageCount: 10, unlocked: 1 })).toEqual({
       title: '끝!',
       stars: null,
@@ -89,7 +89,7 @@ describe('scenes/resultText: resultView (설계 4절 표)', () => {
       bonus: null,
       rankLine: null,
       allClear: false,
-      buttons: ['retry', 'menu'],
+      buttons: ['retry', 'ranking', 'menu'],
     });
     const best = resultView({ ...ta, score: 1200, newBest: true }, { stageCount: 10, unlocked: 1 });
     expect(best).toMatchObject({ best: '최고 점수 1,200', newBest: true });

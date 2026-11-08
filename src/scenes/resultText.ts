@@ -46,7 +46,7 @@ export function resultSounds(result: ModeResult): SfxName[] {
   return result.newBest ? ['newbest', 'applause'] : ['nobest'];
 }
 
-export type ResultButton = 'next' | 'retry' | 'map' | 'menu';
+export type ResultButton = 'next' | 'retry' | 'ranking' | 'map' | 'menu';
 
 /** 결과 화면에 무엇을 보일지 (설계 4절 표) */
 export interface ResultView {
@@ -85,7 +85,7 @@ export function resultView(
       bonus: null,
       rankLine,
       allClear: false,
-      buttons: ['retry', 'menu'],
+      buttons: ['retry', 'ranking', 'menu'],
     };
   }
 

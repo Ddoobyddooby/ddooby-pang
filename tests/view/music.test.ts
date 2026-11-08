@@ -7,6 +7,7 @@ describe('musicFor', () => {
   it('메뉴·지도는 같은 메뉴 곡', () => {
     expect(musicFor('Menu')).toBe('menu');
     expect(musicFor('StageMap')).toBe('menu');
+    expect(musicFor('Ranking')).toBe('menu');
   });
 
   it('게임은 모드 곡', () => {

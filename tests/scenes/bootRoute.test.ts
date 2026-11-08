@@ -17,6 +17,12 @@ describe('scenes/bootRoute (스토리 화면 설계 1절)', () => {
     expect(bootRoute('?seed=7', false)).toEqual({ scene: 'Game', data: { mode: 'timeattack' } });
   });
 
+  it('DEV ?fakeranking → 주간 랭킹 화면. 배포 빌드에서는 무시', () => {
+    expect(bootRoute('?fakeranking=list', true)).toEqual({ scene: 'Ranking' });
+    expect(bootRoute('?fakeranking', true)).toEqual({ scene: 'Ranking' });
+    expect(bootRoute('?fakeranking=list', false)).toEqual({ scene: 'Menu' });
+  });
+
   it('DEV ?stage=N → 스토리 N번 게임. 배포 빌드에서는 무시', () => {
     expect(bootRoute('?stage=3', true)).toEqual({
       scene: 'Game',

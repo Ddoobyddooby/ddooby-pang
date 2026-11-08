@@ -75,6 +75,15 @@ export class MenuScene extends Phaser.Scene {
       lock,
     );
     this.addThemeButton(cx, cy + THEME_BUTTON.dy, lock);
+    const r = MENU.ranking;
+    addButton(
+      this,
+      cx,
+      cy + r.dy,
+      { width: r.width, height: r.height, fontSize: r.fontSize, label: r.text },
+      () => this.scene.start('Ranking'),
+      lock,
+    );
   }
 
   /** 테마 버튼(스토리·경쟁과 같은 잠금): 지금 테마 이름을 작게 보여 주고, 누르면 고르기 창. 고르면 저장하고 메뉴를 다시 그린다 */

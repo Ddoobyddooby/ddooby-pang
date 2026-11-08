@@ -186,6 +186,9 @@ export class ResultScene extends Phaser.Scene {
           } satisfies GameData);
         }
         break;
+      case 'ranking':
+        this.scene.start('Ranking');
+        break;
       case 'map':
         this.scene.start('StageMap');
         break;

@@ -15,6 +15,10 @@ describe('backAction', () => {
     expect(backAction(['StageMap'])).toEqual({ go: 'Menu' });
   });
 
+  it('주간 랭킹 → 메뉴', () => {
+    expect(backAction(['Ranking'])).toEqual({ go: 'Menu' });
+  });
+
   it('결과: 스토리는 지도, 경쟁은 메뉴', () => {
     expect(backAction(['Result'], { resultKind: 'story' })).toEqual({ go: 'StageMap' });
     expect(backAction(['Result'], { resultKind: 'timeattack' })).toEqual({ go: 'Menu' });

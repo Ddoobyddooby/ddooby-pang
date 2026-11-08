@@ -14,7 +14,7 @@ export function backAction(
   if (activeKeys.includes('Game')) return 'pause';
   if (activeKeys.includes('Result'))
     return { go: ctx.resultKind === 'story' ? 'StageMap' : 'Menu' };
-  if (activeKeys.includes('StageMap')) return { go: 'Menu' };
+  if (activeKeys.includes('StageMap') || activeKeys.includes('Ranking')) return { go: 'Menu' };
   if (activeKeys.includes('Menu')) return 'exit';
   return 'none'; // Boot(불러오는 중) 등
 }
