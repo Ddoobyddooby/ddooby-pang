@@ -313,6 +313,55 @@ PoC(PLAN2 5.8, `scripts/server-poc/`)의 리플레이·판정을 src로 옮겨 �
 - claude-2: `src/scenes/GameScene.ts`·`MenuScene`·`ResultScene`·`PauseScene`, 새 `src/scenes/startTimeAttack.ts`, `src/view/moveLog.ts`(또는 `src/modes/`), 결과 문구(`src/view/` 텍스트 파일). `runs.ts`는 위 시그니처로 가짜를 주입해 먼저 만들고, claude-1 반영 뒤 연결
 - 원격 적용(마이그레이션 `db push`·함수 배포 2개)은 사용자 승인 뒤 PL이 한다
 
+### 6.5 V2-W3-04 주간 랭킹 화면과 오프라인 플레이 (SPEC 5.2·10절)
+
+2026-11-08 PL 초안(`.codex-out/V2-W3-04-plan.md`)을 PM이 기본값 그대로 확정했다. W3-03(6.4) main 반영·원격 적용 뒤에 구현한다.
+
+**구조** (의존 방향 `scenes → view/online`, online은 core를 모른다)
+
+| 파일 | 하는 일 |
+|---|---|
+| `supabase/migrations/<시각>_v2_w3_04_weekly_ranking.sql` | 함수 `public.weekly_ranking(p_week text default null)`. `security invoker`, `stable`, `set search_path = ''`, execute는 `anon, authenticated`. 표 권한·RLS는 그대로 (두 표 모두 이미 전체 SELECT) |
+| `src/online/ranking.ts` | `fetchRanking(week?) → {kind:'ok', …} \| {kind:'offline'} \| {kind:'error'}`. 키 없음·오프라인·계정 offline이면 요청 없이 `offline`. `rpc('weekly_ranking')` 한 번, 5초 시간 초과·5xx·네트워크는 `error`. account·client 주입식 (`runs.ts` 모양) |
+| `src/view/rankingRows.ts` | 순수 함수: 응답 → 화면 줄. TOP 50과 내 ±5를 나열 순번으로 합쳐 중복 제거, 순번이 끊기는 곳에 `⋯` 줄, 내 줄 표시, 상태별 안내 선택 |
+| `src/view/rankingText.ts` | 랭킹 화면 문구 (W3-03에서 생긴 파일에 더한다) |
+| `src/scenes/RankingScene.ts` | 제목·주 기간·목록(드래그 스크롤, `StageMapScene` 방식)·하단 내 순위 고정 줄·[새로고침]·[돌아가기]·필요하면 [이름 정하기] |
+| `MenuScene`·`ResultScene`(경쟁) | 진입 버튼: 메뉴 "주간 랭킹", 경쟁 결과 "랭킹 보기". 기존 `addButton` 스타일, 새 그림 없음 |
+| `src/config.ts` | 줄 높이·글자 크기·시간 초과 ms·색 |
+
+**DB 함수 `weekly_ranking(p_week)`**
+- `p_week`가 null이면 서버 시각으로 이번 주: `to_char(now() at time zone 'Asia/Seoul', 'IYYY-"W"IW')` (`src/replay/weekKey.ts`와 같은 규칙·`2026-W45` 형식). 기기 시계와 무관하게 월요일 00:00 KST에 바뀐다. 명시 week는 시험용
+- 대상: 그 주 `weekly_scores` 중 `profiles.nickname is not null`만. 닉네임 없는 점수는 목록·순위 계산에서 빠지고 이름을 정하면 그때부터 보인다 (6.1)
+- 나열 `best_score desc, updated_at asc, user_id` (같은 점수는 먼저 최고 점수에 도달한 사람이 위). 표시 순위는 `rank()` 공동 순위 (100, 90, 90, 80 → 1, 2, 2, 4)
+- 반환 한 번에: `week_key`, `section`('top' 나열 1~50번째 / 'around' 내 위아래 5명 / 'me' 내 상태 1행), `rank`, `nickname`, `tag`, `best_score`, `is_me`. me: 닉네임·기록 있음 → rank, 기록 있으나 닉네임 없음 → rank null·점수, 기록 없음 → 행 없음. anon은 around·me 없음
+- user_id는 돌려주지 않는다 (is_me로만 구분). 한 사람은 PK `(user_id, week_key)`로 한 주 1행
+
+**화면 상태와 문구 (PM 확정)**
+
+| 상태 | 판단 | 화면 |
+|---|---|---|
+| 불러오는 중 | 요청 중 | "불러오는 중…" (0.3초 넘을 때만) |
+| 연결 불가 | `offline` | "인터넷에 연결되면 랭킹을 볼 수 있어요" + [다시 시도] |
+| 오류 | `error` | "랭킹을 불러오지 못했어요" + [다시 시도] |
+| 빈 주 | top 0행 | "이번 주 첫 기록을 남겨 보세요!" |
+| 목록 | top ≥ 1행 | TOP 50, 내 순번이 51 이후면 `⋯` 뒤 내 ±5. 내 줄은 연한 노랑 바탕·굵게. 1~3위 순위 숫자는 금·은·동 색 |
+| 내 기록 없음 | me 없음 | 하단 고정 줄 "이번 주 기록이 없어요" |
+| 닉네임 없음 | me.rank null | 하단 "N점 · 이름을 정하면 랭킹에 보여요" + [이름 정하기] → 결과 화면과 **같은 `NicknamePrompt`·같은 규칙**. 성공하면 목록을 다시 불러온다 |
+
+- 줄: `12  이안#0427  15,320`. 주 기간 "11월 2일(월) ~ 11월 8일(일)" (weekKey에서 계산). 이번 주만 보여 준다
+- 390×844: 줄 약 44px, 한 화면 11~12줄 → 드래그 스크롤. 10자 닉네임 + `#0000` + 6자리 점수가 한 줄에 들어간다. 하단 내 줄은 고정. 버튼 터치 영역 44px 이상
+- 글꼴: Jua 서브셋(상용 2,350자) 밖의 드문 한글은 그 글자만 기본 글꼴로 보인다. 그대로 둔다 (FEEDBACK)
+
+**오프라인 플레이 (SPEC 10절)**: W3-02·03에서 이미 계정·run을 기다리지 않고 로컬 seed·로컬 저장으로 진행한다. W3-04는 수용 시험으로 확인한다: Network Offline으로 시작 → 스토리 1판·경쟁 1판 끝까지 → 로컬 최고 점수·별 갱신 → 랭킹 "연결 불가" → 온라인 복귀 후 [다시 시도]로 목록. 키 없는 빌드도 같은 흐름
+
+**검증**
+- Vitest `rankingRows`: TOP 50만, 내가 7·50·51·56·200위, top·around 겹침 중복 제거, `⋯` 위치, 공동 순위 2·2·4, 닉네임 없음·기록 없음·anon, 빈 주, 10자 닉네임. `ranking.ts`: offline·error(5초·5xx·네트워크)·정상 매핑. 주 기간 문자열(W53·W01)
+- PGlite: 서버 주 계산 = `weekKey()` (일 23:59:59 KST ↔ 월 00:00 KST, UTC 일요일 15:00), 닉네임 없는 행 제외, 동점 순서·공동 순위, around 경계(1위·꼴찌·51위), anon 호출
+- 원격 `npm run supabase:check -- .env.local --ranking`: anon 호출 성공·me 없음, 닉네임 있는 시험 사용자 목록·is_me, 닉네임 없는 시험 사용자 목록 제외·me.rank null, 먼 과거 주 0행, 클라이언트 `weekly_scores` 직접 쓰기 실패. 기록은 `--scores` 경로로 만든다
+- 브라우저 390×844: DEV `?fakeranking=`(60명·내가 57위·동점·10자 닉네임·빈 주·오류·느림·닉네임 없음) 캡처, 실서버 1회, 오프라인 수용 시험
+
+**분담**: claude-1 = 마이그레이션, `src/online/ranking.ts`, `scripts/supabase-check`(`--ranking`), PGlite 확인, tests/online. claude-2 = `src/view/rankingRows.ts`·문구, `RankingScene`, 메뉴·결과 진입 버튼, DEV `?fakeranking`, 브라우저 확인·오프라인 수용 시험. 원격 적용(마이그레이션·`--ranking`)은 PL
+
 - **4주차 재조정**: 1~30 데이터(이동·장애물·색), `npm run stages:sim`에 장애물 반영, **별 3개 기준 상향 (FEEDBACK R6)**, 플레이 로그 → 조카 2차 테스트
 
 ## 7. 리스크
