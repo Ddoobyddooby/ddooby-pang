@@ -240,10 +240,9 @@ export default tseslint.config(
                 '**/config',
                 '**/replay/*',
                 '!**/replay/coreVersion',
-                '!**/replay/weekKey',
               ],
               message:
-                'online은 다른 게임 계층에 의존하지 않는다 (scenes → online). replay는 coreVersion·weekKey만.',
+                'online은 다른 게임 계층에 의존하지 않는다 (scenes → online). replay는 coreVersion만.',
             },
           ],
         },

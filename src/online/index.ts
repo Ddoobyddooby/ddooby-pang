@@ -13,8 +13,6 @@ import {
 } from './runs';
 // 자동 생성 상수 (import 없음). online이 게임 계층(core)에 기대는 것은 아니다
 import { CORE_VERSION } from '../replay/coreVersion';
-// import 없는 순수 함수. 빈 주(0행)일 때 이번 주 키를 정하는 데만 쓴다
-import { weekKey } from '../replay/weekKey';
 
 export type { OnlineStatus } from './account';
 export type { MyProfile, SetNicknameErrorCode, SetNicknameResult } from './profile';
@@ -44,7 +42,7 @@ function online() {
       account,
       profile: createProfile(account),
       runs: createRuns(account, { version: CORE_VERSION, isOnline }),
-      ranking: createRanking(account, { isOnline, currentWeek: () => weekKey(Date.now()) }),
+      ranking: createRanking(account, { isOnline }),
     };
   }
   return instance;

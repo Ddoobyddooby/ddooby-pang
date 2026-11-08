@@ -35,8 +35,6 @@ export type RankingResult =
 
 export interface RankingDeps {
   isOnline(): boolean;
-  /** 이번 주 키. 응답이 0행(빈 주)이라 서버가 주를 알려 주지 않을 때만 쓴다 */
-  currentWeek(): string;
   timeoutMs?: number;
 }
 
@@ -48,18 +46,27 @@ export interface Ranking {
 const isCount = (v: unknown, min: number): v is number =>
   Number.isInteger(v) && (v as number) >= min;
 
-/** 응답 행 → 결과. 형식이 어긋나면 null (error로 처리) */
-function parseRows(data: unknown, fallbackWeek: string): RankingResult | null {
+/**
+ * 응답 행 → 결과. 형식이 어긋나면 null (error로 처리).
+ * 주 키는 항상 'week' 메타 행에서 받는다 (빈 주에도 있다). 기기 시계로 대신하지 않는다
+ */
+function parseRows(data: unknown): RankingResult | null {
   if (!Array.isArray(data)) return null;
   const top: RankingRow[] = [];
   const around: RankingRow[] = [];
   let me: RankingMe | null = null;
   let weekKey: string | null = null;
+  const weeks = new Set<string>();
   for (const raw of data as unknown[]) {
     if (typeof raw !== 'object' || raw === null) return null;
     const r = raw as Record<string, unknown>;
-    if (typeof r.week_key !== 'string' || (weekKey !== null && r.week_key !== weekKey)) return null;
-    weekKey = r.week_key;
+    if (typeof r.week_key !== 'string' || r.week_key === '') return null;
+    weeks.add(r.week_key);
+    if (r.section === 'week') {
+      if (weekKey !== null) return null;
+      weekKey = r.week_key;
+      continue;
+    }
     if (r.section === 'me') {
       const rank = r.rank === null ? null : isCount(r.rank, 1) ? r.rank : undefined;
       if (me !== null || rank === undefined || !isCount(r.best_score, 0)) return null;
@@ -86,10 +93,12 @@ function parseRows(data: unknown, fallbackWeek: string): RankingResult | null {
     };
     (r.section === 'top' ? top : around).push(row);
   }
+  // week 행이 없거나 다른 주의 행이 섞였다
+  if (weekKey === null || weeks.size !== 1) return null;
   const bySeq = (a: RankingRow, b: RankingRow) => a.seq - b.seq;
   return {
     kind: 'ok',
-    weekKey: weekKey ?? fallbackWeek,
+    weekKey,
     top: top.sort(bySeq),
     around: around.sort(bySeq),
     me,
@@ -114,7 +123,7 @@ export function createRanking(account: Account, deps: RankingDeps): Ranking {
           week === undefined ? {} : { p_week: week },
         );
         if (res === 'error') return error;
-        return parseRows(res.data, week ?? deps.currentWeek()) ?? error;
+        return parseRows(res.data) ?? error;
       });
     },
   };

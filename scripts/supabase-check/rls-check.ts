@@ -16,6 +16,8 @@ import { parseEnv } from 'node:util';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 // 함수와 같은 규칙 묶음 (npm run server:shared). 시험 이름이 현재 규칙에서 기대대로 판정되는지 먼저 본다
 import { checkNickname } from '../../supabase/functions/_shared/nicknameRules.js';
+// 클라이언트·start-run과 같은 주 계산. 서버 now()의 주가 이 값과 같은지 본다
+import { weekKey } from '../../src/replay/weekKey.ts';
 // 함수와 같은 리플레이 번들. 제출할 점수를 서버와 같은 코드로 계산하고 같은 CORE_VERSION을 보낸다
 import {
   CORE_VERSION,
@@ -674,7 +676,7 @@ interface RankingRpcRow {
   section: string;
   seq: number | null;
   rank: number | null;
-  best_score: number;
+  best_score: number | null;
   is_me: boolean;
 }
 
@@ -739,17 +741,38 @@ async function rankingChecks({ url, key, anon, check }: RankingContext): Promise
     if (res.error) throw new Error(errText(res));
     return res.data as RankingRpcRow[];
   };
-  const listed = (rows: RankingRpcRow[]) => rows.filter((x) => x.section !== 'me');
+  const listed = (rows: RankingRpcRow[]) =>
+    rows.filter((x) => x.section === 'top' || x.section === 'around');
+  const weekRows = (rows: RankingRpcRow[]) => rows.filter((x) => x.section === 'week');
   const meOf = (rows: RankingRpcRow[]) => rows.filter((x) => x.section === 'me');
   const summary = (rows: RankingRpcRow[]) =>
     `${rows.length}행 (top ${rows.filter((x) => x.section === 'top').length}, ` +
     `around ${rows.filter((x) => x.section === 'around').length}, me ${JSON.stringify(meOf(rows))})`;
 
-  await check('랭', 'anon 호출', '성공, around·me 없음, is_me 모두 false', async () => {
+  await check('랭', 'anon 호출', '성공, week 1행 + top만, is_me 모두 false', async () => {
     const rows = await rpc(anon);
-    const pass = rows.every((x) => x.section === 'top' && x.is_me === false);
+    const pass =
+      rows[0]?.section === 'week' &&
+      weekRows(rows).length === 1 &&
+      rows.slice(1).every((x) => x.section === 'top' && x.is_me === false);
     return { pass, detail: summary(rows) };
   });
+  await check(
+    '랭',
+    '이번 주 week 행',
+    '맨 앞 1개, week_key = 서버 주 = weekKey(지금)',
+    async () => {
+      const rows = await rpc(r);
+      const w = weekRows(rows);
+      const local = weekKey(Date.now());
+      const pass =
+        rows[0]?.section === 'week' &&
+        w.length === 1 &&
+        w[0]!.week_key === local &&
+        rows.every((x) => x.week_key === local);
+      return { pass, detail: `서버 ${w.map((x) => x.week_key).join(',')}, 로컬 ${local}` };
+    },
+  );
   await check(
     '랭',
     'R(닉네임 있음) 호출',
@@ -778,9 +801,11 @@ async function rankingChecks({ url, key, anon, check }: RankingContext): Promise
       !rows.some((x) => x.section === 'around');
     return { pass, detail: summary(rows) };
   });
-  await check('랭', '먼 과거 주 (2000-W01)', '0행', async () => {
+  await check('랭', '먼 과거 주 (2000-W01)', 'week 행 1개 + 나머지 0행', async () => {
     const rows = await rpc(r, '2000-W01');
-    return { pass: rows.length === 0, detail: `${rows.length}행` };
+    const pass =
+      rows.length === 1 && rows[0]!.section === 'week' && rows[0]!.week_key === '2000-W01';
+    return { pass, detail: JSON.stringify(rows) };
   });
 
   const week = (await rpc(r))[0]?.week_key ?? TEST_WEEK_KEY;
