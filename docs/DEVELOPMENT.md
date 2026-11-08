@@ -37,10 +37,10 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 | `npm run android:sync` | 웹 빌드 후 `android/` 앱에 복사 (`cap sync`). 웹 코드를 고친 뒤 Android Studio에서 ▶ 하기 전에 실행 |
 | `npm run icons` | `assets/app-icon/`의 원본 그림으로 Android 앱 아이콘(mipmap-*)을 다시 만든다 |
 | `npm run stages:sim` | 스토리 스테이지마다 자동 플레이를 300판씩 돌려 클리어율·점수·별 비율 표를 찍는다. `SIM_GAMES=1000`(판 수), `SIM_STAGES=11-20`(일부만)을 앞에 붙일 수 있다. `story.json`을 고친 뒤 난이도를 잴 때 |
-| `npm run poc:deno` | (V2-W2-08 서버 PoC) 랜덤 로그 1000개와 실제 게임 기록 6판을 Node와 Deno로 다시 계산해 점수·판정·해시가 같은지 비교. Deno 필요 (`brew install deno`). 결과 `scripts/server-poc/RESULT.md` |
-| `npm run supabase:check` | Supabase 권한(RLS) 시험. 익명 사용자 둘과 비로그인으로 점수 표 쓰기·남의 기록 읽기가 막히는지 표로 보여 준다. `.env.local`과 대시보드 Anonymous Sign-ins가 필요 |
+| `npm run poc:deno` | 랜덤 로그 1000개와 실제 게임 기록 6판을 Node와 Deno(배포 번들 `supabase/functions/_shared/replay.js`)로 다시 계산해 점수·판정·해시가 같은지 비교. Deno 필요 (`brew install deno`). 결과 `scripts/server-poc/RESULT.md` |
+| `npm run supabase:check` | Supabase 권한(RLS) 시험. 익명 사용자 둘과 비로그인으로 점수 표 쓰기·남의 기록 읽기가 막히는지 표로 보여 준다. `.env.local`과 대시보드 Anonymous Sign-ins가 필요. `-- .env.local --nickname`은 닉네임, `--scores`는 점수 제출 시험(약 70초)을 더한다 |
 | `npm run server:shared` | 닉네임 규칙(`src/online/nicknameRules.ts`·`bannedWords.ts`)을 서버 함수용 한 파일(`supabase/functions/_shared/nicknameRules.js`)로 다시 묶는다. 금칙어·규칙을 고친 뒤 꼭 실행하고 같이 커밋 (`:check`는 커밋본과 같은지만 본다, CI도 실행) |
-| `npm run functions:check` | Edge Function `set-nickname` 타입 검사 (`deno check`). Deno 필요 |
+| `npm run functions:check` | Edge Function `set-nickname`·`start-run`·`submit-score` 타입 검사 (`deno check`). Deno 필요 |
 
 ## 3. 게임 화면 확인하기
 
@@ -671,10 +671,19 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 6. `?ranking` 없이(배포본과 같음) 경쟁 결과: 창이 뜨지 않는다
 7. 서버: `npm run supabase:check -- .env.local --nickname` → 44개 모두 PASS (금칙어·짧음 400, 같은 이름 다른 태그, 두 번째 설정 409, 토큰 없음 401, 허용 안 된 출처 차단)
 
+### V2-W3-03 경쟁 점수 서버 검증
+1. 메뉴 → 경쟁: "준비 중…"이 잠깐 보인 뒤 시작한다 (서버가 seed를 준다). 60초를 끝까지 하면 결과 화면이 "랭킹에 올리는 중…" → "이번 주 최고 N점"
+2. 닉네임이 없는 브라우저면 그 뒤에 이름 입력 창이 뜬다 (제출이 성공했을 때만). 정하면 다음 판부터 안 뜬다
+3. 다시하기로 더 낮은 점수를 내면 "이번 주 최고"는 그대로
+4. 개발자 도구 Network Offline → 경쟁: 기다림 없이 시작, 결과에 등록 줄 없음, 로컬 최고 점수는 갱신. 스토리도 끝까지 된다
+5. `?seed=1`·`?time=5`·`?specials` 판은 랭킹 대상이 아니라 등록 줄이 없다. 가짜 서버 응답은 DEV `?fakerun=ok|rejected|outdated|failed|null|slow`
+6. 서버: `npm run supabase:check -- .env.local --scores` → 48개 모두 PASS (약 70초. 조작 점수·재사용 run·너무 빠른 제출·버전 불일치 거부, 낮은 점수는 최고 점수 유지, 클라이언트 직접 쓰기 차단)
+7. 서버 함수는 개발 주소로 `http://localhost:5173`만 허용한다. 다른 포트로 띄우면 시작이 실패해 "이번 판은 랭킹에 안 올라가요"가 뜬다
+
 ### V2-W2-08 랭킹 서버 PoC (core 공유·시간 판정)
 1. `deno --version`으로 Deno가 있는지 확인 (없으면 `brew install deno`)
 2. `npm run poc:deno`. 마지막에 "1000/1000 일치", 늦은 move 100판 거부, 브라우저 기록 6/6 일치·판정 통과가 나온다
-3. `npx vitest run tests/poc`: 리플레이와 서버 판정 테스트(시각 0~60초, 간격 200ms, 58초·30분, 재제출, 잘못된 형식)
+3. `npx vitest run tests/replay`(V2-W3-03에서 `tests/poc`를 옮김): 리플레이와 서버 판정 테스트(시각 0~60초, 간격 200ms, 58초·30분, 재제출, 잘못된 형식)
 4. 결정 내용은 `docs/PLAN.md` 5.8절, 실측·비교표는 `scripts/server-poc/RESULT.md`
 
 ## 5. 문제 해결
@@ -1249,6 +1258,16 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **CORS는 인증이 아니다**: 허용 출처만 브라우저 응답을 읽게 할 뿐, 토큰 검사는 따로 한다
 - **캔버스 위 HTML 입력**: Phaser에는 글자 입력이 없어 `<input>`을 덮는다. 한글 조합 중 Enter(`isComposing`)는 제출하지 않는다. 씬이 끝나면 DOM·리스너·타이머를 지운다 (`src/view/NicknamePrompt.ts`, `nicknamePromptState.ts` `shouldSubmitOnEnter`)
 - **배포 게이트**: 아직 점수 제출이 없어 창이 랭킹 등록으로 오해될 수 있으므로 `import.meta.env.DEV && ?ranking`일 때만 연결. 빌드에서 이 분기는 통째로 빠진다 (`ResultScene.askNickname`)
+
+### V2-W3-03 경쟁 점수 서버 검증
+- **서버가 seed를 정한다**: `start-run`이 seed와 run을 발급하고, 제출 때는 run에 저장된 seed로 다시 돌린다. 클라이언트 seed를 믿지 않는다 (`supabase/functions/start-run/handler.ts`)
+- **같은 코드를 두 곳에서**: 리플레이·판정을 `src/replay/`에 두고 rolldown으로 묶어 서버 함수가 그대로 쓴다. 묶은 코드의 sha256 앞 12자가 `CORE_VERSION`이 되어, 규칙이 바뀌면 버전이 달라져 옛 클라이언트를 거부한다 (`scripts/server-shared/build.ts`, `src/replay/coreVersion.ts`)
+- **입력 기록**: 실제로 처리한 스왑만 `{from, to, t}`로 남긴다. t는 일시정지를 뺀 게임 시간 (`src/view/moveLog.ts`, `GameScene.trySwap`)
+- **멱등과 한 번만 쓰기**: 제출 내용의 해시를 `where submission_hash is null`로 한 번만 저장하고, 같은 해시면 저장된 결과를 돌려준다. 주간 최고 기록 함수는 "이 run이 지금 최고 기록인가"로 답해 몇 번 불러도 같다 (리뷰에서 동시 재제출로 응답이 갈리는 문제를 찾아 고침) (`submit-score/handler.ts`, `supabase/migrations/20261107120000_v2_w3_03_weekly_best.sql`)
+- **저장하지 않는 거부**: 58초 미만 제출은 시각 때문의 거부라 저장하지 않는다. 저장하면 같은 내용의 정상 재시도까지 막힌다 (`src/replay/judge.ts` `shouldStore`)
+- **upsert 조건부 갱신**: `on conflict … do update … where excluded.best_score > best_score`로 더 높을 때만 바꾼다. 행 잠금 뒤 비교해 동시 제출에도 최고만 남는다
+- **ISO 주차와 시간대**: KST 날짜의 ISO 8601 주차(목요일이 속한 해). 연말에 해가 바뀔 수 있다 (`src/replay/weekKey.ts`)
+- **기다리지 않는 온라인**: run 발급은 최대 2.5초만 기다리고, 제출은 결과 화면과 병렬로 진행한다. 실패해도 로컬 기록은 남는다 (`src/scenes/startTimeAttack.ts`, `ResultScene`)
 
 ### V2-W2-08 랭킹 서버 PoC (core 공유·시간 판정)
 - **리플레이 검증**: 서버는 클라이언트 점수를 믿지 않고 seed + 수 기록으로 게임을 다시 돌려 점수를 계산한다. 순수 core라 가능하다 (`scripts/server-poc/replay.ts`)

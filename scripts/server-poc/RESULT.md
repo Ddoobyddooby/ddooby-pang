@@ -1,5 +1,8 @@
 # V2-W2-08 core 공유·리플레이 PoC 결과
 
+> V2-W3-03(2026-11-08) 이후: 리플레이·판정 코드는 `src/replay/`로, 테스트는 `tests/poc/` → `tests/replay/`로 옮겼고 `server.ts`는 지웠다(진입점 `src/replay/index.ts`). `poc:deno`는 배포 번들 하나만 비교한다. 아래는 PoC 당시 기록이다.
+
+
 > 2026-11-06, claude-1. 환경: macOS, Node v23.10.0, Deno 2.9.8 (V8 15.0, TS 6.0.3), rolldown 1.2.15 (vite 8에 포함), Phaser 3.90.0.
 > Supabase 프로젝트·CLI·Docker 없이 로컬에서만 확인했다. 실제 Edge Function 배포는 시험하지 않았다 (확인 필요 항목은 C 끝).
 
