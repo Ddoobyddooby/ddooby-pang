@@ -4,152 +4,99 @@
     "rows": 8,
     "cols": 8,
     "colors": 4,
-    "moves": 38,
+    "moves": 33,
     "goals": [
       {
         "type": "score",
-        "target": 3900
+        "target": 4200
       }
     ],
-    "stars": [3900, 9700, 14100]
+    "stars": [4200, 11400, 18000]
   },
   {
     "id": 2,
     "rows": 8,
     "cols": 8,
     "colors": 4,
-    "moves": 38,
+    "moves": 33,
     "goals": [
       {
         "type": "score",
-        "target": 5600
+        "target": 4400
       }
     ],
-    "stars": [5600, 11100, 15300]
+    "stars": [4400, 11600, 18100]
   },
   {
     "id": 3,
     "rows": 8,
     "cols": 8,
     "colors": 4,
-    "moves": 33,
+    "moves": 29,
     "goals": [
       {
         "type": "collect",
         "color": "red",
-        "count": 43
+        "count": 45
       }
     ],
-    "stars": [3000, 8200, 13200]
+    "stars": [3600, 10100, 18100]
   },
   {
     "id": 4,
     "rows": 8,
     "cols": 8,
     "colors": 5,
-    "moves": 38,
+    "moves": 33,
     "goals": [
       {
         "type": "score",
-        "target": 2500
+        "target": 2100
       }
     ],
-    "stars": [2500, 6100, 8700]
+    "stars": [2100, 6600, 9600]
   },
   {
     "id": 5,
     "rows": 8,
     "cols": 8,
     "colors": 5,
-    "moves": 33,
+    "moves": 29,
     "goals": [
       {
         "type": "collect",
         "color": "yellow",
-        "count": 28
+        "count": 26
       }
     ],
-    "stars": [2300, 4700, 6600]
+    "stars": [1900, 5100, 7500]
   },
   {
     "id": 6,
     "rows": 8,
     "cols": 8,
     "colors": 5,
-    "moves": 33,
+    "moves": 29,
     "goals": [
       {
         "type": "collect",
         "color": "red",
-        "count": 24
+        "count": 22
       },
       {
         "type": "collect",
         "color": "blue",
-        "count": 24
+        "count": 22
       }
     ],
-    "stars": [2300, 4700, 6700]
+    "stars": [1900, 4900, 7800]
   },
   {
     "id": 7,
     "rows": 8,
     "cols": 8,
     "colors": 5,
-    "moves": 30,
-    "goals": [
-      {
-        "type": "score",
-        "target": 2100
-      },
-      {
-        "type": "collect",
-        "color": "green",
-        "count": 25
-      }
-    ],
-    "stars": [2100, 4500, 6400]
-  },
-  {
-    "id": 8,
-    "rows": 8,
-    "cols": 8,
-    "colors": 6,
-    "moves": 30,
-    "goals": [
-      {
-        "type": "score",
-        "target": 1400
-      }
-    ],
-    "stars": [1400, 3900, 6000]
-  },
-  {
-    "id": 9,
-    "rows": 8,
-    "cols": 8,
-    "colors": 6,
-    "moves": 27,
-    "goals": [
-      {
-        "type": "collect",
-        "color": "purple",
-        "count": 17
-      },
-      {
-        "type": "collect",
-        "color": "orange",
-        "count": 17
-      }
-    ],
-    "stars": [1200, 2700, 3900]
-  },
-  {
-    "id": 10,
-    "rows": 8,
-    "cols": 8,
-    "colors": 6,
-    "moves": 27,
+    "moves": 26,
     "goals": [
       {
         "type": "score",
@@ -157,374 +104,888 @@
       },
       {
         "type": "collect",
-        "color": "red",
-        "count": 16
+        "color": "green",
+        "count": 18
       }
     ],
-    "stars": [1500, 3400, 4900]
+    "stars": [1500, 4900, 7300]
+  },
+  {
+    "id": 8,
+    "rows": 8,
+    "cols": 8,
+    "colors": 6,
+    "moves": 26,
+    "goals": [
+      {
+        "type": "score",
+        "target": 1200
+      }
+    ],
+    "stars": [1200, 4200, 6400]
+  },
+  {
+    "id": 9,
+    "rows": 8,
+    "cols": 8,
+    "colors": 6,
+    "moves": 24,
+    "goals": [
+      {
+        "type": "collect",
+        "color": "purple",
+        "count": 13
+      },
+      {
+        "type": "collect",
+        "color": "orange",
+        "count": 12
+      }
+    ],
+    "stars": [1200, 3300, 5100]
+  },
+  {
+    "id": 10,
+    "rows": 8,
+    "cols": 8,
+    "colors": 6,
+    "moves": 24,
+    "goals": [
+      {
+        "type": "score",
+        "target": 1100
+      },
+      {
+        "type": "collect",
+        "color": "red",
+        "count": 13
+      }
+    ],
+    "stars": [1100, 3600, 5400]
   },
   {
     "id": 11,
     "rows": 8,
     "cols": 8,
     "colors": 5,
-    "moves": 35,
+    "moves": 32,
+    "layout": [
+      "........",
+      "........",
+      "........",
+      "..L..L..",
+      "..L..L..",
+      "........",
+      "........",
+      "........"
+    ],
+    "layers": {
+      "L": {
+        "type": "lock"
+      }
+    },
     "goals": [
       {
         "type": "collect",
         "color": "purple",
-        "count": 31
+        "count": 64
+      },
+      {
+        "type": "clearObstacle",
+        "obstacle": "lock",
+        "count": 4
       }
     ],
-    "stars": [2300, 4800, 6700]
+    "stars": [6900, 11300, 14600]
   },
   {
     "id": 12,
     "rows": 8,
     "cols": 8,
     "colors": 5,
-    "moves": 33,
+    "moves": 30,
+    "layout": [
+      "........",
+      "........",
+      ".L....L.",
+      "..L..L..",
+      "..L..L..",
+      ".L....L.",
+      "........",
+      "........"
+    ],
+    "layers": {
+      "L": {
+        "type": "lock"
+      }
+    },
     "goals": [
       {
         "type": "score",
-        "target": 2300
+        "target": 6500
+      },
+      {
+        "type": "clearObstacle",
+        "obstacle": "lock",
+        "count": 8
       }
     ],
-    "stars": [2300, 5300, 7600]
+    "stars": [6500, 10700, 13300]
   },
   {
     "id": 13,
     "rows": 8,
     "cols": 8,
     "colors": 5,
-    "moves": 33,
+    "moves": 30,
+    "layout": [
+      "........",
+      "L......L",
+      ".L....L.",
+      "...LL...",
+      "...LL...",
+      ".L....L.",
+      "L......L",
+      "........"
+    ],
+    "layers": {
+      "L": {
+        "type": "lock"
+      }
+    },
     "goals": [
       {
         "type": "collect",
         "color": "green",
-        "count": 31
+        "count": 58
+      },
+      {
+        "type": "clearObstacle",
+        "obstacle": "lock",
+        "count": 10
       }
     ],
-    "stars": [2300, 4600, 6400]
+    "stars": [6500, 10600, 14200]
   },
   {
     "id": 14,
     "rows": 8,
     "cols": 8,
     "colors": 5,
-    "moves": 32,
+    "moves": 29,
+    "layout": [
+      "........",
+      "........",
+      "LL....LL",
+      "........",
+      "........",
+      "LL....LL",
+      "........",
+      "........"
+    ],
+    "layers": {
+      "L": {
+        "type": "lock"
+      }
+    },
     "goals": [
       {
         "type": "collect",
         "color": "blue",
-        "count": 27
+        "count": 56
       },
       {
-        "type": "collect",
-        "color": "yellow",
-        "count": 29
+        "type": "clearObstacle",
+        "obstacle": "lock",
+        "count": 8
       }
     ],
-    "stars": [2300, 4300, 6300]
+    "stars": [6300, 10500, 13700]
   },
   {
     "id": 15,
     "rows": 8,
     "cols": 8,
     "colors": 5,
-    "moves": 30,
+    "moves": 27,
+    "layout": [
+      "........",
+      ".L.LL.L.",
+      "........",
+      "L..LL..L",
+      "........",
+      ".L.LL.L.",
+      "........",
+      "........"
+    ],
+    "layers": {
+      "L": {
+        "type": "lock"
+      }
+    },
     "goals": [
-      {
-        "type": "score",
-        "target": 2200
-      },
       {
         "type": "collect",
         "color": "purple",
-        "count": 19
+        "count": 50
+      },
+      {
+        "type": "clearObstacle",
+        "obstacle": "lock",
+        "count": 12
       }
     ],
-    "stars": [2200, 4800, 6700]
+    "stars": [5800, 10000, 13400]
   },
   {
     "id": 16,
     "rows": 8,
     "cols": 8,
     "colors": 5,
-    "moves": 30,
+    "moves": 28,
+    "layout": [
+      "........",
+      "........",
+      "........",
+      "...11...",
+      "...11...",
+      "........",
+      "........",
+      "........"
+    ],
+    "layers": {
+      "1": {
+        "type": "frost",
+        "hp": 1
+      }
+    },
     "goals": [
       {
         "type": "collect",
         "color": "red",
-        "count": 27
+        "count": 58
       },
       {
-        "type": "collect",
-        "color": "green",
-        "count": 27
+        "type": "clearObstacle",
+        "obstacle": "frost",
+        "count": 4
       }
     ],
-    "stars": [2300, 4000, 5700]
+    "stars": [6100, 10600, 13500]
   },
   {
     "id": 17,
     "rows": 8,
     "cols": 8,
     "colors": 5,
-    "moves": 30,
-    "goals": [
-      {
-        "type": "score",
-        "target": 2400
+    "moves": 27,
+    "layout": [
+      "........",
+      "........",
+      "L.1..1.L",
+      "..1..1..",
+      "..1..1..",
+      "L......L",
+      "........",
+      "........"
+    ],
+    "layers": {
+      "1": {
+        "type": "frost",
+        "hp": 1
       },
+      "L": {
+        "type": "lock"
+      }
+    },
+    "goals": [
       {
         "type": "collect",
         "color": "yellow",
-        "count": 25
+        "count": 57
+      },
+      {
+        "type": "clearObstacle",
+        "obstacle": "frost",
+        "count": 6
       }
     ],
-    "stars": [2400, 4900, 6600]
+    "stars": [6400, 10700, 13600]
   },
   {
     "id": 18,
     "rows": 8,
     "cols": 8,
     "colors": 6,
-    "moves": 30,
+    "moves": 27,
+    "layout": [
+      "........",
+      "........",
+      "..1..1..",
+      ".2....2.",
+      ".2....2.",
+      "..1..1..",
+      "........",
+      "........"
+    ],
+    "layers": {
+      "1": {
+        "type": "frost",
+        "hp": 1
+      },
+      "2": {
+        "type": "frost",
+        "hp": 2
+      }
+    },
     "goals": [
       {
         "type": "collect",
         "color": "red",
-        "count": 19
+        "count": 27
       },
       {
-        "type": "collect",
-        "color": "purple",
-        "count": 20
+        "type": "clearObstacle",
+        "obstacle": "frost",
+        "count": 8
       }
     ],
-    "stars": [1500, 3100, 4400]
+    "stars": [2900, 6300, 8600]
   },
   {
     "id": 19,
     "rows": 8,
     "cols": 8,
     "colors": 6,
-    "moves": 27,
-    "goals": [
-      {
-        "type": "score",
-        "target": 1600
+    "moves": 26,
+    "layout": [
+      "........",
+      "L......L",
+      "..2..2..",
+      "...LL...",
+      "...LL...",
+      "..2..2..",
+      "L......L",
+      "........"
+    ],
+    "layers": {
+      "2": {
+        "type": "frost",
+        "hp": 2
       },
+      "L": {
+        "type": "lock"
+      }
+    },
+    "goals": [
       {
         "type": "collect",
         "color": "blue",
-        "count": 16
+        "count": 24
+      },
+      {
+        "type": "clearObstacle",
+        "obstacle": "frost",
+        "count": 4
       }
     ],
-    "stars": [1600, 3000, 4500]
+    "stars": [3100, 6100, 8200]
   },
   {
     "id": 20,
     "rows": 8,
     "cols": 8,
     "colors": 6,
-    "moves": 27,
-    "goals": [
-      {
-        "type": "score",
-        "target": 1700
+    "moves": 25,
+    "layout": [
+      "........",
+      ".L....L.",
+      "2.2..2.2",
+      "...LL...",
+      "...LL...",
+      "2.2..2.2",
+      ".L....L.",
+      "........"
+    ],
+    "layers": {
+      "2": {
+        "type": "frost",
+        "hp": 2
       },
+      "L": {
+        "type": "lock"
+      }
+    },
+    "goals": [
       {
         "type": "collect",
         "color": "orange",
-        "count": 18
+        "count": 23
+      },
+      {
+        "type": "clearObstacle",
+        "obstacle": "frost",
+        "count": 6
       }
     ],
-    "stars": [1700, 2900, 4600]
+    "stars": [3200, 5900, 8100]
   },
   {
     "id": 21,
     "rows": 8,
     "cols": 8,
     "colors": 6,
-    "moves": 30,
+    "moves": 28,
+    "layout": [
+      "........",
+      "........",
+      "........",
+      "..jjjj..",
+      "..jjjj..",
+      "........",
+      "........",
+      "........"
+    ],
+    "layers": {
+      "j": {
+        "type": "jelly",
+        "hp": 1
+      }
+    },
     "goals": [
       {
-        "type": "score",
-        "target": 2000
+        "type": "clearJelly"
       },
       {
         "type": "collect",
         "color": "green",
-        "count": 20
+        "count": 31
       }
     ],
-    "stars": [2000, 3300, 5000]
+    "stars": [3200, 6400, 9100]
   },
   {
     "id": 22,
     "rows": 8,
     "cols": 8,
-    "colors": 5,
-    "moves": 33,
+    "colors": 6,
+    "moves": 29,
+    "layout": [
+      "........",
+      "........",
+      ".jjjjjj.",
+      ".jKjjKj.",
+      ".jKjjKj.",
+      ".jjjjjj.",
+      "........",
+      "........"
+    ],
+    "layers": {
+      "j": {
+        "type": "jelly",
+        "hp": 1
+      },
+      "K": [
+        {
+          "type": "lock"
+        },
+        {
+          "type": "jelly",
+          "hp": 1
+        }
+      ]
+    },
     "goals": [
+      {
+        "type": "clearJelly"
+      },
       {
         "type": "collect",
         "color": "blue",
-        "count": 36
+        "count": 27
       }
     ],
-    "stars": [1500, 4800, 6900]
+    "stars": [4400, 7600, 10000]
   },
   {
     "id": 23,
     "rows": 8,
     "cols": 8,
     "colors": 6,
-    "moves": 30,
+    "moves": 27,
+    "layout": [
+      "........",
+      "..1..1..",
+      "........",
+      "jjjjjjjj",
+      "jjjjjjjj",
+      "........",
+      "..1..1..",
+      "........"
+    ],
+    "layers": {
+      "1": {
+        "type": "frost",
+        "hp": 1
+      },
+      "j": {
+        "type": "jelly",
+        "hp": 1
+      }
+    },
     "goals": [
       {
-        "type": "collect",
-        "color": "yellow",
-        "count": 23
+        "type": "clearJelly"
       },
       {
         "type": "collect",
-        "color": "purple",
-        "count": 21
+        "color": "yellow",
+        "count": 28
       }
     ],
-    "stars": [1500, 2900, 4300]
+    "stars": [3900, 6900, 9100]
   },
   {
     "id": 24,
     "rows": 8,
     "cols": 8,
     "colors": 6,
-    "moves": 30,
+    "moves": 27,
+    "layout": [
+      "........",
+      "L.2..2.L",
+      "........",
+      ".jjJJjj.",
+      ".jjJJjj.",
+      "........",
+      "L.2..2.L",
+      "........"
+    ],
+    "layers": {
+      "2": {
+        "type": "frost",
+        "hp": 2
+      },
+      "L": {
+        "type": "lock"
+      },
+      "j": {
+        "type": "jelly",
+        "hp": 1
+      },
+      "J": {
+        "type": "jelly",
+        "hp": 2
+      }
+    },
     "goals": [
       {
-        "type": "score",
-        "target": 2000
+        "type": "clearJelly"
       },
       {
         "type": "collect",
         "color": "red",
-        "count": 22
+        "count": 30
       }
     ],
-    "stars": [2000, 3500, 5000]
+    "stars": [4200, 7200, 9400]
   },
   {
     "id": 25,
     "rows": 8,
     "cols": 8,
     "colors": 6,
-    "moves": 29,
+    "moves": 26,
+    "layout": [
+      "........",
+      "........",
+      ".jjKKjj.",
+      ".jJ..Jj.",
+      ".jJ..Jj.",
+      ".jjKKjj.",
+      "..2..2..",
+      "........"
+    ],
+    "layers": {
+      "2": {
+        "type": "frost",
+        "hp": 2
+      },
+      "j": {
+        "type": "jelly",
+        "hp": 1
+      },
+      "J": {
+        "type": "jelly",
+        "hp": 2
+      },
+      "K": [
+        {
+          "type": "lock"
+        },
+        {
+          "type": "jelly",
+          "hp": 1
+        }
+      ]
+    },
     "goals": [
       {
-        "type": "collect",
-        "color": "blue",
-        "count": 22
+        "type": "clearJelly"
       },
       {
         "type": "collect",
-        "color": "orange",
-        "count": 21
+        "color": "blue",
+        "count": 23
       }
     ],
-    "stars": [1500, 3100, 4300]
+    "stars": [4400, 7100, 9100]
   },
   {
     "id": 26,
     "rows": 8,
     "cols": 8,
-    "colors": 5,
-    "moves": 32,
+    "colors": 6,
+    "moves": 29,
+    "layout": [
+      "........",
+      "........",
+      "...33...",
+      "........",
+      ".L.jj.L.",
+      "...jj...",
+      "........",
+      "........"
+    ],
+    "layers": {
+      "3": {
+        "type": "frost",
+        "hp": 3
+      },
+      "L": {
+        "type": "lock"
+      },
+      "j": {
+        "type": "jelly",
+        "hp": 1
+      }
+    },
     "goals": [
       {
+        "type": "clearJelly"
+      },
+      {
         "type": "score",
-        "target": 3100
+        "target": 3700
       }
     ],
-    "stars": [3100, 5500, 7800]
+    "stars": [3700, 7200, 9700]
   },
   {
     "id": 27,
     "rows": 8,
     "cols": 8,
     "colors": 6,
-    "moves": 29,
+    "moves": 27,
+    "layout": [
+      "........",
+      ".3....3.",
+      "........",
+      "..KjjK..",
+      "..jJJj..",
+      "..KjjK..",
+      "........",
+      "........"
+    ],
+    "layers": {
+      "3": {
+        "type": "frost",
+        "hp": 3
+      },
+      "j": {
+        "type": "jelly",
+        "hp": 1
+      },
+      "J": {
+        "type": "jelly",
+        "hp": 2
+      },
+      "K": [
+        {
+          "type": "lock"
+        },
+        {
+          "type": "jelly",
+          "hp": 1
+        }
+      ]
+    },
     "goals": [
       {
-        "type": "score",
-        "target": 2000
+        "type": "clearJelly"
       },
       {
         "type": "collect",
         "color": "purple",
-        "count": 20
+        "count": 23
       }
     ],
-    "stars": [2000, 3400, 4900]
+    "stars": [3900, 7200, 9500]
   },
   {
     "id": 28,
     "rows": 8,
     "cols": 8,
     "colors": 6,
-    "moves": 28,
+    "moves": 26,
+    "layout": [
+      "L......L",
+      "........",
+      "..3..3..",
+      "jjjjjjjj",
+      "jjJJJJjj",
+      "..2..2..",
+      "........",
+      "L......L"
+    ],
+    "layers": {
+      "2": {
+        "type": "frost",
+        "hp": 2
+      },
+      "3": {
+        "type": "frost",
+        "hp": 3
+      },
+      "L": {
+        "type": "lock"
+      },
+      "j": {
+        "type": "jelly",
+        "hp": 1
+      },
+      "J": {
+        "type": "jelly",
+        "hp": 2
+      }
+    },
     "goals": [
       {
-        "type": "collect",
-        "color": "green",
-        "count": 21
+        "type": "clearJelly"
       },
       {
         "type": "collect",
-        "color": "red",
-        "count": 21
+        "color": "green",
+        "count": 23
       }
     ],
-    "stars": [1500, 2800, 4000]
+    "stars": [4100, 7000, 9200]
   },
   {
     "id": 29,
     "rows": 8,
     "cols": 8,
     "colors": 6,
-    "moves": 28,
+    "moves": 26,
+    "layout": [
+      "........",
+      ".L.33.L.",
+      "........",
+      "jJj..jJj",
+      "jJj..jJj",
+      "........",
+      ".L.22.L.",
+      "........"
+    ],
+    "layers": {
+      "2": {
+        "type": "frost",
+        "hp": 2
+      },
+      "3": {
+        "type": "frost",
+        "hp": 3
+      },
+      "L": {
+        "type": "lock"
+      },
+      "j": {
+        "type": "jelly",
+        "hp": 1
+      },
+      "J": {
+        "type": "jelly",
+        "hp": 2
+      }
+    },
     "goals": [
       {
-        "type": "score",
-        "target": 2000
+        "type": "clearJelly"
       },
       {
         "type": "collect",
         "color": "yellow",
-        "count": 20
+        "count": 23
       }
     ],
-    "stars": [2000, 3300, 4800]
+    "stars": [3800, 6700, 8900]
   },
   {
     "id": 30,
     "rows": 8,
     "cols": 8,
     "colors": 6,
-    "moves": 27,
+    "moves": 25,
+    "layout": [
+      "........",
+      ".3K..K3.",
+      "..jjjj..",
+      ".jJjjJj.",
+      ".jJjjJj.",
+      "..jjjj..",
+      "2..LL..2",
+      "........"
+    ],
+    "layers": {
+      "2": {
+        "type": "frost",
+        "hp": 2
+      },
+      "3": {
+        "type": "frost",
+        "hp": 3
+      },
+      "L": {
+        "type": "lock"
+      },
+      "j": {
+        "type": "jelly",
+        "hp": 1
+      },
+      "J": {
+        "type": "jelly",
+        "hp": 2
+      },
+      "K": [
+        {
+          "type": "lock"
+        },
+        {
+          "type": "jelly",
+          "hp": 1
+        }
+      ]
+    },
     "goals": [
       {
-        "type": "score",
-        "target": 1900
+        "type": "clearJelly"
       },
       {
         "type": "collect",
         "color": "orange",
-        "count": 20
+        "count": 25
       }
     ],
-    "stars": [1900, 3000, 4600]
+    "stars": [4400, 7300, 9700]
   }
 ]

@@ -53,7 +53,7 @@ describe('story.json 30개', () => {
     });
 
     // 데이터가 나온 뒤 켠다 (claude-1의 story.json 재조정). 지금은 장애물이 없어 실패한다
-    it.skip('11·16·21번에 해당 장애물이 실제로 있다', () => {
+    it('11·16·21번에 해당 장애물이 실제로 있다', () => {
       expect(kindsIn(stages[10]!).has('lock')).toBe(true);
       expect(kindsIn(stages[15]!).has('frost')).toBe(true);
       expect(kindsIn(stages[20]!).has('jelly')).toBe(true);
@@ -71,7 +71,7 @@ describe('story.json 30개', () => {
     });
 
     // 새 데이터(PLAN2 6.6)가 들어오면 켠다. 지금 story.json에서는 실패한다 (22·26번 5색)
-    it.skip('11~15번은 5색, 21~30번은 6색이다 (PLAN2 6.6)', () => {
+    it('11~15번은 5색, 21~30번은 6색이다 (PLAN2 6.6)', () => {
       for (const s of range(11, 15)) expect(s.colors, `#${s.id}`).toBe(5);
       for (const s of range(21, 30)) expect(s.colors, `#${s.id}`).toBe(6);
     });
@@ -82,7 +82,7 @@ describe('story.json 30개', () => {
     const V01_MOVES = [38, 38, 33, 38, 33, 33, 30, 30, 27, 27];
 
     // 새 데이터가 들어오면 켠다. 지금은 v0.1 값 그대로라 실패한다
-    it.skip('1~10번은 v0.1 이동의 85~90%다', () => {
+    it('1~10번은 v0.1 이동의 85~90%다', () => {
       for (const s of range(1, 10)) {
         const base = V01_MOVES[s.id - 1]!;
         expect(s.moves, `#${s.id}`).toBeGreaterThanOrEqual(Math.floor(base * 0.85));
@@ -90,7 +90,7 @@ describe('story.json 30개', () => {
       }
     });
 
-    it.skip('11~30번은 25~32다', () => {
+    it('11~30번은 25~32다', () => {
       for (const s of range(11, 30)) {
         expect(s.moves, `#${s.id}`).toBeGreaterThanOrEqual(25);
         expect(s.moves, `#${s.id}`).toBeLessThanOrEqual(32);
