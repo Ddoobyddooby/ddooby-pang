@@ -36,7 +36,7 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 | `npm run build` | 타입체크 + 배포용 빌드 (`dist/`) |
 | `npm run android:sync` | 웹 빌드 후 `android/` 앱에 복사 (`cap sync`). 웹 코드를 고친 뒤 Android Studio에서 ▶ 하기 전에 실행 |
 | `npm run icons` | `assets/app-icon/`의 원본 그림으로 Android 앱 아이콘(mipmap-*)을 다시 만든다 |
-| `npm run stages:sim` | 스토리 스테이지마다 자동 플레이를 300판씩 돌려 클리어율·점수·별 비율 표를 찍는다. `SIM_GAMES=1000`(판 수), `SIM_STAGES=11-20`(일부만)을 앞에 붙일 수 있다. `story.json`을 고친 뒤 난이도를 잴 때 |
+| `npm run stages:sim` | 스토리 스테이지마다 자동 플레이를 300판씩 돌려 클리어율·점수·별 비율·장애물 요약 표를 찍는다. `SIM_GAMES=1000`(판 수), `SIM_STAGES=11-20`(일부만), `SIM_BOT=first|greedy|both`(봇, 기본 both: 첫 힌트 봇과 미션 의식 탐욕 봇)를 앞에 붙일 수 있다. `story.json`을 고친 뒤 난이도를 잴 때 |
 | `npm run poc:deno` | 랜덤 로그 1000개와 실제 게임 기록 6판을 Node와 Deno(배포 번들 `supabase/functions/_shared/replay.js`)로 다시 계산해 점수·판정·해시가 같은지 비교. Deno 필요 (`brew install deno`). 결과 `scripts/server-poc/RESULT.md` |
 | `npm run supabase:check` | Supabase 권한(RLS) 시험. 익명 사용자 둘과 비로그인으로 점수 표 쓰기·남의 기록 읽기가 막히는지 표로 보여 준다. `.env.local`과 대시보드 Anonymous Sign-ins가 필요. `-- .env.local --nickname`은 닉네임, `--scores`는 점수 제출 시험(약 70초), `--ranking`은 주간 랭킹 시험(약 60초)을 더한다 |
 | `npm run server:shared` | 닉네임 규칙(`src/online/nicknameRules.ts`·`bannedWords.ts`)을 서버 함수용 한 파일(`supabase/functions/_shared/nicknameRules.js`)로 다시 묶는다. 금칙어·규칙을 고친 뒤 꼭 실행하고 같이 커밋 (`:check`는 커밋본과 같은지만 본다, CI도 실행) |
@@ -525,7 +525,7 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 1. `npm run dev` → 메뉴의 스토리 버튼 아래 글자가 `스테이지 N / 20`
 2. `?unlock=20` → 스토리: 지도에 20개, 20번이 지금 할 곳. `?stage=11` … `?stage=20`으로 바로 해 볼 수 있다 (미션 카드에 미션이 보인다)
 3. `?result=3000&stage=20&stars=2&bonus=600` → 결과 화면에 "모든 스테이지 클리어!"
-4. 난이도 재기: `SIM_GAMES=1000 npm run stages:sim` → 스테이지별 클리어율 표 (PLAN 6.12 결과 줄의 표와 같은 값이 나온다). `story.json` 숫자를 바꾸고 다시 돌려 비교한다
+4. 난이도 재기: `SIM_GAMES=1000 npm run stages:sim` → 스테이지별 클리어율 표 (v0.1 당시 PLAN 6.12 표와 같은 값이었다. V2-W4-01 이후는 PLAN2 6.6 결과 표). `story.json` 숫자를 바꾸고 다시 돌려 비교한다
 
 ### W4-20 연쇄 발동 차례 재생
 1. `npm run dev` → `?seed=4&specials` 로 시작. 왼쪽 위 ↔ 블록 바로 오른쪽 칸(2행 3열)을 아래로 끌어 바꾼다
@@ -593,7 +593,7 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 2. `?unlock=30` → 스토리: 지도를 위로 끝까지 끌면 맨 위가 30번. 노드가 겹치지 않고 길이 이어진다
 3. 예전 저장 이어가기: 개발자 도구 콘솔에서 `localStorage.setItem('ddooby-pang/save', JSON.stringify({version:1, story:{unlocked:20, bestStars:Object.fromEntries(Array.from({length:20},(_,i)=>[i+1,2])), bestScore:{}}, timeattack:{bestScore:0}, settings:{muted:false, music:true}}))` 후 주소 옵션 없이 새로고침 → 스토리 지도에서 21번이 열려 있다(지금 할 곳). 메뉴 글자는 `스테이지 21 / 30`
 4. `?stage=21` → 미션 카드에 미션 두 개, 패널 이동 수가 예전보다 길다(1~20번도 27~38)
-5. 난이도 재기: `SIM_GAMES=1000 npm run stages:sim` → PLAN 6.19 결과 표와 같은 값
+5. 난이도 재기: `SIM_GAMES=1000 npm run stages:sim` → v0.1 당시 PLAN 6.19 결과 표와 같은 값이었다 (V2-W4-01 이후는 PLAN2 6.6 결과 표)
 
 ### V2-W1-01 특수 블록 조합 core (V2-W1-04에서 원복, 지금은 확인할 것 없음)
 1. `npm test` → `tests/core/combo.test.ts` 38개 포함 전체 통과
@@ -670,6 +670,13 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 5. 개발자 도구 Network를 Offline으로 → 경쟁 한 판: 창이 안 뜨고 게임·결과 화면은 정상
 6. `?ranking` 없이(배포본과 같음) 경쟁 결과: 창이 뜨지 않는다
 7. 서버: `npm run supabase:check -- .env.local --nickname` → 44개 모두 PASS (금칙어·짧음 400, 같은 이름 다른 태그, 두 번째 설정 409, 토큰 없음 401, 허용 안 된 출처 차단)
+
+### V2-W4-01 스토리 1~30 재조정
+1. `npm run dev` → 스토리 지도. 1~10번은 장애물 없이 예전보다 이동이 조금 적다
+2. `?stage=11`: 미션 카드에 "자물쇠 N개 풀기"가 처음 나온다. `?stage=16`은 얼음, `?stage=21`은 젤리("젤리 모두 없애기")가 처음 나온다. `?stage=26`·`?stage=30`은 세 가지가 섞이고 얼음 3겹이 있다
+3. 모든 판의 미션 카드·아래 패널에 미션이 2개 이하로 전부 보인다
+4. 같은 점수를 내도 별 2·3개가 예전보다 어렵다 (이미 받은 별은 줄지 않는다)
+5. 측정: `SIM_GAMES=1000 npm run stages:sim` (약 4분). 결과 표는 `docs/PLAN.md` 6.6. 1~10번은 "첫" 열, 11~30번은 "탐욕" 열이 기준
 
 ### V2-W3-04 주간 랭킹
 1. `npm run dev` → 메뉴 "주간 랭킹": 제목 아래 이번 주 기간("11월 2일(월) ~ 11월 8일(일)"), 목록은 점수 순, 1~3위 숫자는 금·은·동. 같은 점수는 같은 순위(1, 2, 2, 4)
@@ -1267,6 +1274,14 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **CORS는 인증이 아니다**: 허용 출처만 브라우저 응답을 읽게 할 뿐, 토큰 검사는 따로 한다
 - **캔버스 위 HTML 입력**: Phaser에는 글자 입력이 없어 `<input>`을 덮는다. 한글 조합 중 Enter(`isComposing`)는 제출하지 않는다. 씬이 끝나면 DOM·리스너·타이머를 지운다 (`src/view/NicknamePrompt.ts`, `nicknamePromptState.ts` `shouldSubmitOnEnter`)
 - **배포 게이트**: 아직 점수 제출이 없어 창이 랭킹 등록으로 오해될 수 있으므로 `import.meta.env.DEV && ?ranking`일 때만 연결. 빌드에서 이 분기는 통째로 빠진다 (`ResultScene.askNickname`)
+
+### V2-W4-01 스토리 1~30 재조정
+- **시뮬레이션으로 난이도 맞추기**: 봇을 seed 1~1000으로 돌려 클리어율·점수 분포를 재고 데이터(이동·미션 양)를 고친다. 봇은 사람과 다르므로 절대값이 아니라 "판끼리의 상대 난이도"를 맞추는 도구다 (`scripts/sim/stageSim.ts`)
+- **봇의 편향**: 왼쪽 위부터 첫 수를 두는 봇은 아래쪽 장애물을 거의 못 깬다. 측정 도구의 편향이 데이터 설계를 왜곡하지 않게 미션을 보는 봇을 따로 둔다 (`scripts/sim/greedyBot.ts`)
+- **정보 누출 막기**: 탐욕 봇이 `resolveSwap` 결과 전체를 보면 앞으로 떨어질 블록(seed RNG)을 아는 셈이다. 첫 `refill` 이벤트 전까지만 세서 사람이 볼 수 있는 정보로 제한한다 (`seenBeforeRefill`)
+- **분위수로 별 기준 정하기**: 클리어 판 점수의 70%·95% 지점(quantile)을 별 2·3 기준으로 쓴다
+- **데이터 테스트로 설계 규칙 지키기**: 장애물 첫 등장 순서, 구간별 색 수, 이동 범위, 미션 수 ≤ 화면 줄 수를 테스트로 막는다 (`tests/data/storyStages.test.ts`)
+- **화면 확인이 잡는 버그**: 미션 3개가 2줄 화면에 잘린 문제는 테스트·시뮬이 아니라 브라우저 확인에서 나왔다
 
 ### V2-W3-04 주간 랭킹
 - **창 함수(window function)**: `row_number()`로 나열 순번, `rank()`로 공동 순위를 한 번에 계산한다. 같은 점수의 나열은 `updated_at`(먼저 도달) 순 (`supabase/migrations/20261108120000_v2_w3_04_weekly_ranking.sql`)
