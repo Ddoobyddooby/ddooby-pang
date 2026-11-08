@@ -169,10 +169,10 @@ describe('data/stageSchema: layout·layers (SPEC v0.2 4.3, PLAN2 5.4)', () => {
     failsAt(stage({ layers: inList }), 'story[0].layers.K[0].hp');
   });
 
-  it('기존 story.json 1~30은 layout 없이 그대로 로드된다', () => {
+  it('story.json 1~10은 layout 없이 로드된다 (장애물은 11번부터, PLAN2 6.6)', () => {
     const story = parseStory(JSON.parse(storyRaw));
     expect(story).toHaveLength(30);
-    story.forEach((s) => expect(s).not.toHaveProperty('layers'));
+    story.slice(0, 10).forEach((s) => expect(s).not.toHaveProperty('layers'));
   });
 
   it('DEV ?obstacles 시험 스테이지: 잠금·얼음 1~3·젤리 1~2·잠금+젤리가 다 있고 clearJelly', () => {

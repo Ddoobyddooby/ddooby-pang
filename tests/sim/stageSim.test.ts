@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialState, resolveSwap } from '../../src/core/engine';
 import { findHint } from '../../src/core/moves';
-import type { ResolveResult } from '../../src/core/types';
+import type { Board, ResolveResult } from '../../src/core/types';
 import { StoryMode } from '../../src/modes/StoryMode';
-import { greedyBot, moveValue, playStageGreedy } from '../../scripts/sim/greedyBot';
+import {
+  greedyBot,
+  moveValue,
+  playStageGreedy,
+  seenBeforeRefill,
+} from '../../scripts/sim/greedyBot';
 import type { Goal, StageDef } from '../../src/data/stageSchema';
 import {
   firstHintBot,
@@ -135,11 +140,11 @@ describe('탐욕 봇 (SIM_BOT=greedy)', () => {
   });
 
   it('moveValue: 끝난 미션은 세지 않고, 남은 양까지만 센다', () => {
-    const res = {
-      scoreDelta: 500,
-      removedByColor: [9, 0, 0, 0, 0, 0],
-      clearedObstacles: { lock: 0, frost: 0, jelly: 0 },
-    } as unknown as ResolveResult;
+    const seen = {
+      byColor: [9, 0, 0, 0, 0, 0],
+      cleared: { lock: 0, frost: 0, jelly: 0 },
+      score: 500,
+    };
     const p = (goal: Goal, current: number, target: number) => ({
       goal,
       current,
@@ -147,8 +152,57 @@ describe('탐욕 봇 (SIM_BOT=greedy)', () => {
       done: current >= target,
     });
     const collect = { type: 'collect', color: 0, count: 10 } as const;
-    expect(moveValue(res, [p(collect, 8, 10)])).toBeCloseTo(2 * 3 + 500 / 10000);
-    expect(moveValue(res, [p(collect, 10, 10)])).toBeCloseTo(500 / 10000);
+    expect(moveValue(seen, [p(collect, 8, 10)])).toBeCloseTo(2 * 3 + 500 / 10000);
+    expect(moveValue(seen, [p(collect, 10, 10)])).toBeCloseTo(500 / 10000);
+  });
+
+  it('seenBeforeRefill: 리필 뒤 연쇄로만 나오는 제거·점수는 가치에 안 들어간다', () => {
+    const before = {
+      rows: 1,
+      cols: 3,
+      nextId: 9,
+      cells: [
+        { id: 1, color: 0 },
+        { id: 2, color: 0 },
+        { id: 3, color: null },
+      ],
+    } as unknown as Board;
+    const at = { r: 0, c: 0 };
+    const res = {
+      steps: [
+        [
+          {
+            type: 'remove',
+            blocks: [
+              { id: 1, at, bySpecial: false },
+              { id: 3, at, bySpecial: true },
+            ],
+          },
+          {
+            type: 'obstacle',
+            changes: [
+              { at, kind: 'jelly', hp: 0 },
+              { at, kind: 'frost', hp: 1 },
+            ],
+          },
+          { type: 'score', delta: 300, cascade: 0, at },
+          { type: 'refill', blocks: [] },
+        ],
+        [
+          { type: 'remove', blocks: [{ id: 2, at, bySpecial: false }] }, // 연쇄: 안 센다
+          { type: 'obstacle', changes: [{ at, kind: 'lock', hp: 0 }] },
+          { type: 'score', delta: 900, cascade: 1, at },
+        ],
+      ],
+    } as unknown as ResolveResult;
+    const seen = seenBeforeRefill(before, res);
+    expect(seen.byColor).toEqual([1, 0, 0, 0, 0, 0]); // id 3(color null)과 연쇄 id 2는 제외
+    expect(seen.cleared).toEqual({ lock: 0, frost: 0, jelly: 1 }); // hp 1짜리 frost, 연쇄의 lock 제외
+    expect(seen.score).toBe(300);
+    const collect = { type: 'collect', color: 0, count: 5 } as const;
+    expect(moveValue(seen, [{ goal: collect, current: 0, target: 5, done: false }])).toBeCloseTo(
+      3 + 300 / 10000,
+    );
   });
 
   it('유효한 수가 없으면 findHint로 넘어간다', () => {

@@ -20,17 +20,7 @@ const kindsIn = (s: StageDef): Set<ObstacleKind> => {
 const range = (from: number, to: number) => stages.filter((s) => s.id >= from && s.id <= to);
 
 describe('story.json 30개', () => {
-  it('스키마를 통과하고 id가 1~30 순서다', () => {
-    expect(stages.map((s) => s.id)).toEqual(Array.from({ length: 30 }, (_, i) => i + 1));
-  });
-
-  it('별 기준이 오름차순이다 (별 1 < 별 2 < 별 3)', () => {
-    for (const s of stages) {
-      const [a, b, c] = s.stars;
-      expect(a, `#${s.id} 별1<별2`).toBeLessThan(b);
-      expect(b, `#${s.id} 별2<별3`).toBeLessThan(c);
-    }
-  });
+  // 30개·id 1~30·스키마·별 오름차순은 stories.test.ts
 
   describe('장애물 첫 등장 순서 (있으면 그 구간 이후에만)', () => {
     it.each([
@@ -73,9 +63,32 @@ describe('story.json 30개', () => {
       for (const s of range(16, 20)) expect(s.colors, `#${s.id}`).toBeGreaterThanOrEqual(5);
     });
 
-    // PLAN2 6.6에만 있고 SPEC 6절에는 없는 값이라 확정되면 켠다
-    it.todo('11~15번은 5색이다 (PLAN2 6.6)');
-    it.todo('21~30번은 6색이다 (PLAN2 6.6)');
+    // 새 데이터(PLAN2 6.6)가 들어오면 켠다. 지금 story.json에서는 실패한다 (22·26번 5색)
+    it.skip('11~15번은 5색, 21~30번은 6색이다 (PLAN2 6.6)', () => {
+      for (const s of range(11, 15)) expect(s.colors, `#${s.id}`).toBe(5);
+      for (const s of range(21, 30)) expect(s.colors, `#${s.id}`).toBe(6);
+    });
+  });
+
+  describe('이동 수 (PLAN2 6.6)', () => {
+    // 1~10번의 v0.1(W4-27) 이동 수. 재조정 전 값이라 story.json이 바뀐 뒤에도 기준이다
+    const V01_MOVES = [38, 38, 33, 38, 33, 33, 30, 30, 27, 27];
+
+    // 새 데이터가 들어오면 켠다. 지금은 v0.1 값 그대로라 실패한다
+    it.skip('1~10번은 v0.1 이동의 85~90%다', () => {
+      for (const s of range(1, 10)) {
+        const base = V01_MOVES[s.id - 1]!;
+        expect(s.moves, `#${s.id}`).toBeGreaterThanOrEqual(Math.floor(base * 0.85));
+        expect(s.moves, `#${s.id}`).toBeLessThanOrEqual(Math.ceil(base * 0.9));
+      }
+    });
+
+    it.skip('11~30번은 25~32다', () => {
+      for (const s of range(11, 30)) {
+        expect(s.moves, `#${s.id}`).toBeGreaterThanOrEqual(25);
+        expect(s.moves, `#${s.id}`).toBeLessThanOrEqual(32);
+      }
+    });
   });
 
   describe('시작 보드', () => {
