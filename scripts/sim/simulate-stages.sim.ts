@@ -5,7 +5,7 @@
 import { it } from 'vitest';
 import storyRaw from '../../public/stages/story.json?raw';
 import { colorName, parseStory, type Goal, type StageDef } from '../../src/data/stageSchema';
-import { measureStage } from './stageSim';
+import { measureStage, summarizeObstacles } from './stageSim';
 
 const env = import.meta.env as Record<string, string | undefined>;
 const games = Number(env.SIM_GAMES) || 300;
@@ -27,14 +27,17 @@ it(`스토리 자동 플레이 ${games}판씩`, { timeout: 600_000 }, () => {
   // 스테이지마다 같은 seed 목록 (1..games)
   const seeds = Array.from({ length: games }, (_, i) => i + 1);
   const rows = [
-    '| # | 색 | 이동 | 미션 | 클리어율 | 전체 중간값 | 클리어 판 50% / 80% | 별 (1 / 2 / 3) | 별 ≥1 / ≥2 / ≥3 |',
-    '|---|---|---|---|---|---|---|---|---|',
+    '| # | 색 | 이동 | 미션 | 장애물 | 클리어율 | 남은 장애물 | 전체 중간값 | 클리어 판 50% / 80% | 70% / 95% | 별 (1 / 2 / 3) | 별 ≥1 / ≥2 / ≥3 |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|',
   ];
   for (const stage of stages) {
     const s = measureStage(stage, seeds);
     rows.push(
       `| ${stage.id} | ${stage.colors} | ${stage.moves} | ${stage.goals.map(goalText).join(' + ')} | ` +
-        `${pct(s.clearRate)} | ${num(s.medianScore)} | ${num(s.clearP50)} / ${num(s.clearP80)} | ` +
+        `${summarizeObstacles(stage.layers)} | ${pct(s.clearRate)} | ` +
+        `${s.avgObstacleLeft === undefined ? '-' : s.avgObstacleLeft.toFixed(1)} | ` +
+        `${num(s.medianScore)} | ${num(s.clearP50)} / ${num(s.clearP80)} | ` +
+        `${num(s.clearP70)} / ${num(s.clearP95)} | ` +
         `${stage.stars.map(num).join(' / ')} | ${s.starRates.map(pct).join(' / ')} |`,
     );
   }

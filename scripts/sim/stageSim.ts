@@ -3,6 +3,7 @@
 
 import { createInitialState, resolveSwap } from '../../src/core/engine';
 import { findHint } from '../../src/core/moves';
+import type { CellLayer } from '../../src/core/types';
 import type { StageDef } from '../../src/data/stageSchema';
 import { StoryMode } from '../../src/modes/StoryMode';
 
@@ -11,6 +12,8 @@ export interface GameOutcome {
   /** 최종 점수 (클리어면 남은 이동 보너스 포함) */
   score: number;
   stars: number;
+  /** 장애물 미션(clearObstacle·clearJelly)이 있으면 끝났을 때 남은 장애물 수 합. 없으면 undefined */
+  obstacleLeft?: number;
 }
 
 export interface StageStats {
@@ -22,6 +25,11 @@ export interface StageStats {
   /** 클리어한 판의 최종 점수 50%·80% 지점 (별 2·3 기준을 정할 때 본다) */
   clearP50: number;
   clearP80: number;
+  /** 클리어한 판의 최종 점수 70%·95% 지점 (R6 상향 별 2·3 기준용) */
+  clearP70: number;
+  clearP95: number;
+  /** 장애물 미션 판의 평균 남은 장애물 수. 장애물 미션이 없으면 undefined */
+  avgObstacleLeft?: number;
   /** 지금 stars 기준으로 별 1·2·3을 받은 비율 (전체 판 기준) */
   starRates: [number, number, number];
 }
@@ -45,7 +53,46 @@ export function playStage(stage: StageDef, seed: number): GameOutcome {
   }
   const result = mode.result();
   if (result.kind !== 'story') throw new Error('스토리 결과가 아니다');
-  return { cleared: result.cleared, score: result.score, stars: result.stars };
+  const left = obstacleLeft(mode.goalProgress());
+  return {
+    cleared: result.cleared,
+    score: result.score,
+    stars: result.stars,
+    ...(left === undefined ? {} : { obstacleLeft: left }),
+  };
+}
+
+/** 장애물 미션의 남은 수 합 (목표를 넘으면 0). 장애물 미션이 없으면 undefined */
+export function obstacleLeft(
+  progress: readonly { goal: { type: string }; current: number; target: number }[],
+): number | undefined {
+  const mine = progress.filter(
+    (g) => g.goal.type === 'clearObstacle' || g.goal.type === 'clearJelly',
+  );
+  if (mine.length === 0) return undefined;
+  return mine.reduce((sum, g) => sum + Math.max(0, g.target - g.current), 0);
+}
+
+/** 장애물 요약 (예: "잠금 6·얼음2×4·젤리 10"). 얼음·젤리는 겹수가 2 이상이면 "겹×칸수"로 쓴다. 없으면 "-" */
+export function summarizeObstacles(layers: readonly (CellLayer | null)[] | undefined): string {
+  if (!layers) return '-';
+  const lock = layers.filter((l) => l?.lock).length;
+  const count = (kind: 'frost' | 'jelly') => {
+    const byLayer = new Map<number, number>();
+    for (const l of layers) {
+      const n = l?.[kind];
+      if (n) byLayer.set(n, (byLayer.get(n) ?? 0) + 1);
+    }
+    return [...byLayer].sort(([a], [b]) => a - b);
+  };
+  const part = (name: string, groups: [number, number][]) =>
+    groups.map(([n, cells]) => (n === 1 ? `${name} ${cells}` : `${name}${n}×${cells}`));
+  const parts = [
+    ...(lock > 0 ? [`잠금 ${lock}`] : []),
+    ...part('얼음', count('frost')),
+    ...part('젤리', count('jelly')),
+  ];
+  return parts.length > 0 ? parts.join('·') : '-';
 }
 
 /** 정렬된 배열의 q 지점 (0~1). 비었으면 0 */
@@ -63,6 +110,7 @@ export function measureStage(stage: StageDef, seeds: readonly number[]): StageSt
     .filter((o) => o.cleared)
     .map((o) => o.score)
     .sort((a, b) => a - b);
+  const lefts = outcomes.flatMap((o) => (o.obstacleLeft === undefined ? [] : [o.obstacleLeft]));
   const rate = (pred: (o: GameOutcome) => boolean) =>
     outcomes.filter(pred).length / outcomes.length;
   return {
@@ -72,6 +120,11 @@ export function measureStage(stage: StageDef, seeds: readonly number[]): StageSt
     medianScore: quantile(all, 0.5),
     clearP50: quantile(clears, 0.5),
     clearP80: quantile(clears, 0.8),
+    clearP70: quantile(clears, 0.7),
+    clearP95: quantile(clears, 0.95),
+    ...(lefts.length > 0
+      ? { avgObstacleLeft: lefts.reduce((a, b) => a + b, 0) / lefts.length }
+      : {}),
     starRates: [rate((o) => o.stars >= 1), rate((o) => o.stars >= 2), rate((o) => o.stars >= 3)],
   };
 }
