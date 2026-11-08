@@ -38,7 +38,7 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 | `npm run icons` | `assets/app-icon/`의 원본 그림으로 Android 앱 아이콘(mipmap-*)을 다시 만든다 |
 | `npm run stages:sim` | 스토리 스테이지마다 자동 플레이를 300판씩 돌려 클리어율·점수·별 비율 표를 찍는다. `SIM_GAMES=1000`(판 수), `SIM_STAGES=11-20`(일부만)을 앞에 붙일 수 있다. `story.json`을 고친 뒤 난이도를 잴 때 |
 | `npm run poc:deno` | 랜덤 로그 1000개와 실제 게임 기록 6판을 Node와 Deno(배포 번들 `supabase/functions/_shared/replay.js`)로 다시 계산해 점수·판정·해시가 같은지 비교. Deno 필요 (`brew install deno`). 결과 `scripts/server-poc/RESULT.md` |
-| `npm run supabase:check` | Supabase 권한(RLS) 시험. 익명 사용자 둘과 비로그인으로 점수 표 쓰기·남의 기록 읽기가 막히는지 표로 보여 준다. `.env.local`과 대시보드 Anonymous Sign-ins가 필요. `-- .env.local --nickname`은 닉네임, `--scores`는 점수 제출 시험(약 70초)을 더한다 |
+| `npm run supabase:check` | Supabase 권한(RLS) 시험. 익명 사용자 둘과 비로그인으로 점수 표 쓰기·남의 기록 읽기가 막히는지 표로 보여 준다. `.env.local`과 대시보드 Anonymous Sign-ins가 필요. `-- .env.local --nickname`은 닉네임, `--scores`는 점수 제출 시험(약 70초), `--ranking`은 주간 랭킹 시험(약 60초)을 더한다 |
 | `npm run server:shared` | 닉네임 규칙(`src/online/nicknameRules.ts`·`bannedWords.ts`)을 서버 함수용 한 파일(`supabase/functions/_shared/nicknameRules.js`)로 다시 묶는다. 금칙어·규칙을 고친 뒤 꼭 실행하고 같이 커밋 (`:check`는 커밋본과 같은지만 본다, CI도 실행) |
 | `npm run functions:check` | Edge Function `set-nickname`·`start-run`·`submit-score` 타입 검사 (`deno check`). Deno 필요 |
 
@@ -671,6 +671,15 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 6. `?ranking` 없이(배포본과 같음) 경쟁 결과: 창이 뜨지 않는다
 7. 서버: `npm run supabase:check -- .env.local --nickname` → 44개 모두 PASS (금칙어·짧음 400, 같은 이름 다른 태그, 두 번째 설정 409, 토큰 없음 401, 허용 안 된 출처 차단)
 
+### V2-W3-04 주간 랭킹
+1. `npm run dev` → 메뉴 "주간 랭킹": 제목 아래 이번 주 기간("11월 2일(월) ~ 11월 8일(일)"), 목록은 점수 순, 1~3위 숫자는 금·은·동. 같은 점수는 같은 순위(1, 2, 2, 4)
+2. 기록이 없으면 하단 "이번 주 기록이 없어요". 경쟁 한 판 뒤 이름을 [나중에]로 미루면 하단 "N점 이름을 정하면 랭킹에 보여요" + [이름 정하기] (목록에는 안 보인다)
+3. [이름 정하기] → 결과 화면과 같은 입력 창 → 저장하면 목록에 내 줄이 연한 노랑으로 보이고 하단에 "내 순위 N위"
+4. 51위 이후면 50위 다음에 `⋯`, 그 뒤 내 위아래 5명. 가짜 응답으로 보기: DEV `?fakeranking=list`(60명·내가 57위), `empty`, `error`·`offline`(첫 요청 실패 → [다시 시도]하면 목록), `slow`, `nonick`, `norecord`
+5. Network Offline → 랭킹 "인터넷에 연결되면 랭킹을 볼 수 있어요"(요청 없음) → Online 후 [다시 시도] → 목록. 오프라인에서도 스토리·경쟁은 끝까지 되고 로컬 최고 점수가 바뀐다
+6. 경쟁 결과의 "랭킹 보기"로도 들어간다. [돌아가기]·Android 뒤로 가기는 메뉴로
+7. 서버: `npm run supabase:check -- .env.local --ranking` → 44개 모두 PASS (닉네임 없는 점수 목록 제외, 비로그인은 TOP만, 서버 주 = 기기 주, 먼 과거 주는 빈 목록)
+
 ### V2-W3-03 경쟁 점수 서버 검증
 1. 메뉴 → 경쟁: "준비 중…"이 잠깐 보인 뒤 시작한다 (서버가 seed를 준다). 60초를 끝까지 하면 결과 화면이 "랭킹에 올리는 중…" → "이번 주 최고 N점"
 2. 닉네임이 없는 브라우저면 그 뒤에 이름 입력 창이 뜬다 (제출이 성공했을 때만). 정하면 다음 판부터 안 뜬다
@@ -1258,6 +1267,15 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **CORS는 인증이 아니다**: 허용 출처만 브라우저 응답을 읽게 할 뿐, 토큰 검사는 따로 한다
 - **캔버스 위 HTML 입력**: Phaser에는 글자 입력이 없어 `<input>`을 덮는다. 한글 조합 중 Enter(`isComposing`)는 제출하지 않는다. 씬이 끝나면 DOM·리스너·타이머를 지운다 (`src/view/NicknamePrompt.ts`, `nicknamePromptState.ts` `shouldSubmitOnEnter`)
 - **배포 게이트**: 아직 점수 제출이 없어 창이 랭킹 등록으로 오해될 수 있으므로 `import.meta.env.DEV && ?ranking`일 때만 연결. 빌드에서 이 분기는 통째로 빠진다 (`ResultScene.askNickname`)
+
+### V2-W3-04 주간 랭킹
+- **창 함수(window function)**: `row_number()`로 나열 순번, `rank()`로 공동 순위를 한 번에 계산한다. 같은 점수의 나열은 `updated_at`(먼저 도달) 순 (`supabase/migrations/20261108120000_v2_w3_04_weekly_ranking.sql`)
+- **한 번의 호출로 여러 묶음**: TOP 50·내 위아래 5명·내 상태·주 키를 `section` 열로 나눠 한 결과에 담는다. 클라이언트는 `seq`로 합치고 중복을 없앤다 (`src/view/rankingRows.ts` `mergeRows`)
+- **시간은 서버가 정한다**: 이번 주를 `now() at time zone 'Asia/Seoul'`의 ISO 주로 DB가 계산하고, 빈 주에도 메타 행으로 알려 준다. 기기 시계가 틀려도 주가 맞다 (리뷰에서 빈 주만 기기 시각을 쓰던 구멍을 찾아 고침)
+- **security invoker 함수와 노출 범위**: 호출자 권한으로 읽고 user_id는 내보내지 않는다. 내 줄은 `auth.uid()`와 비교한 `is_me`로만 구분
+- **늦은 응답 버리기**: 요청마다 token을 올리고 응답 때 비교해, [새로고침]을 연달아 누르거나 화면을 떠난 뒤 온 옛 응답을 무시한다 (`src/scenes/RankingScene.ts`)
+- **의존 방향을 지키는 타입 검사**: view는 online을 import하지 않아 타입이 두 곳에 있다. scenes에서 서로 대입 가능한지 컴파일 때 확인해 어긋나면 빌드가 실패한다 (`src/scenes/rankingClient.ts`)
+- **상태를 먼저 고르고 그리기**: 응답 → `selectView`(offline·error·empty·list)를 순수 함수로 정한 뒤 화면은 그 상태만 그린다
 
 ### V2-W3-03 경쟁 점수 서버 검증
 - **서버가 seed를 정한다**: `start-run`이 seed와 run을 발급하고, 제출 때는 run에 저장된 seed로 다시 돌린다. 클라이언트 seed를 믿지 않는다 (`supabase/functions/start-run/handler.ts`)
