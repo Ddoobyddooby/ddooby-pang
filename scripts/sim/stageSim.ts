@@ -3,7 +3,7 @@
 
 import { createInitialState, resolveSwap } from '../../src/core/engine';
 import { findHint } from '../../src/core/moves';
-import type { CellLayer } from '../../src/core/types';
+import type { CellLayer, GameState, ResolveResult } from '../../src/core/types';
 import type { StageDef } from '../../src/data/stageSchema';
 import { StoryMode } from '../../src/modes/StoryMode';
 
@@ -34,8 +34,17 @@ export interface StageStats {
   starRates: [number, number, number];
 }
 
-/** 한 판: 끝날 때까지 첫 번째 힌트 수를 둔다 */
-export function playStage(stage: StageDef, seed: number): GameOutcome {
+/** 봇: 지금 상태에서 둘 수를 resolveSwap으로 풀어 돌려준다. 둘 수 없으면 null (판 중단) */
+export type Bot = (state: GameState, mode: StoryMode, stage: StageDef) => ResolveResult | null;
+
+/** 첫 번째 봇: findHint가 찾은 첫 수. 장애물·미션을 보지 않는다 */
+export const firstHintBot: Bot = (state) => {
+  const hint = findHint(state.board);
+  return hint ? resolveSwap(state, hint.a, hint.b) : null; // null은 resolveSwap이 셔플까지 해 두므로 오지 않는다
+};
+
+/** 한 판: 끝날 때까지 bot이 고른 수를 둔다 (기본 firstHintBot) */
+export function playStage(stage: StageDef, seed: number, bot: Bot = firstHintBot): GameOutcome {
   let state = createInitialState({
     rows: stage.rows,
     cols: stage.cols,
@@ -45,9 +54,8 @@ export function playStage(stage: StageDef, seed: number): GameOutcome {
   });
   const mode = new StoryMode(stage);
   while (!mode.isOver()) {
-    const hint = findHint(state.board);
-    if (!hint) break; // resolveSwap이 셔플까지 해 두므로 오지 않는다
-    const result = resolveSwap(state, hint.a, hint.b);
+    const result = bot(state, mode, stage);
+    if (!result) break;
     state = result.state;
     mode.onResolve(result);
   }
@@ -103,8 +111,12 @@ export function quantile(sorted: readonly number[], q: number): number {
 }
 
 /** seeds마다 한 판씩 */
-export function measureStage(stage: StageDef, seeds: readonly number[]): StageStats {
-  const outcomes = seeds.map((seed) => playStage(stage, seed));
+export function measureStage(
+  stage: StageDef,
+  seeds: readonly number[],
+  bot: Bot = firstHintBot,
+): StageStats {
+  const outcomes = seeds.map((seed) => playStage(stage, seed, bot));
   const all = outcomes.map((o) => o.score).sort((a, b) => a - b);
   const clears = outcomes
     .filter((o) => o.cleared)

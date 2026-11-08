@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { StageDef } from '../../src/data/stageSchema';
+import { createInitialState, resolveSwap } from '../../src/core/engine';
+import { findHint } from '../../src/core/moves';
+import type { ResolveResult } from '../../src/core/types';
+import { StoryMode } from '../../src/modes/StoryMode';
+import { greedyBot, moveValue, playStageGreedy } from '../../scripts/sim/greedyBot';
+import type { Goal, StageDef } from '../../src/data/stageSchema';
 import {
+  firstHintBot,
   measureStage,
   obstacleLeft,
   playStage,
@@ -104,4 +110,52 @@ it('젤리 미션 판은 남은 장애물 수를 돌려주고, 평균이 나온�
   expect(o.obstacleLeft).toBeLessThanOrEqual(16);
   expect(o.cleared).toBe(o.obstacleLeft === 0);
   expect(measureStage(jelly, [1, 2, 3]).avgObstacleLeft).toBeGreaterThanOrEqual(0);
+});
+
+describe('탐욕 봇 (SIM_BOT=greedy)', () => {
+  const jellyStage: StageDef = {
+    ...stage,
+    colors: 5,
+    moves: 12,
+    goals: [{ type: 'clearJelly' }],
+    layers: Array.from({ length: 64 }, (_, i) =>
+      i >= 40 && i < 48 ? { jelly: 1 as const } : null,
+    ),
+  };
+
+  it('같은 seed → 같은 결과', () => {
+    expect(playStageGreedy(jellyStage, 5)).toEqual(playStageGreedy(jellyStage, 5));
+  });
+
+  it('작은 젤리 판에서 첫 힌트 봇보다 남은 젤리가 평균적으로 적다', () => {
+    const seeds = Array.from({ length: 30 }, (_, i) => i + 1);
+    const first = measureStage(jellyStage, seeds, firstHintBot);
+    const greedy = measureStage(jellyStage, seeds, greedyBot);
+    expect(greedy.avgObstacleLeft!).toBeLessThan(first.avgObstacleLeft!);
+  });
+
+  it('moveValue: 끝난 미션은 세지 않고, 남은 양까지만 센다', () => {
+    const res = {
+      scoreDelta: 500,
+      removedByColor: [9, 0, 0, 0, 0, 0],
+      clearedObstacles: { lock: 0, frost: 0, jelly: 0 },
+    } as unknown as ResolveResult;
+    const p = (goal: Goal, current: number, target: number) => ({
+      goal,
+      current,
+      target,
+      done: current >= target,
+    });
+    const collect = { type: 'collect', color: 0, count: 10 } as const;
+    expect(moveValue(res, [p(collect, 8, 10)])).toBeCloseTo(2 * 3 + 500 / 10000);
+    expect(moveValue(res, [p(collect, 10, 10)])).toBeCloseTo(500 / 10000);
+  });
+
+  it('유효한 수가 없으면 findHint로 넘어간다', () => {
+    const state = createInitialState({ rows: 8, cols: 8, colors: 4, seed: 2 });
+    // 후보 스왑이 하나도 없는 1×1 판으로 알려 주면 탐욕 후보가 0개 → findHint 수를 둔다
+    const res = greedyBot(state, new StoryMode(stage), { ...stage, rows: 1, cols: 1 });
+    const hint = findHint(state.board)!;
+    expect(res).toEqual(resolveSwap(state, hint.a, hint.b));
+  });
 });
