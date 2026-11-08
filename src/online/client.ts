@@ -10,6 +10,9 @@ export interface ProfileRow {
 /** Edge Function 응답. 연결 자체가 안 되면(오프라인·CORS 차단) 'network' */
 export type FunctionResult = { status: number; body: unknown } | 'network';
 
+/** DB 함수(rpc) 응답. 권한·4xx·5xx·연결 실패는 구분하지 않고 'error' (throw하지 않는다) */
+export type RpcResult = { data: unknown } | 'error';
+
 export interface OnlineBackend {
   /** 저장된 세션의 사용자 ID. 세션이 없으면 null. 실패는 throw */
   getSessionUserId(): Promise<string | null>;
@@ -21,6 +24,8 @@ export interface OnlineBackend {
   fetchProfile(userId: string): Promise<ProfileRow | null>;
   /** Edge Function 호출 (세션 토큰은 클라이언트가 붙인다) */
   callFunction(name: string, body: Record<string, unknown>): Promise<FunctionResult>;
+  /** DB 함수 호출 (PostgREST rpc) */
+  callRpc(name: string, args: Record<string, unknown>): Promise<RpcResult>;
 }
 
 export function backendFromClient(
@@ -69,6 +74,14 @@ export function backendFromClient(
       if (error instanceof errors.FunctionsFetchError) return 'network';
       // FunctionsRelayError 등: 함수까지 못 간 서버 쪽 오류
       return { status: 502, body: null };
+    },
+    async callRpc(name, args) {
+      try {
+        const { data, error } = await client.rpc(name, args);
+        return error ? 'error' : { data };
+      } catch {
+        return 'error';
+      }
     },
   };
 }

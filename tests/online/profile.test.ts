@@ -29,6 +29,7 @@ function backendWith(result: FunctionResult | (() => Promise<FunctionResult>)) {
     onSignedOut: vi.fn(),
     fetchProfile: vi.fn(async () => null),
     callFunction: vi.fn(typeof result === 'function' ? result : async () => result),
+    callRpc: vi.fn(async () => 'error' as const),
   } satisfies OnlineBackend;
 }
 

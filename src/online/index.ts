@@ -3,6 +3,7 @@
 import { createAccount, type Account, type OnlineStatus } from './account';
 import { createDefaultBackend, hasOnlineKeys } from './client';
 import { createProfile, type MyProfile, type Profile, type SetNicknameResult } from './profile';
+import { createRanking, type Ranking, type RankingResult } from './ranking';
 import {
   createRuns,
   type Runs,
@@ -12,10 +13,13 @@ import {
 } from './runs';
 // 자동 생성 상수 (import 없음). online이 게임 계층(core)에 기대는 것은 아니다
 import { CORE_VERSION } from '../replay/coreVersion';
+// import 없는 순수 함수. 빈 주(0행)일 때 이번 주 키를 정하는 데만 쓴다
+import { weekKey } from '../replay/weekKey';
 
 export type { OnlineStatus } from './account';
 export type { MyProfile, SetNicknameErrorCode, SetNicknameResult } from './profile';
 export type { RunMove, StartedRun, SubmitOutcome, SubmitPayload } from './runs';
+export type { RankingMe, RankingResult, RankingRow } from './ranking';
 export {
   checkNickname,
   formatTag,
@@ -23,7 +27,7 @@ export {
   type NicknameErrorCode,
 } from './nicknameRules';
 
-let instance: { account: Account; profile: Profile; runs: Runs } | null = null;
+let instance: { account: Account; profile: Profile; runs: Runs; ranking: Ranking } | null = null;
 
 function online() {
   if (!instance) {
@@ -40,6 +44,7 @@ function online() {
       account,
       profile: createProfile(account),
       runs: createRuns(account, { version: CORE_VERSION, isOnline }),
+      ranking: createRanking(account, { isOnline, currentWeek: () => weekKey(Date.now()) }),
     };
   }
   return instance;
@@ -71,4 +76,9 @@ export function startRun(): Promise<StartedRun | null> {
 /** 경쟁 모드 점수 제출 (최대 10초). 절대 throw하지 않는다 */
 export function submitScore(runId: string, payload: SubmitPayload): Promise<SubmitOutcome> {
   return online().runs.submitScore(runId, payload);
+}
+
+/** 주간 랭킹 (최대 5초). week가 없으면 서버 시각의 이번 주. 절대 throw하지 않는다 */
+export function fetchRanking(week?: string): Promise<RankingResult> {
+  return online().ranking.fetchRanking(week);
 }

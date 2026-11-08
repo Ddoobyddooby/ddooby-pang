@@ -1,10 +1,12 @@
 // V2-W3-01 권한(RLS·GRANT) 시험: 원격 개발 프로젝트에 익명 사용자 A·B와 비로그인 anon으로 접속해
 // PLAN2 6.2 시험 ①~④와 anon 쓰기 차단을 확인한다. publishable key만 쓴다 (npm test에 넣지 않음).
 //
-//   npm run supabase:check [-- <env 파일 경로>] [--nickname] [--scores]   (기본값 .env.local)
+//   npm run supabase:check [-- <env 파일 경로>] [--nickname] [--scores] [--ranking]   (기본값 .env.local)
 //
 // --nickname: Edge Function set-nickname 시험을 더한다 (V2-W3-02, 함수 배포 뒤에만).
 // --scores: start-run·submit-score 시험 ①~⑪을 더한다 (V2-W3-03, 마이그레이션·함수 배포 뒤에만. 약 70초).
+// --ranking: DB 함수 weekly_ranking 시험을 더한다 (V2-W3-04, 마이그레이션 뒤에만. 기록을 --scores 경로로
+//   만들려고 약 60초 기다린다). 닉네임 있는 시험 사용자(`시험R` 접두어)의 기록은 이번 주 랭킹에 보인다.
 // 시험이 만든 익명 계정, stage_attempts 행(stage_id 999), `시험` 접두어 닉네임, 이번 주 runs·weekly_scores 행
 // (닉네임 없는 시험 계정이라 랭킹에는 보이지 않는다)은 개발 프로젝트에 남는다.
 import { readFileSync } from 'node:fs';
@@ -61,6 +63,53 @@ function loadEnv(path: string): { url: string; key: string } {
   return { url, key };
 }
 
+async function tokenOf(client: SupabaseClient): Promise<string> {
+  const { data } = await client.auth.getSession();
+  if (!data.session) throw new Error('세션 없음');
+  return data.session.access_token;
+}
+
+interface FnResult {
+  status: number;
+  body: Record<string, unknown>;
+}
+
+/** Edge Function 호출. 상태 코드·본문을 보려고 supabase-js 대신 fetch로 부른다 */
+async function callFn(
+  url: string,
+  key: string,
+  name: string,
+  body: unknown,
+  token: string,
+): Promise<FnResult> {
+  const res = await fetch(`${url}/functions/v1/${name}`, {
+    method: 'POST',
+    headers: {
+      apikey: key,
+      'Content-Type': 'application/json',
+      Origin: ALLOWED_ORIGIN,
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  let parsed: unknown = null;
+  try {
+    parsed = await res.json();
+  } catch {
+    // 게이트웨이 응답은 JSON이 아닐 수 있다
+  }
+  const obj = typeof parsed === 'object' && parsed !== null ? parsed : {};
+  return { status: res.status, body: obj as Record<string, unknown> };
+}
+
+/** 실제 브라우저 기록 한 판의 move (판정 기준을 지키는 시각·간격). 서버 seed에 그대로 둔다 */
+function fixtureMoves(): ReplayMove[] {
+  const fixture = JSON.parse(
+    readFileSync(join(import.meta.dirname, '../server-poc/fixtures/browser-runs.json'), 'utf8'),
+  ) as { runs: { moves: ReplayMove[] }[] };
+  return fixture.runs[0]!.moves;
+}
+
 function newClient(url: string, key: string): SupabaseClient {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
@@ -112,6 +161,7 @@ async function main(): Promise<number> {
   const envPath = args.find((arg) => !arg.startsWith('--')) ?? '.env.local';
   const withNickname = args.includes('--nickname');
   const withScores = args.includes('--scores');
+  const withRanking = args.includes('--ranking');
   const { url, key } = loadEnv(envPath);
 
   const anon = newClient(url, key);
@@ -302,6 +352,7 @@ async function main(): Promise<number> {
 
   if (withNickname) await nicknameChecks({ url, key, a, b, idA, check });
   if (withScores) await scoreChecks({ url, key, a, b, idA, check, anon });
+  if (withRanking) await rankingChecks({ url, key, anon, check });
 
   console.log('| # | 항목 | 기대 | 결과 | 상세 |');
   console.log('|---|---|---|---|---|');
@@ -327,11 +378,6 @@ interface NicknameContext {
 /** set-nickname 시험 (PLAN2 6.3). 상태 코드·CORS 헤더를 보려고 supabase-js 대신 fetch로 부른다 */
 async function nicknameChecks({ url, key, a, b, idA, check }: NicknameContext): Promise<void> {
   const endpoint = `${url}/functions/v1/set-nickname`;
-  const tokenOf = async (client: SupabaseClient) => {
-    const { data } = await client.auth.getSession();
-    if (!data.session) throw new Error('세션 없음');
-    return data.session.access_token;
-  };
   const tokenA = await tokenOf(a);
   const tokenB = await tokenOf(b);
   // 같은 이름·태그 시험은 앞 항목 결과(B에 닉네임이 생겼는지)에 기대지 않게 닉네임 없는 새 사용자 C로 한다
@@ -445,54 +491,21 @@ interface ScoreContext extends Omit<NicknameContext, 'key'> {
   anon: SupabaseClient;
 }
 
-interface FnResult {
-  status: number;
-  body: Record<string, unknown>;
-}
-
 /**
  * start-run·submit-score 시험 (PLAN2 6.4 ①~⑪). A의 run 넷(정상·점수 조작·낮은 점수·버전 다름)을 먼저 발급받고
  * 서버 시각 하한(58초)이 지나도록 60초 기다린 뒤 한꺼번에 제출한다. 만료(30분)는 단위 테스트로만 본다
  */
 async function scoreChecks({ url, key, a, b, idA, check, anon }: ScoreContext): Promise<void> {
-  const tokenOf = async (client: SupabaseClient) => {
-    const { data } = await client.auth.getSession();
-    if (!data.session) throw new Error('세션 없음');
-    return data.session.access_token;
-  };
   const tokenA = await tokenOf(a);
   const tokenB = await tokenOf(b);
-  const call = async (name: string, body: unknown, token: string): Promise<FnResult> => {
-    const res = await fetch(`${url}/functions/v1/${name}`, {
-      method: 'POST',
-      headers: {
-        apikey: key,
-        'Content-Type': 'application/json',
-        Origin: ALLOWED_ORIGIN,
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
-    let parsed: unknown = null;
-    try {
-      parsed = await res.json();
-    } catch {
-      // 게이트웨이 응답은 JSON이 아닐 수 있다
-    }
-    const obj = typeof parsed === 'object' && parsed !== null ? parsed : {};
-    return { status: res.status, body: obj as Record<string, unknown> };
-  };
+  const call = (name: string, body: unknown, token: string) => callFn(url, key, name, body, token);
   const show = (r: FnResult) => `${r.status} ${JSON.stringify(r.body)}`;
   const expectCode = (r: FnResult, status: number, code: string): Outcome => ({
     pass: r.status === status && r.body.code === code,
     detail: show(r),
   });
 
-  // 실제 브라우저 기록 한 판의 move를 서버 seed에 그대로 둔다 (판정 기준을 지키는 시각·간격)
-  const fixture = JSON.parse(
-    readFileSync(join(import.meta.dirname, '../server-poc/fixtures/browser-runs.json'), 'utf8'),
-  ) as { runs: { moves: ReplayMove[] }[] };
-  const moves = fixture.runs[0]!.moves;
+  const moves = fixtureMoves();
 
   interface Started {
     runId: string;
@@ -647,6 +660,151 @@ async function scoreChecks({ url, key, a, b, idA, check, anon }: ScoreContext): 
     const res = await anon.rpc('record_weekly_best', rpcArgs);
     return { pass: res.error !== null, detail: res.error ? errText(res) : '호출됨' };
   });
+}
+
+interface RankingContext {
+  url: string;
+  key: string;
+  anon: SupabaseClient;
+  check: NicknameContext['check'];
+}
+
+interface RankingRpcRow {
+  week_key: string;
+  section: string;
+  seq: number | null;
+  rank: number | null;
+  best_score: number;
+  is_me: boolean;
+}
+
+/**
+ * weekly_ranking 시험 (PLAN2 6.5). 닉네임 있는 R과 닉네임 없는 N이 --scores와 같은 경로(start-run → 60초 →
+ * submit-score)로 이번 주 기록을 만든 뒤 R·N·anon으로 부른다
+ */
+async function rankingChecks({ url, key, anon, check }: RankingContext): Promise<void> {
+  const r = newClient(url, key);
+  const n = newClient(url, key);
+  const idR = await signIn(r, 'R');
+  await signIn(n, 'N');
+  const tokenR = await tokenOf(r);
+  const tokenN = await tokenOf(n);
+  const moves = fixtureMoves();
+  const show = (res: FnResult) => `${res.status} ${JSON.stringify(res.body)}`;
+
+  const nameR = `시험R${String(Math.floor(Math.random() * 100)).padStart(2, '0')}`;
+  await check('랭', `R 닉네임 설정 (${nameR})`, '200', async () => {
+    const res = await callFn(url, key, 'set-nickname', { nickname: nameR }, tokenR);
+    return { pass: res.status === 200, detail: show(res) };
+  });
+
+  // 기록 만들기: run 발급 → 서버 시각 하한을 넘기고 제출
+  const started: Record<'R' | 'N', { runId: string; seed: number } | null> = { R: null, N: null };
+  for (const [who, token] of [
+    ['R', tokenR],
+    ['N', tokenN],
+  ] as const) {
+    const res = await callFn(url, key, 'start-run', { version: CORE_VERSION }, token);
+    const { runId, seed } = res.body;
+    if (res.status === 200 && typeof runId === 'string' && Number.isInteger(seed)) {
+      started[who] = { runId, seed: seed as number };
+    }
+  }
+  const waitMs = JUDGE.minServerElapsedMs + 2_000;
+  console.error(`기록을 만들려고 ${Math.ceil(waitMs / 1000)}초 기다린다…`);
+  await sleep(waitMs);
+  const best: Record<'R' | 'N', number | null> = { R: null, N: null };
+  for (const [who, token] of [
+    ['R', tokenR],
+    ['N', tokenN],
+  ] as const) {
+    await check('랭', `${who} 기록 만들기 (start-run → submit-score)`, '200', async () => {
+      const run = started[who];
+      if (!run) return { pass: false, detail: 'start-run 실패' };
+      const clientScore = replayTimeAttack(run.seed, moves).score;
+      const res = await callFn(
+        url,
+        key,
+        'submit-score',
+        { runId: run.runId, moves, clientScore, version: CORE_VERSION },
+        token,
+      );
+      if (res.status === 200 && typeof res.body.best === 'number') best[who] = res.body.best;
+      return { pass: best[who] !== null, detail: show(res) };
+    });
+  }
+
+  const rpc = async (client: SupabaseClient, week?: string) => {
+    const res = await client.rpc('weekly_ranking', week === undefined ? {} : { p_week: week });
+    if (res.error) throw new Error(errText(res));
+    return res.data as RankingRpcRow[];
+  };
+  const listed = (rows: RankingRpcRow[]) => rows.filter((x) => x.section !== 'me');
+  const meOf = (rows: RankingRpcRow[]) => rows.filter((x) => x.section === 'me');
+  const summary = (rows: RankingRpcRow[]) =>
+    `${rows.length}행 (top ${rows.filter((x) => x.section === 'top').length}, ` +
+    `around ${rows.filter((x) => x.section === 'around').length}, me ${JSON.stringify(meOf(rows))})`;
+
+  await check('랭', 'anon 호출', '성공, around·me 없음, is_me 모두 false', async () => {
+    const rows = await rpc(anon);
+    const pass = rows.every((x) => x.section === 'top' && x.is_me === false);
+    return { pass, detail: summary(rows) };
+  });
+  await check(
+    '랭',
+    'R(닉네임 있음) 호출',
+    '목록에 is_me 행, me.rank 있음·점수 = best',
+    async () => {
+      const rows = await rpc(r);
+      const me = meOf(rows);
+      const mine = listed(rows).filter((x) => x.is_me);
+      const pass =
+        me.length === 1 &&
+        Number.isInteger(me[0]!.rank) &&
+        me[0]!.best_score === best.R &&
+        mine.length >= 1 &&
+        mine.every((x) => x.seq === me[0]!.seq && x.best_score === best.R);
+      return { pass, detail: summary(rows) };
+    },
+  );
+  await check('랭', 'N(닉네임 없음) 호출', '목록에 없음, me.rank null·점수 = best', async () => {
+    const rows = await rpc(n);
+    const me = meOf(rows);
+    const pass =
+      me.length === 1 &&
+      me[0]!.rank === null &&
+      me[0]!.best_score === best.N &&
+      !listed(rows).some((x) => x.is_me) &&
+      !rows.some((x) => x.section === 'around');
+    return { pass, detail: summary(rows) };
+  });
+  await check('랭', '먼 과거 주 (2000-W01)', '0행', async () => {
+    const rows = await rpc(r, '2000-W01');
+    return { pass: rows.length === 0, detail: `${rows.length}행` };
+  });
+
+  const week = (await rpc(r))[0]?.week_key ?? TEST_WEEK_KEY;
+  await check('랭', 'R weekly_scores 직접 INSERT', '실패', async () =>
+    denied(
+      await r
+        .from('weekly_scores')
+        .insert({ user_id: idR, week_key: TEST_WEEK_KEY, best_score: 999999, run_id: NIL_UUID })
+        .select(),
+    ),
+  );
+  await check('랭', 'R weekly_scores 직접 UPDATE', '실패', async () =>
+    denied(
+      await r
+        .from('weekly_scores')
+        .update({ best_score: 999999 })
+        .eq('user_id', idR)
+        .eq('week_key', week)
+        .select(),
+    ),
+  );
+  await check('랭', 'R weekly_scores 직접 DELETE', '실패', async () =>
+    denied(await r.from('weekly_scores').delete().eq('user_id', idR).select()),
+  );
 }
 
 main().then(

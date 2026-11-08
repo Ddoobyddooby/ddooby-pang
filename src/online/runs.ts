@@ -51,8 +51,8 @@ export interface Runs {
   submitScore(runId: string, payload: SubmitPayload): Promise<SubmitOutcome>;
 }
 
-/** ms 안에 끝나지 않거나 throw하면 fallback */
-function within<T>(ms: number, fallback: T, work: () => Promise<T>): Promise<T> {
+/** ms 안에 끝나지 않거나 throw하면 fallback (ranking.ts도 쓴다) */
+export function within<T>(ms: number, fallback: T, work: () => Promise<T>): Promise<T> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve(fallback), ms);
     work().then(
