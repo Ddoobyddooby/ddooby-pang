@@ -1,6 +1,7 @@
 // public/stages/story.json 30개의 데이터 규칙 (PLAN2 6.6, SPEC 6절). 숫자 조정(V2-W4-01)이 이 규칙을 깨지 않게 막는다.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { HUD } from '../../src/config';
 import { createInitialState } from '../../src/core/engine';
 import { findHint } from '../../src/core/moves';
 import { parseStory, type ObstacleKind, type StageDef } from '../../src/data/stageSchema';
@@ -21,6 +22,12 @@ const range = (from: number, to: number) => stages.filter((s) => s.id >= from &&
 
 describe('story.json 30개', () => {
   // 30개·id 1~30·스키마·별 오름차순은 stories.test.ts
+
+  it('미션 수가 화면 줄 수(HUD.story.maxGoalLines) 이하다', () => {
+    for (const s of stages) {
+      expect(s.goals.length, `#${s.id}`).toBeLessThanOrEqual(HUD.story.maxGoalLines);
+    }
+  });
 
   describe('장애물 첫 등장 순서 (있으면 그 구간 이후에만)', () => {
     it.each([
