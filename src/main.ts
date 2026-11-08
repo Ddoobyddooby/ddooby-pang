@@ -8,7 +8,7 @@ import { ResultScene } from './scenes/ResultScene';
 import { RankingScene } from './scenes/RankingScene';
 import { StageMapScene } from './scenes/StageMapScene';
 import { renderAppIconPage } from './dev/appIcon';
-import { onlineStatus, setNickname, startRun, submitScore } from './online';
+import { fetchRanking, onlineStatus, setNickname, startRun, submitScore } from './online';
 import { toPromptResult } from './scenes/nicknameGate';
 import { setRankingClient } from './scenes/rankingClient';
 import { setRunClient } from './scenes/runClient';
@@ -34,9 +34,9 @@ if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('icon
     ? new URLSearchParams(window.location.search).get('fakerun')
     : null;
   if (fakeRun !== null) void import('./dev/fakeRun').then((m) => m.installFakeRun(fakeRun));
-  // 주간 랭킹: fetchRanking은 claude-1의 src/online/ranking.ts가 오면 여기서 꽂는다 (그 전에는 "연결 불가")
+  // 주간 랭킹: 키 없음·오프라인이면 요청 없이 offline (src/online/ranking.ts)
   setRankingClient({
-    fetchRanking: () => Promise.resolve({ kind: 'offline' }),
+    fetchRanking: () => fetchRanking(),
     setNickname: (name) => setNickname(name).then(toPromptResult),
   });
   // DEV ?fakeranking=<list|empty|error|slow|offline|nonick|norecord>: 서버 없는 랭킹 화면 확인
