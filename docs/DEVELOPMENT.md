@@ -679,6 +679,13 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 5. 캡처: `adb exec-out screencap -p > 파일.png`. 화면 좌표 = 캡처 픽셀 좌표라 `adb shell input tap X Y`로 누를 수 있다
 6. 앱 WebView 안 값 보기: Chrome 주소창 `chrome://inspect` → 기기의 `https://localhost` → inspect (디버그 APK만 된다)
 
+### V2-W4-02 스토리 플레이 기록 (stage_attempts)
+1. `npm run dev` → `?attemptlog&stage=1`로 한 판을 끝까지(클리어 또는 이동 다 쓰기) 한다. 개발 서버에서는 `?attemptlog`가 있어야 기록을 보낸다
+2. Supabase 대시보드 Table Editor → `stage_attempts`에 방금 판 행이 생긴다 (`stage_id`·`result`·`moves_left`·`score`·`stars`·`attempt_no`, `user_id`·`created_at`은 서버가 채움)
+3. 같은 스테이지를 한 번 더 끝까지 하면 `attempt_no`가 1 오른다. 중간에 지도로 나가면 오르지 않는다
+4. 와이파이를 끄고 스토리를 끝까지 해도 결과 화면이 정상이다 (그 판 기록은 버린다)
+5. `?demo`나 `?obstacles` 같은 시험 판은 보내지 않는다. 배포된 게임은 `?attemptlog` 없이 항상 보낸다
+
 ### V2-W4-01 스토리 1~30 재조정
 1. `npm run dev` → 스토리 지도. 1~10번은 장애물 없이 예전보다 이동이 조금 적다
 2. `?stage=11`: 미션 카드에 "자물쇠 N개 풀기"가 처음 나온다. `?stage=16`은 얼음, `?stage=21`은 젤리("젤리 모두 없애기")가 처음 나온다. `?stage=26`·`?stage=30`은 세 가지가 섞이고 얼음 3겹이 있다
@@ -1288,6 +1295,13 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **`clientHeight`는 padding을 포함한다**: Phaser Scale은 부모 크기로 캔버스를 만든다. 부모에 padding을 주면 캔버스가 그만큼 밀린다. 부모 요소 자체를 안전 영역 안에 두는(`position: fixed` + `top/bottom: env(...)`) 쪽이 맞다 (`index.html` `#game`)
 - **CDP로 원격 측정**: `adb forward tcp:9333 localabstract:webview_devtools_remote_<pid>` → `http://localhost:9333/json`의 WebSocket으로 `Runtime.evaluate`. 화면 안의 실제 값(inset, 요소 크기)을 숫자로 확인한다
 - **디버그 APK vs 릴리스**: 디버그는 개발용 서명이라 USB로 바로 설치·디버깅되지만 스토어에는 못 올린다. 스토어용은 직접 만든 키로 서명한 릴리스 빌드
+
+### V2-W4-02 스토리 플레이 기록 (stage_attempts)
+- **보내고 잊기(fire-and-forget)**: 기록 전송을 기다리지 않고, 실패해도 버린다. 참고용 자료라 게임 진행이 우선이다 (`src/online/attempts.ts`, `GameScene.finish`)
+- **시간 제한 래퍼**: `within(ms, fallback, work)`로 느린 네트워크도 5초 뒤에 포기한다 (`src/online/runs.ts`)
+- **서버 기본값 열**: `user_id`(`auth.uid()`)·`id`·`created_at`은 보내지 않고 DB가 채운다. 열 단위 INSERT 권한으로 클라이언트가 못 정하게 막았다 (V2-W3-01)
+- **저장 형식 확장의 하위 호환**: 옛 저장값에 없는 `story.attempts`는 `parseSave`가 `{}`로 채운다. version을 올리지 않고 읽는 쪽에서 기본값을 준다 (`src/storage/progress.ts`)
+- **자료 오염 막기**: 개발 중 플레이·자동 플레이·시험 스테이지는 보내지 않는다 (`src/scenes/attemptLog.ts` `shouldLogAttempt`)
 
 ### V2-W4-01 스토리 1~30 재조정
 - **시뮬레이션으로 난이도 맞추기**: 봇을 seed 1~1000으로 돌려 클리어율·점수 분포를 재고 데이터(이동·미션 양)를 고친다. 봇은 사람과 다르므로 절대값이 아니라 "판끼리의 상대 난이도"를 맞추는 도구다 (`scripts/sim/stageSim.ts`)
