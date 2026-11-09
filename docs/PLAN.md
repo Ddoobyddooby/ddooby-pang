@@ -448,6 +448,25 @@ PoC(PLAN2 5.8, `scripts/server-poc/`)의 리플레이·판정을 src로 옮겨 �
 
 - **4주차 재조정**: 1~30 데이터(이동·장애물·색), `npm run stages:sim`에 장애물 반영, **별 3개 기준 상향 (FEEDBACK R6)**, 플레이 로그 → 조카 2차 테스트
 
+### 6.7 V2-W4-02 `stage_attempts` 플레이 로그 (SPEC 6.1)
+
+**결정 (2026-11-09 사용자)**
+- 오프라인·실패한 기록은 **버린다** (모아 두었다 나중에 보내지 않는다). 게임은 기다리지 않는다
+- `attempt_no`: 스테이지별로 **끝까지 한 판(클리어·실패)만** 센다. 중간에 나간 판(일시정지 → 지도·다시하기)은 세지 않는다. 기기의 저장값에 스테이지별 횟수를 둔다 (보내기에 실패해도 횟수는 오른다 → 서버에서 번호가 빠질 수 있다)
+
+**구조**
+| 파일 | 변경 |
+|---|---|
+| `src/storage/progress.ts` | `SaveData.story.attempts: Record<number, number>` 추가. `parseSave`는 없거나 잘못된 값을 버리고 `{}`로 채운다 (version 1 그대로, 기존 `bestStars` 방식). `applyModeResult`가 스토리 결과마다 그 스테이지 횟수 +1 |
+| `src/online/attempts.ts` | `logStageAttempt(row)`: 키 없음·오프라인·계정 없음이면 바로 끝. 아니면 `stage_attempts`에 INSERT (`user_id`·`created_at`·`id`는 서버 기본값, 클라이언트가 보내지 않음). 최대 5초, 어떤 실패도 throw하지 않는다 |
+| `src/online/index.ts` | `logStageAttempt` 공개 |
+| `src/scenes/GameScene.ts` `finish()` | 스토리 결과면 저장 뒤 `logStageAttempt({stage_id, result: cleared ? 'clear' : 'fail', moves_left, score, stars, attempt_no})`를 기다리지 않고 호출. `moves_left`는 끝난 순간 남은 이동 수(보너스로 바꾸기 전 값) |
+
+- **보내지 않는 판**: DEV 시험 스테이지(`?obstacles` 등 `devStage`), `?demo` 자동 플레이, DEV 빌드(개발 중 플레이가 자료를 흐리지 않게. DEV에서 시험할 때만 `?attemptlog`로 켠다)
+- 클라이언트 로그는 참고 자료다 (SPEC 6.1). 서버 검증·중복 제거는 하지 않는다
+
+**검증**: Vitest — parseSave 옛 저장값·잘못된 attempts, applyModeResult 횟수 증가(스토리만, 경쟁 제외), logStageAttempt(가짜 백엔드: 성공·키 없음·오프라인·계정 없음·오류·시간 초과에서 throw 없음, 보내는 열이 6개 + 서버 기본값 열 없음), 보내지 않는 판 판정 함수. 원격: `?attemptlog&stage=1` 끝까지 → `npm run supabase:check`의 새 항목 또는 대시보드에서 본인 행 확인. 브라우저: 오프라인에서 스토리 끝까지·결과 화면 정상
+
 ## 7. 리스크
 
 - 조합이 너무 세서 쉬워짐 → 4주차 재조정에서 이동 수로 맞춘다. `superAny` 밸런스는 SPEC 11절 3번
