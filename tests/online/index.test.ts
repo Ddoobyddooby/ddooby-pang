@@ -22,5 +22,15 @@ describe('키 없는 빌드 (.env.local 없음)', () => {
       kind: 'failed',
     });
     expect(await online.fetchRanking()).toEqual({ kind: 'offline' });
+    await expect(
+      online.logStageAttempt({
+        stageId: 1,
+        result: 'clear',
+        movesLeft: 2,
+        score: 100,
+        stars: 1,
+        attemptNo: 1,
+      }),
+    ).resolves.toBeUndefined();
   });
 });

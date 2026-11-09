@@ -30,6 +30,7 @@ function backendWith(result: FunctionResult | (() => Promise<FunctionResult>)) {
     fetchProfile: vi.fn(async () => null),
     callFunction: vi.fn(typeof result === 'function' ? result : async () => result),
     callRpc: vi.fn(async () => 'error' as const),
+    insertRow: vi.fn(async () => 'error' as const),
   } satisfies OnlineBackend;
 }
 

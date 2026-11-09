@@ -1,6 +1,7 @@
 // 온라인 기능 공개 API (PLAN2 6.3·6.4). scenes는 이 파일만 import한다.
 // online은 core·view·scenes를 모른다. 어떤 함수도 게임을 막거나 throw하지 않는다
 import { createAccount, type Account, type OnlineStatus } from './account';
+import { createAttempts, type Attempts, type StageAttempt } from './attempts';
 import { createDefaultBackend, hasOnlineKeys } from './client';
 import { createProfile, type MyProfile, type Profile, type SetNicknameResult } from './profile';
 import { createRanking, type Ranking, type RankingResult } from './ranking';
@@ -15,6 +16,7 @@ import {
 import { CORE_VERSION } from '../replay/coreVersion';
 
 export type { OnlineStatus } from './account';
+export type { StageAttempt } from './attempts';
 export type { MyProfile, SetNicknameErrorCode, SetNicknameResult } from './profile';
 export type { RunMove, StartedRun, SubmitOutcome, SubmitPayload } from './runs';
 export type { RankingMe, RankingResult, RankingRow } from './ranking';
@@ -25,7 +27,13 @@ export {
   type NicknameErrorCode,
 } from './nicknameRules';
 
-let instance: { account: Account; profile: Profile; runs: Runs; ranking: Ranking } | null = null;
+let instance: {
+  account: Account;
+  profile: Profile;
+  runs: Runs;
+  ranking: Ranking;
+  attempts: Attempts;
+} | null = null;
 
 function online() {
   if (!instance) {
@@ -43,6 +51,7 @@ function online() {
       profile: createProfile(account),
       runs: createRuns(account, { version: CORE_VERSION, isOnline }),
       ranking: createRanking(account, { isOnline }),
+      attempts: createAttempts(account, { isOnline }),
     };
   }
   return instance;
@@ -79,4 +88,9 @@ export function submitScore(runId: string, payload: SubmitPayload): Promise<Subm
 /** 주간 랭킹 (최대 5초). week가 없으면 서버 시각의 이번 주. 절대 throw하지 않는다 */
 export function fetchRanking(week?: string): Promise<RankingResult> {
   return online().ranking.fetchRanking(week);
+}
+
+/** 스토리 한 판 기록 (최대 5초). 키 없음·오프라인·계정 없음이면 보내지 않는다. 절대 throw하지 않는다 */
+export function logStageAttempt(attempt: StageAttempt): Promise<void> {
+  return online().attempts.logStageAttempt(attempt);
 }

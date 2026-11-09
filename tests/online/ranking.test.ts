@@ -14,6 +14,7 @@ function backendWith(result: RpcResult | (() => Promise<RpcResult>)) {
     fetchProfile: vi.fn(async () => null),
     callFunction: vi.fn(async () => 'network' as const),
     callRpc: vi.fn(typeof result === 'function' ? result : async () => result),
+    insertRow: vi.fn(async () => 'error' as const),
   } satisfies OnlineBackend;
 }
 

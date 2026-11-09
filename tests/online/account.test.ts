@@ -12,6 +12,7 @@ function fakeBackend(opts: { session?: string | null; signIn?: () => Promise<str
     fetchProfile: vi.fn(async () => null),
     callFunction: vi.fn(async () => 'network' as const),
     callRpc: vi.fn(async () => 'error' as const),
+    insertRow: vi.fn(async () => 'error' as const),
   } satisfies OnlineBackend;
   return { backend, signOut: () => signedOut?.() };
 }

@@ -9,7 +9,13 @@ export type Stars = 0 | 1 | 2 | 3;
 
 export interface SaveData {
   version: 1;
-  story: { unlocked: number; bestStars: Record<number, Stars>; bestScore: Record<number, number> };
+  /** attempts = 스테이지별 끝까지 한 판(클리어·실패) 수 (V2-W4-02, stage_attempts의 attempt_no. 옛 저장값에는 없다) */
+  story: {
+    unlocked: number;
+    bestStars: Record<number, Stars>;
+    bestScore: Record<number, number>;
+    attempts: Record<number, number>;
+  };
   timeattack: { bestScore: number };
   /**
    * 옛 저장값에는 없거나 일부만 있다. parseSave가 기본값으로 채운다 (version은 1 그대로).
@@ -34,7 +40,7 @@ export interface KeyValueStore {
 export function defaultSave(): SaveData {
   return {
     version: 1,
-    story: { unlocked: 1, bestStars: {}, bestScore: {} },
+    story: { unlocked: 1, bestStars: {}, bestScore: {}, attempts: {} },
     timeattack: { bestScore: 0 },
     settings: { muted: false, music: true, theme: DEFAULT_THEME },
   };
@@ -81,6 +87,13 @@ export function parseSave(json: string | null): SaveData {
       if (id !== null && nonNegative(score)) save.story.bestScore[id] = score;
     }
   }
+  if (isRecord(story.attempts)) {
+    for (const [key, count] of Object.entries(story.attempts)) {
+      const id = stageKey(key);
+      if (id !== null && Number.isInteger(count) && (count as number) >= 1)
+        save.story.attempts[id] = count as number;
+    }
+  }
   const timeattack = isRecord(raw.timeattack) ? raw.timeattack : {};
   if (nonNegative(timeattack.bestScore)) save.timeattack.bestScore = timeattack.bestScore;
   const settings = isRecord(raw.settings) ? raw.settings : {};
@@ -113,7 +126,10 @@ export function recordTimeAttack(save: SaveData, score: number): SaveData {
   };
 }
 
-/** 클리어하면 다음 스테이지를 연다. 별·점수는 큰 값만, 이미 더 높은 unlocked는 유지. 원본은 바꾸지 않는다 */
+/**
+ * 클리어하면 다음 스테이지를 연다. 별·점수는 큰 값만, 이미 더 높은 unlocked는 유지.
+ * 끝까지 한 판이므로 그 스테이지의 attempts를 1 올린다 (V2-W4-02). 원본은 바꾸지 않는다
+ */
 export function recordStory(
   save: SaveData,
   stageId: number,
@@ -131,12 +147,16 @@ export function recordStory(
         ...save.story.bestScore,
         [stageId]: Math.max(save.story.bestScore[stageId] ?? 0, score),
       },
+      attempts: {
+        ...save.story.attempts,
+        [stageId]: (save.story.attempts[stageId] ?? 0) + 1,
+      },
     },
   };
 }
 
 /**
- * 한 판의 결과를 저장 데이터에 반영한다 (순수). 타임어택은 최고 점수, 스토리는 별·점수·다음 스테이지 해금.
+ * 한 판의 결과를 저장 데이터에 반영한다 (순수). 타임어택은 최고 점수, 스토리는 별·점수·다음 스테이지 해금·판 수.
  * 열린 스테이지는 전체 스테이지 수(stageCount)를 넘지 않는다 (10번 클리어해도 11번은 없다)
  */
 export function applyModeResult(save: SaveData, result: ModeResult, stageCount: number): SaveData {

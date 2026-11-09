@@ -66,6 +66,54 @@ describe('parseSave', () => {
     expect(save.timeattack.bestScore).toBe(900);
   });
 
+  it('attempts가 없는 옛 저장값(V2-W4-02 전)은 {}로 채우고 다른 값은 그대로', () => {
+    const old = {
+      version: 1,
+      story: { unlocked: 4, bestStars: { 1: 3, 2: 1 }, bestScore: { 1: 2500, 2: 800 } },
+      timeattack: { bestScore: 900 },
+      settings: { muted: true, music: false, theme: 'storybook' },
+    };
+    const save = parseSave(JSON.stringify(old));
+    expect(save.story.attempts).toEqual({});
+    expect(save).toEqual({ ...old, story: { ...old.story, attempts: {} } });
+  });
+
+  it('attempts는 1 이상 정수만, 스테이지 번호 키만 읽는다', () => {
+    const save = parseSave(
+      JSON.stringify({
+        version: 1,
+        story: {
+          unlocked: 3,
+          bestStars: {},
+          bestScore: {},
+          attempts: { 1: 5, 2: 0, 3: -1, 4: 1.5, 5: '2', 6: null, bad: 3, 0: 2, 7: 1 },
+        },
+      }),
+    );
+    expect(save.story.attempts).toEqual({ 1: 5, 7: 1 });
+    for (const attempts of [[1, 2], 'x', 3, null]) {
+      const s = parseSave(JSON.stringify({ version: 1, story: { unlocked: 2, attempts } }));
+      expect(s.story.attempts).toEqual({});
+      expect(s.story.unlocked).toBe(2);
+    }
+  });
+
+  it('attempts는 저장 → 불러오기에서 그대로', () => {
+    const save = applyModeResult(
+      defaultSave(),
+      {
+        kind: 'story',
+        stageId: 2,
+        cleared: false,
+        stars: 0,
+        score: 10,
+        bonus: 0,
+      },
+      10,
+    );
+    expect(parseSave(JSON.stringify(save))).toEqual(save);
+  });
+
   it('settings.muted는 boolean일 때만 읽는다', () => {
     const withMuted = (muted: unknown) =>
       parseSave(JSON.stringify({ ...defaultSave(), settings: { muted } })).settings.muted;
@@ -241,8 +289,27 @@ describe('applyModeResult', () => {
     expect(s.story.unlocked).toBe(10);
   });
 
+  it('스토리 결과마다 그 스테이지 판 수 +1 (클리어·실패 모두, 다른 스테이지는 그대로)', () => {
+    let s = applyModeResult(defaultSave(), story(1, false, 0, 100), 10);
+    expect(s.story.attempts).toEqual({ 1: 1 });
+    s = applyModeResult(s, story(1, true, 2, 6500), 10);
+    s = applyModeResult(s, story(2, false, 0, 50), 10);
+    s = applyModeResult(s, story(1, true, 1, 3000), 10);
+    expect(s.story.attempts).toEqual({ 1: 3, 2: 1 });
+  });
+
+  it('경쟁 결과는 판 수를 바꾸지 않는다', () => {
+    const before = applyModeResult(defaultSave(), story(1, true, 2, 6500), 10);
+    const after = applyModeResult(
+      before,
+      { kind: 'timeattack', score: 900, bestScore: 0, newBest: true },
+      10,
+    );
+    expect(after.story).toBe(before.story);
+  });
+
   it('원본은 바뀌지 않는다', () => {
-    const base = defaultSave();
+    const base = applyModeResult(defaultSave(), story(1, false, 0, 1), 10);
     const snapshot = JSON.stringify(base);
     applyModeResult(base, story(1, true, 3, 1), 10);
     expect(JSON.stringify(base)).toBe(snapshot);

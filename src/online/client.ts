@@ -26,6 +26,8 @@ export interface OnlineBackend {
   callFunction(name: string, body: Record<string, unknown>): Promise<FunctionResult>;
   /** DB 함수 호출 (PostgREST rpc) */
   callRpc(name: string, args: Record<string, unknown>): Promise<RpcResult>;
+  /** 테이블에 행 하나 INSERT (응답 행은 받지 않는다). 권한·4xx·5xx·연결 실패는 'error' (throw하지 않는다) */
+  insertRow(table: string, row: Record<string, unknown>): Promise<'ok' | 'error'>;
 }
 
 export function backendFromClient(
@@ -79,6 +81,14 @@ export function backendFromClient(
       try {
         const { data, error } = await client.rpc(name, args);
         return error ? 'error' : { data };
+      } catch {
+        return 'error';
+      }
+    },
+    async insertRow(table, row) {
+      try {
+        const { error } = await client.from(table).insert(row);
+        return error ? 'error' : 'ok';
       } catch {
         return 'error';
       }

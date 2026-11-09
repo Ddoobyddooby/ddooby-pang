@@ -12,6 +12,7 @@
 //   ?specials   (개발 모드) 시작 보드에 특수 블록 5종을 하나씩 놓는다
 //   ?specials=combo (개발 모드) 무지개 블록 옆에 줄·폭탄·슈퍼를 하나씩 놓는다 (조합 확인, PLAN 6.18)
 //   ?obstacles  (개발 모드) 장애물 시험 스테이지 (PLAN2 5.4). 결과는 저장하지 않는다
+//   ?attemptlog (개발 모드) 스토리 플레이 로그(stage_attempts)를 보낸다. 없으면 DEV에서는 안 보낸다 (PLAN2 6.7)
 
 import Phaser from 'phaser';
 import { GAME, HINT, HUD, MAP, MISSION_CARD, TIMEATTACK, VIEW } from '../config';
@@ -36,6 +37,8 @@ import { addRoundButton, drawPauseIcon } from '../view/ui/RoundButton';
 import { MoveLog } from '../view/moveLog';
 import { applyModeResult } from '../storage/progress';
 import { commitSave, getSave } from './saveRegistry';
+import { shouldLogAttempt, stageAttemptOf } from './attemptLog';
+import { logStageAttempt } from '../online';
 import { musicFor } from './musicRules';
 import { canPause } from './pauseRules';
 import { CORE_VERSION } from '../replay/coreVersion';
@@ -45,7 +48,7 @@ import type { GameData, PauseData } from './sceneData';
 import { hasRankBlockingOption } from './timeAttackStart';
 import { getDevStage, getStages } from './stageRegistry';
 import type { StageDef } from '../data/stageSchema';
-import type { GameMode } from '../modes/GameMode';
+import type { GameMode, ModeResult } from '../modes/GameMode';
 import { StoryMode } from '../modes/StoryMode';
 import { TimeAttackMode } from '../modes/TimeAttackMode';
 import { addSceneBackground } from '../view/theme/sceneBackground';
@@ -367,9 +370,36 @@ export class GameScene extends Phaser.Scene {
     // 결과 화면이 열린 스테이지를 보고 버튼을 정하므로 registry 갱신(commitSave)이 Result 시작보다 먼저다
     const stageCount = getStages(this.registry).story.length;
     if (!this.devStage) {
-      commitSave(this.registry, applyModeResult(getSave(this.registry), result, stageCount));
+      const save = applyModeResult(getSave(this.registry), result, stageCount);
+      commitSave(this.registry, save);
+      if (result.kind === 'story' && this.storyMode) {
+        this.logAttempt(
+          result,
+          this.storyMode.movesLeft(),
+          save.story.attempts[result.stageId] ?? 1,
+        );
+      }
     }
     this.scene.start('Result', { result, rank });
+  }
+
+  /** 스토리 한 판 기록을 보낸다 (stage_attempts, PLAN2 6.7). 기다리지 않고, 실패는 버린다 */
+  private logAttempt(
+    result: Extract<ModeResult, { kind: 'story' }>,
+    movesLeft: number,
+    attemptNo: number,
+  ): void {
+    const send = shouldLogAttempt({
+      devStage: this.devStage,
+      demo: this.demo,
+      dev: import.meta.env.DEV,
+      search: window.location.search,
+    });
+    if (!send) return;
+    const attempt = stageAttemptOf(result, movesLeft, attemptNo);
+    void Promise.resolve()
+      .then(() => logStageAttempt(attempt))
+      .catch(() => undefined);
   }
 
   /** 서버 run이 있으면 점수 제출을 시작한다 (기다리지 않고 Promise를 결과 화면에 넘긴다) */

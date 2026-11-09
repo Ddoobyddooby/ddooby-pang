@@ -13,7 +13,14 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { parseEnv } from 'node:util';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import {
+  createClient,
+  FunctionsFetchError,
+  FunctionsHttpError,
+  type SupabaseClient,
+} from '@supabase/supabase-js';
+// 앱과 같은 백엔드 어댑터. stage_attempts INSERT를 앱이 보내는 요청 그대로 시험한다 (V2-W4-02)
+import { backendFromClient } from '../../src/online/client.ts';
 // 함수와 같은 규칙 묶음 (npm run server:shared). 시험 이름이 현재 규칙에서 기대대로 판정되는지 먼저 본다
 import { checkNickname } from '../../supabase/functions/_shared/nicknameRules.js';
 // 클라이언트·start-run과 같은 주 계산. 서버 now()의 주가 이 값과 같은지 본다
@@ -275,6 +282,41 @@ async function main(): Promise<number> {
     const res = await a.from('stage_attempts').select('id').eq('id', insertedId);
     if (res.error) return { pass: false, detail: errText(res) };
     return { pass: res.data.length === 1, detail: `${res.data.length}행` };
+  });
+  // 앱 플레이 로그(V2-W4-02)와 같은 요청: 6개 열만, 응답 행 없이(return=minimal). user_id는 서버 기본값
+  await check('④', '앱 logStageAttempt와 같은 INSERT', '성공, user_id = A', async () => {
+    const marker = Date.now() % 1_000_000_000;
+    const res = await backendFromClient(a, { FunctionsHttpError, FunctionsFetchError }).insertRow(
+      'stage_attempts',
+      {
+        stage_id: TEST_STAGE_ID,
+        result: 'fail',
+        moves_left: 3,
+        score: marker,
+        stars: 1,
+        attempt_no: 2,
+      },
+    );
+    if (res !== 'ok') return { pass: false, detail: 'insertRow error' };
+    const read = await a
+      .from('stage_attempts')
+      .select('user_id, stage_id, result, moves_left, score, stars, attempt_no, created_at')
+      .eq('stage_id', TEST_STAGE_ID)
+      .eq('score', marker);
+    if (read.error) return { pass: false, detail: errText(read) };
+    const row = read.data[0];
+    const pass =
+      read.data.length === 1 &&
+      row?.user_id === idA &&
+      row.result === 'fail' &&
+      row.moves_left === 3 &&
+      row.stars === 1 &&
+      row.attempt_no === 2 &&
+      typeof row.created_at === 'string';
+    return {
+      pass,
+      detail: pass ? '6개 값 일치, user_id 기본값 = A, created_at 있음' : JSON.stringify(read.data),
+    };
   });
   await check('④', 'B가 A의 stage_attempts SELECT', '오류 없음·0행', async () =>
     emptyRead(await b.from('stage_attempts').select('*').eq('user_id', idA)),
