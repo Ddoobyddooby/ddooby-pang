@@ -671,6 +671,14 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 6. `?ranking` 없이(배포본과 같음) 경쟁 결과: 창이 뜨지 않는다
 7. 서버: `npm run supabase:check -- .env.local --nickname` → 44개 모두 PASS (금칙어·짧음 400, 같은 이름 다른 태그, 두 번째 설정 409, 토큰 없음 401, 허용 안 된 출처 차단)
 
+### V2-W4-01a Android 실기기 확인·내비게이션 바 겹침
+1. 휴대폰: 설정 → 휴대전화 정보 → 소프트웨어 정보 → 빌드 번호 7번 → 개발자 옵션 → USB 디버깅 켜기 → Mac에 USB 연결 → "이 컴퓨터에서 항상 허용"
+2. 연결 확인: `~/Library/Android/sdk/platform-tools/adb devices -l` (PATH에 `~/Library/Android/sdk/platform-tools`를 넣으면 `adb`만으로)
+3. 빌드·설치 (`.env.local`이 있는 폴더에서 해야 온라인 기능이 켜진다): `npm run android:sync` → `cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew assembleDebug` → `adb install -r app/build/outputs/apk/debug/app-debug.apk`
+4. 주간 랭킹 화면: 맨 아래 [새로고침]·[돌아가기]가 내비게이션 바(|||·○·<) 위에 있다. 메뉴·지도·스테이지·일시정지 창도 바와 겹치지 않는다
+5. 캡처: `adb exec-out screencap -p > 파일.png`. 화면 좌표 = 캡처 픽셀 좌표라 `adb shell input tap X Y`로 누를 수 있다
+6. 앱 WebView 안 값 보기: Chrome 주소창 `chrome://inspect` → 기기의 `https://localhost` → inspect (디버그 APK만 된다)
+
 ### V2-W4-01 스토리 1~30 재조정
 1. `npm run dev` → 스토리 지도. 1~10번은 장애물 없이 예전보다 이동이 조금 적다
 2. `?stage=11`: 미션 카드에 "자물쇠 N개 풀기"가 처음 나온다. `?stage=16`은 얼음, `?stage=21`은 젤리("젤리 모두 없애기")가 처음 나온다. `?stage=26`·`?stage=30`은 세 가지가 섞이고 얼음 3겹이 있다
@@ -1274,6 +1282,12 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **CORS는 인증이 아니다**: 허용 출처만 브라우저 응답을 읽게 할 뿐, 토큰 검사는 따로 한다
 - **캔버스 위 HTML 입력**: Phaser에는 글자 입력이 없어 `<input>`을 덮는다. 한글 조합 중 Enter(`isComposing`)는 제출하지 않는다. 씬이 끝나면 DOM·리스너·타이머를 지운다 (`src/view/NicknamePrompt.ts`, `nicknamePromptState.ts` `shouldSubmitOnEnter`)
 - **배포 게이트**: 아직 점수 제출이 없어 창이 랭킹 등록으로 오해될 수 있으므로 `import.meta.env.DEV && ?ranking`일 때만 연결. 빌드에서 이 분기는 통째로 빠진다 (`ResultScene.askNickname`)
+
+### V2-W4-01a Android 실기기 확인·내비게이션 바 겹침
+- **edge-to-edge와 두 경로**: Android 15+(targetSdk 35 이상)는 앱이 바 밑까지 그려진다. Capacitor 8 SystemBars는 WebView 140 이상이면 바 크기를 CSS `env(safe-area-inset-*)`로 넘기고, 미만이면 앱 자체를 줄여(native padding) 그린다. 에뮬레이터(WebView 113·133)는 뒤쪽 경로라 실기기(148)에서 처음 드러났다
+- **`clientHeight`는 padding을 포함한다**: Phaser Scale은 부모 크기로 캔버스를 만든다. 부모에 padding을 주면 캔버스가 그만큼 밀린다. 부모 요소 자체를 안전 영역 안에 두는(`position: fixed` + `top/bottom: env(...)`) 쪽이 맞다 (`index.html` `#game`)
+- **CDP로 원격 측정**: `adb forward tcp:9333 localabstract:webview_devtools_remote_<pid>` → `http://localhost:9333/json`의 WebSocket으로 `Runtime.evaluate`. 화면 안의 실제 값(inset, 요소 크기)을 숫자로 확인한다
+- **디버그 APK vs 릴리스**: 디버그는 개발용 서명이라 USB로 바로 설치·디버깅되지만 스토어에는 못 올린다. 스토어용은 직접 만든 키로 서명한 릴리스 빌드
 
 ### V2-W4-01 스토리 1~30 재조정
 - **시뮬레이션으로 난이도 맞추기**: 봇을 seed 1~1000으로 돌려 클리어율·점수 분포를 재고 데이터(이동·미션 양)를 고친다. 봇은 사람과 다르므로 절대값이 아니라 "판끼리의 상대 난이도"를 맞추는 도구다 (`scripts/sim/stageSim.ts`)
