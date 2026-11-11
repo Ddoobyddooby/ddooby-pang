@@ -671,6 +671,11 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 6. `?ranking` 없이(배포본과 같음) 경쟁 결과: 창이 뜨지 않는다
 7. 서버: `npm run supabase:check -- .env.local --nickname` → 44개 모두 PASS (금칙어·짧음 400, 같은 이름 다른 태그, 두 번째 설정 409, 토큰 없음 401, 허용 안 된 출처 차단)
 
+### V2-W4-01c 스토리 11~30 별 기준 완화
+1. `npm run dev` → `?stage=11`로 한 판을 클리어한다. 결과 화면 별이 예전(별 2개 11,300·3개 14,600점)보다 쉽게 찬다: 지금은 별 2개 10,000·3개 12,100점 (값은 `public/stages/story.json` 11번 `stars`)
+2. `?stage=21`~`30`도 같은 방식. 클리어 자체(이동 수·미션·장애물)는 예전과 같다
+3. 측정: `SIM_GAMES=1000 SIM_STAGES=11-30 npm run stages:sim` → "탐욕" 열의 클리어 판 50%·80% 지점이 별 2·3 값과 같다 (결과 표 `docs/PLAN.md` 6.6)
+
 ### V2-W4-01a Android 실기기 확인·내비게이션 바 겹침
 1. 휴대폰: 설정 → 휴대전화 정보 → 소프트웨어 정보 → 빌드 번호 7번 → 개발자 옵션 → USB 디버깅 켜기 → Mac에 USB 연결 → "이 컴퓨터에서 항상 허용"
 2. 연결 확인: `~/Library/Android/sdk/platform-tools/adb devices -l` (PATH에 `~/Library/Android/sdk/platform-tools`를 넣으면 `adb`만으로)
@@ -1289,6 +1294,10 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **CORS는 인증이 아니다**: 허용 출처만 브라우저 응답을 읽게 할 뿐, 토큰 검사는 따로 한다
 - **캔버스 위 HTML 입력**: Phaser에는 글자 입력이 없어 `<input>`을 덮는다. 한글 조합 중 Enter(`isComposing`)는 제출하지 않는다. 씬이 끝나면 DOM·리스너·타이머를 지운다 (`src/view/NicknamePrompt.ts`, `nicknamePromptState.ts` `shouldSubmitOnEnter`)
 - **배포 게이트**: 아직 점수 제출이 없어 창이 랭킹 등록으로 오해될 수 있으므로 `import.meta.env.DEV && ?ranking`일 때만 연결. 빌드에서 이 분기는 통째로 빠진다 (`ResultScene.askNickname`)
+
+### V2-W4-01c 스토리 11~30 별 기준 완화
+- **측정 봇과 사람의 차이 보정**: 11~30번 기준 봇(탐욕 봇)은 아이보다 강하다. 같은 분위수(95%)를 써도 사람에게는 더 어렵기 때문에, 봇이 강한 구간은 분위수를 더 낮게(50%·80%) 잡는다 (`public/stages/story.json`, `scripts/sim/stageSim.ts` `clearP50`·`clearP80`)
+- **데이터만 바꾸는 변경**: 별 값은 core 규칙·seed 결과와 무관한 데이터라 클리어율 시뮬이 바뀌지 않는지(전후 같은 값)로 회귀를 확인한다
 
 ### V2-W4-01a Android 실기기 확인·내비게이션 바 겹침
 - **edge-to-edge와 두 경로**: Android 15+(targetSdk 35 이상)는 앱이 바 밑까지 그려진다. Capacitor 8 SystemBars는 WebView 140 이상이면 바 크기를 CSS `env(safe-area-inset-*)`로 넘기고, 미만이면 앱 자체를 줄여(native padding) 그린다. 에뮬레이터(WebView 113·133)는 뒤쪽 경로라 실기기(148)에서 처음 드러났다
