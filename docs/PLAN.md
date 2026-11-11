@@ -468,6 +468,47 @@ PoC(PLAN2 5.8, `scripts/server-poc/`)의 리플레이·판정을 src로 옮겨 �
 
 **검증**: Vitest — parseSave 옛 저장값·잘못된 attempts, applyModeResult 횟수 증가(스토리만, 경쟁 제외), logStageAttempt(가짜 백엔드: 성공·키 없음·오프라인·계정 없음·오류·시간 초과에서 throw 없음, 보내는 열이 6개 + 서버 기본값 열 없음), 보내지 않는 판 판정 함수. 원격: `?attemptlog&stage=1` 끝까지 → `npm run supabase:check`의 새 항목 또는 대시보드에서 본인 행 확인. 브라우저: 오프라인에서 스토리 끝까지·결과 화면 정상
 
+### 6.8 V2-W4-04 테마별 배경음악 (SPEC 15절 "테마별 배경음악")
+
+v0.1 PLAN 6.7(배경 음악)의 재생 규칙·페이드·덕킹·♪ 버튼은 그대로 두고, **게임 곡을 고르는 규칙**과 곡 파일만 바꾼다.
+
+**곡 이름과 파일** (`public/audio/music/<이름>.{ogg,m4a}`)
+
+| 이름 | 곡 | 비고 |
+|---|---|---|
+| `menu` | Happy Clappy Loop (그대로) | 메뉴·지도·랭킹 |
+| `story-storybook` | Cozy Puzzle In-Game 3 | 새 곡 |
+| `timeattack-storybook` | Children's March Theme | 새 곡 |
+| `story-space` | Iridescent Deep 차분한 버전 루프 | 새 곡 |
+| `timeattack-space` | Interstellar Fleet 1 루프 버전 | 새 곡 |
+| `story-ocean` | Aurora | 새 곡 |
+
+- 옛 `story`·`timeattack` 파일은 지운다. 사탕(스토리·경쟁)·바다(경쟁)는 곡을 고른 뒤 `story-candy` 등을 더한다(후속 태스크)
+- 변환: 모노, 약 96kbps. `.ogg`는 `oggenc`(`brew install vorbis-tools`), `.m4a`는 `afconvert -f m4af -d aac`. 원본이 루프 파일이면 자르지 않고, 앞뒤 무음(인코더 priming 포함)이 없어야 한다. 한 곡 1.5MB 이하 목표(길면 작가 루프 구간 안에서 줄이지 않고 비트레이트로 맞춘다)
+- 출처: `public/audio/CREDITS.md` "배경 음악" 표에 곡·작가·원본 파일·URL·라이선스·쓰는 곳. 라이선스는 받기 전에 원 게시물(및 압축 파일 안 README)에서 다시 확인한다. CC0가 아니면 멈추고 보고
+
+**곡 고르기** (순수 함수, `src/scenes/musicRules.ts`)
+- `musicFor(scene, game?, theme?)`: Menu·StageMap·Ranking → `menu`, Result → `null`, Game → `gameTrack(theme, mode)`
+- `gameTrack(theme, mode)`: `config.MUSIC.gameTracks[theme][mode]`가 있으면 그 곡, 없으면 `gameTracks[DEFAULT_THEME][mode]`
+- `config.MUSIC.tracks`에 위 6개 이름, `MUSIC.gameTracks`에 테마별 `{ story?, timeattack? }` 표 (사탕 `{}`, 바다 `{ story }`)
+- 게임 씬은 지금 테마(`getActiveThemeId()`)를 넘긴다
+
+**미리 읽기** (첫 화면이 늦어지지 않게, v0.1과 같은 원칙)
+- Boot는 `menu`만 기다린다
+- 메뉴가 뜬 뒤 **지금 테마의 게임 곡 두 개**를 뒤에서 읽는다(지금의 `['timeattack', 'story']` 대신). 지도는 지금 테마의 스토리 곡
+- 메뉴에서 테마를 바꾸면 새 테마의 두 곡을 뒤에서 읽는다. 게임에 들어갔을 때 아직이면 지금처럼 다 읽힌 순간부터 튼다
+- 같은 곡을 여러 번 읽지 않는다(이미 캐시·읽는 중이면 건너뜀, `Music.load` 그대로)
+
+**테스트**
+- Vitest `musicRules`: 테마 4개 × 모드 2개 기대 곡(사탕 둘·바다 경쟁은 그림책 곡), 메뉴·지도·랭킹은 테마와 무관하게 `menu`, 결과는 `null`, 모르는 테마 값은 기본 테마
+- Vitest 데이터: `MUSIC.gameTracks`가 가리키는 이름이 모두 `MUSIC.tracks`에 있고, `MUSIC.tracks`마다 `public/audio/music/`에 `.ogg`·`.m4a`가 둘 다 있다 (fs로 확인). 쓰지 않는 음악 파일이 남아 있지 않다
+- 브라우저 390×844: 테마 4개를 바꿔 가며 스토리·경쟁에 들어가 `window.__music.state().current`가 기대 곡인지, 메뉴 ↔ 지도에서 `menu`가 이어지는지, 콘솔 오류 없음. 곡이 끝나 반복되는 순간 끊김은 사용자가 귀로 확인(실기기 포함)
+
+**분담** (같은 파일을 나누지 않는다)
+- claude-1: 곡 받기·변환·`public/audio/music/`·`public/audio/CREDITS.md` (codex-design 2차 결과의 파일 이름 기준). 먼저 main에 반영
+- claude-2: `src/config.ts` `MUSIC`, `src/scenes/musicRules.ts`, 메뉴·지도·게임 씬의 곡 이름·미리 읽기, 테스트. claude-1 반영 뒤 rebase해서 파일 존재 테스트까지 통과시킨다
+- Codex 독립 리뷰: 생략 예정. 보기·소리만 바뀌고 core·저장 형식·서버와 무관하다. 회귀는 단위 테스트와 브라우저 확인으로 본다
+
 ## 7. 리스크
 
 - 조합이 너무 세서 쉬워짐 → 4주차 재조정에서 이동 수로 맞춘다. `superAny` 밸런스는 SPEC 11절 3번
