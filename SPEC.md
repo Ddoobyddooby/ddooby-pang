@@ -518,16 +518,17 @@ stage_attempts (id bigserial PK, user_id, stage_id int, result text,
 ### 테마별 배경음악 (2026-11-11 사용자 선택)
 
 - 게임 화면의 배경음악은 **테마 × 모드(스토리 / 경쟁 60초)**마다 다른 곡을 쓴다. 메뉴·스테이지 지도·랭킹 곡은 테마와 상관없이 지금 곡(Happy Clappy Loop)을 그대로 쓴다. 결과 화면은 지금처럼 음악이 없다
-- 고른 곡 (모두 OpenGameArt, CC0. 후보와 근거는 `.codex-out/V2-theme-bgm-image.md`)
+- 고른 곡 (모두 OpenGameArt. 바다 경쟁 곡만 CC-BY 4.0이고 나머지는 CC0. 후보와 근거는 `.codex-out/V2-theme-bgm-image.md`)
 
 | 테마 | 스토리 | 경쟁 60초 |
 |---|---|---|
 | 그림책 | Cozy Puzzle In-Game 3 · MintoDog | Children's March Theme · CleytonKauffman |
-| 사탕 | (2차 후보에서 고르는 중) | (2차 후보에서 고르는 중) |
+| 사탕 | Good Morning · Cakeflaps @ You're Perfect Studio | Fun Bass Loop · Fupi |
 | 우주 | Iridescent Deep 차분한 버전 · Tsorthan Grove | Interstellar Fleet 1 루프 버전 · Zane Little Music |
-| 바다 | Aurora · Trex0n | (2차 후보에서 고르는 중) |
+| 바다 | Aurora · Trex0n | Jungle Jumpin' Loop · Scott Elliott 원곡, AntumDeluge 루프 편집 |
 
-- 아직 곡이 없는 자리는 **그림책 테마의 같은 모드 곡**을 쓴다. 곡을 고르면 그 자리만 채운다
+- 곡이 없는 테마(앞으로 테마를 더할 때)는 **그림책 테마의 같은 모드 곡**을 쓴다
+- CC-BY 곡은 `public/audio/CREDITS.md`(배포본에도 `audio/CREDITS.md`로 함께 올라감)에 곡명·작가·편집자·원본 URL·라이선스 URL·변경 사실(모노 변환, 형식 변환)을 적어 표시 조건을 지킨다
 - 지금의 스토리 곡(qubodup)·경쟁 곡(Happy Vibes)은 그림책 새 곡으로 바뀌어 쓰지 않는다
 - 테마는 보기와 소리만 바꾼다. 규칙·점수·seed·리플레이와 무관하다. ♪ 버튼(음악 끔)은 그대로 모든 곡에 적용된다
 - 수용 기준: 메뉴에서 테마를 바꾸고 스토리·경쟁에 들어가면 그 테마·모드 곡이 나온다. 메뉴 ↔ 지도를 오갈 때 메뉴 곡은 끊기지 않는다. 곡이 끝나면 끊김 없이 처음부터 반복된다. 아이폰 Safari에서도 나온다(`.m4a`)

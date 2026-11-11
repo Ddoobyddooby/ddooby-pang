@@ -482,15 +482,18 @@ v0.1 PLAN 6.7(배경 음악)의 재생 규칙·페이드·덕킹·♪ 버튼은 
 | `story-space` | Iridescent Deep 차분한 버전 루프 | 새 곡 |
 | `timeattack-space` | Interstellar Fleet 1 루프 버전 | 새 곡 |
 | `story-ocean` | Aurora | 새 곡 |
+| `story-candy` | Good Morning · Cakeflaps | 새 곡, CC0 선택 (다중 라이선스 게시물) |
+| `timeattack-candy` | Fun Bass Loop · Fupi | 새 곡 |
+| `timeattack-ocean` | Jungle Jumpin' Loop · Scott Elliott / AntumDeluge 루프 편집 | 새 곡, **CC-BY 4.0** (크레딧 필수) |
 
-- 옛 `story`·`timeattack` 파일은 지운다. 사탕(스토리·경쟁)·바다(경쟁)는 곡을 고른 뒤 `story-candy` 등을 더한다(후속 태스크)
+- 옛 `story`·`timeattack` 파일은 지운다. 사탕·바다 경쟁 3곡은 2026-11-12 사용자 선택(2차 후보)으로 같은 태스크에 더했다
 - 변환: 모노, 약 96kbps. `.ogg`는 `oggenc`(`brew install vorbis-tools`), `.m4a`는 `afconvert -f m4af -d aac`. 원본이 루프 파일이면 자르지 않고, 앞뒤 무음(인코더 priming 포함)이 없어야 한다. 한 곡 1.5MB 이하 목표(길면 작가 루프 구간 안에서 줄이지 않고 비트레이트로 맞춘다)
-- 출처: `public/audio/CREDITS.md` "배경 음악" 표에 곡·작가·원본 파일·URL·라이선스·쓰는 곳. 라이선스는 받기 전에 원 게시물(및 압축 파일 안 README)에서 다시 확인한다. CC0가 아니면 멈추고 보고
+- 출처: `public/audio/CREDITS.md` "배경 음악" 표에 곡·작가·원본 파일·URL·라이선스·쓰는 곳. 라이선스는 받기 전에 원 게시물(및 압축 파일 안 README)에서 다시 확인한다. CC0가 아니면 멈추고 보고 (예외: `timeattack-ocean`은 사용자가 CC-BY 4.0을 알고 골랐다. CREDITS에 곡명·작가·편집자·두 URL·라이선스 URL·변경 사실)
 
 **곡 고르기** (순수 함수, `src/scenes/musicRules.ts`)
 - `musicFor(scene, game?, theme?)`: Menu·StageMap·Ranking → `menu`, Result → `null`, Game → `gameTrack(theme, mode)`
 - `gameTrack(theme, mode)`: `config.MUSIC.gameTracks[theme][mode]`가 있으면 그 곡, 없으면 `gameTracks[DEFAULT_THEME][mode]`
-- `config.MUSIC.tracks`에 위 6개 이름, `MUSIC.gameTracks`에 테마별 `{ story?, timeattack? }` 표 (사탕 `{}`, 바다 `{ story }`)
+- `config.MUSIC.tracks`에 위 9개 이름, `MUSIC.gameTracks`에 테마별 `{ story?, timeattack? }` 표 (4개 테마 모두 둘 다 채움. 대체 규칙은 앞으로 곡 없는 테마를 위해 남긴다)
 - 게임 씬은 지금 테마(`getActiveThemeId()`)를 넘긴다
 
 **미리 읽기** (첫 화면이 늦어지지 않게, v0.1과 같은 원칙)
@@ -500,7 +503,7 @@ v0.1 PLAN 6.7(배경 음악)의 재생 규칙·페이드·덕킹·♪ 버튼은 
 - 같은 곡을 여러 번 읽지 않는다(이미 캐시·읽는 중이면 건너뜀, `Music.load` 그대로)
 
 **테스트**
-- Vitest `musicRules`: 테마 4개 × 모드 2개 기대 곡(사탕 둘·바다 경쟁은 그림책 곡), 메뉴·지도·랭킹은 테마와 무관하게 `menu`, 결과는 `null`, 모르는 테마 값은 기본 테마
+- Vitest `musicRules`: 테마 4개 × 모드 2개 기대 곡(8곡 모두 다름), 곡이 빠진 테마의 대체(테스트용 표로), 메뉴·지도·랭킹은 테마와 무관하게 `menu`, 결과는 `null`, 모르는 테마 값은 기본 테마
 - Vitest 데이터: `MUSIC.gameTracks`가 가리키는 이름이 모두 `MUSIC.tracks`에 있고, `MUSIC.tracks`마다 `public/audio/music/`에 `.ogg`·`.m4a`가 둘 다 있다 (fs로 확인). 쓰지 않는 음악 파일이 남아 있지 않다
 - 브라우저 390×844: 테마 4개를 바꿔 가며 스토리·경쟁에 들어가 `window.__music.state().current`가 기대 곡인지, 메뉴 ↔ 지도에서 `menu`가 이어지는지, 콘솔 오류 없음. 곡이 끝나 반복되는 순간 끊김은 사용자가 귀로 확인(실기기 포함)
 
