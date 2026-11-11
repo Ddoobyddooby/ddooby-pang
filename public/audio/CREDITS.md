@@ -28,32 +28,40 @@ for f in *.ogg; do afconvert -f m4af -d aac "$f" "${f%.ogg}.m4a"; done
 
 `.ogg`를 바꾸면 이 명령으로 `.m4a`도 다시 만든다. ffmpeg가 있으면 `ffmpeg -i swap.ogg -c:a aac swap.m4a`도 된다.
 
-## 배경 음악 (W4-13, `music/`)
+## 배경 음악 (W4-13, V2-W4-04, `music/`)
 
-모두 OpenGameArt의 **CC0** 곡이다. 원본은 저장소에 넣지 않고 변환한 것만 둔다.
+모두 OpenGameArt의 **CC0** 곡이다 (2026-11-12 각 게시물과 압축 안 readme에서 다시 확인). 원본은 저장소에 넣지 않고 변환한 것만 둔다.
+게임 곡은 테마 × 모드마다 다르다 (SPEC 15절, PLAN2 6.8). 곡이 없는 자리(사탕 스토리·경쟁, 바다 경쟁)는 그림책 테마의 같은 모드 곡을 쓴다.
 
-| 파일 | 곡 · 작가 | 원본 | 쓰는 곳 |
-|---|---|---|---|
-| `music/menu.{ogg,m4a}` | Happy Clappy Loop · OwlishMedia | `HappyClappyLoop.wav` · https://opengameart.org/content/happy-clappy-loop | 메뉴·스테이지 지도 |
-| `music/timeattack.{ogg,m4a}` | Happy Vibes · Ruskerdax | `ruskerdax_-_happy_vibes.mp3` · https://opengameart.org/node/160228 | 경쟁 60초 |
-| `music/story.{ogg,m4a}` | Two Simple Game Music Loops 중 게임 곡 · qubodup | `levelmusicloop-tigrun.wav` · https://opengameart.org/node/174263 | 스토리 |
+| 파일 | 곡 · 작가 | 원본 | 라이선스 | 쓰는 곳 |
+|---|---|---|---|---|
+| `music/menu.{ogg,m4a}` | Happy Clappy Loop · OwlishMedia | `HappyClappyLoop.wav` · https://opengameart.org/content/happy-clappy-loop | CC0 | 메뉴·스테이지 지도·랭킹 (모든 테마) |
+| `music/story-storybook.{ogg,m4a}` | Cozy Puzzle In-Game 3 · MintoDog | `cozy_puzzle_in-game_3_bpm108.ogg` · https://opengameart.org/content/cozy-puzzle-in-game-3 | CC0 | 그림책 × 스토리 (사탕 × 스토리 대신) |
+| `music/timeattack-storybook.{ogg,m4a}` | Children's March Theme · CleytonKauffman | `childrens_march_theme.zip` 안 `Children's March Theme.wav` · https://opengameart.org/content/childrens-march-theme | CC0 (압축 안 `readme.txt`도 CC0) | 그림책 × 경쟁 60초 (사탕·바다 × 경쟁 대신) |
+| `music/story-space.{ogg,m4a}` | Iridescent Deep 차분한 버전 루프 · Tsorthan Grove | `iridescent_deep_ogg.7z` 안 `Iridescent Deep - Loop (Alternate).ogg` · https://opengameart.org/content/iridescent-deep | CC0 | 우주 × 스토리 |
+| `music/timeattack-space.{ogg,m4a}` | Interstellar Fleet 1 루프 버전 · Zane Little Music | `interstellar_fleet_1.zip` 안 `WAV/Interstellar Fleet 1 [LOOP].wav` · https://opengameart.org/content/interstellar-fleet-1 | CC0 | 우주 × 경쟁 60초 |
+| `music/story-ocean.{ogg,m4a}` | Aurora · Trex0n | `aurora.wav` · https://opengameart.org/content/aurora-0 | CC0 | 바다 × 스토리 |
 
-변환 (모노 96kbps, 44.1kHz):
+변환 (모노, 44.1kHz. 루프 구간은 자르지 않는다):
 
 ```sh
-# 1) 모노 16비트 WAV로 풀기 (afconvert는 macOS 내장)
-afconvert -f WAVE -d LEI16@44100 -c 1 HappyClappyLoop.wav menu.wav
-afconvert -f WAVE -d LEI16@44100 -c 1 ruskerdax_-_happy_vibes.mp3 timeattack.wav
-afconvert -f WAVE -d LEI16@44100 -c 1 levelmusicloop-tigrun.wav story.wav
-# 2) mp3만 앞뒤 무음 자르기: |샘플| <= 8 인 앞 987·뒤 126 샘플 (약 22ms·3ms). 두 wav 루프는 무음이 없어 그대로
-# 3) 인코딩: ogg는 oggenc(brew install vorbis-tools), m4a는 afconvert
-oggenc -b 96 -o menu.ogg menu.wav
-afconvert -f m4af -d aac -b 96000 menu.wav menu.m4a
+# 1) 모노 16비트 WAV로 풀기 (afconvert는 macOS 내장, Ogg Vorbis도 읽는다). WAV가 들어 있는 압축은 WAV를 쓴다
+afconvert -f WAVE -d LEI16@44100 -c 1 cozy_puzzle_in-game_3_bpm108.ogg story-storybook.wav
+afconvert -f WAVE -d LEI16@44100 -c 1 "Children's March Theme.wav" timeattack-storybook.wav
+afconvert -f WAVE -d LEI16@44100 -c 1 "Iridescent Deep - Loop (Alternate).ogg" story-space.wav
+afconvert -f WAVE -d LEI16@44100 -c 1 "Interstellar Fleet 1 [LOOP].wav" timeattack-space.wav
+afconvert -f WAVE -d LEI16@44100 -c 1 aurora.wav story-ocean.wav
+# 2) 인코딩: ogg는 oggenc(brew install vorbis-tools) 96kbps, m4a는 afconvert 96kbps
+oggenc -b 96 -o story-ocean.ogg story-ocean.wav
+afconvert -f m4af -d aac -b 96000 story-ocean.wav story-ocean.m4a
+#    m4a만 1.5MB를 넘는 두 곡은 비트레이트를 낮췄다: story-storybook 88000, story-space 80000
 ```
 
-- macOS `afconvert`는 Ogg Vorbis를 읽을 수만 있고 쓰지 못해서 `.ogg`는 `oggenc`로 만든다
-- 반복 이음새: 디코드한 길이가 두 형식 모두 원본 WAV와 샘플 단위로 같다(menu 769,132 / timeattack 2,000,878 / story 1,820,904, Chrome에서 확인). AAC 인코더가 앞에 넣는 무음(priming)은 `afconvert`가 파일에 길이를 적어 두어 디코더가 잘라 낸다
-- 크기: ogg 합계 약 1.0MB, m4a 약 1.3MB (기기는 한 형식만 받는다)
+- 앞뒤 무음: 다섯 원본 모두 처음·끝에 무음이 없어(|샘플| > 64가 첫·끝 샘플부터) 자르지 않았다
+- 반복 이음새: 디코드한 길이가 두 형식 모두 원본과 샘플 단위로 같다 (Chrome `decodeAudioData`, 2026-11-12).
+  menu 769,132 / story-storybook 5,488,000 / timeattack-storybook 2,822,400 / story-space 6,773,760 / timeattack-space 3,907,939 / story-ocean 3,528,000.
+  AAC 인코더가 앞에 넣는 무음(priming 2,112)은 `afconvert`가 파일에 길이를 적어 두어 디코더가 잘라 낸다
+- 크기: 곡마다 1.5MB 이하 (ogg 0.67~1.26MB, m4a 0.80~1.41MB. 기기는 한 형식만 받는다)
 
 ## 경쟁 결과 소리 (W4-22)
 
