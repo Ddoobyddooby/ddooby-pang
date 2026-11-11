@@ -671,6 +671,20 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 6. `?ranking` 없이(배포본과 같음) 경쟁 결과: 창이 뜨지 않는다
 7. 서버: `npm run supabase:check -- .env.local --nickname` → 44개 모두 PASS (금칙어·짧음 400, 같은 이름 다른 태그, 두 번째 설정 409, 토큰 없음 401, 허용 안 된 출처 차단)
 
+### V2-W4-04 테마별 배경음악
+1. `npm run dev` → 메뉴: 테마와 상관없이 메뉴 곡(Happy Clappy Loop). 스토리 지도로 가도 끊기지 않고 이어진다
+2. 메뉴에서 테마를 고르고 스토리·경쟁에 각각 들어가면 아래 곡이 나온다. 개발자 도구 콘솔 `__music.state().current`로 이름 확인
+
+| 테마 | 스토리 | 경쟁 60초 |
+|---|---|---|
+| 그림책 | `story-storybook` Cozy Puzzle In-Game 3 | `timeattack-storybook` Children's March Theme |
+| 사탕 | `story-candy` Good Morning | `timeattack-candy` Fun Bass Loop |
+| 우주 | `story-space` Iridescent Deep (차분한 루프) | `timeattack-space` Interstellar Fleet 1 (루프) |
+| 바다 | `story-ocean` Aurora | `timeattack-ocean` Jungle Jumpin' Loop |
+
+3. 곡이 끝나 처음으로 돌아가는 순간을 귀로 들어 본다 (특히 사탕 두 곡·그림책 스토리). 아이폰 Safari에서도 나오는지 본다 (`.m4a`)
+4. 출처·라이선스: `public/audio/CREDITS.md` (배포본 `audio/CREDITS.md`). 바다 경쟁 곡만 CC-BY 4.0
+
 ### V2-W4-01c 스토리 11~30 별 기준 완화
 1. `npm run dev` → `?stage=11`로 한 판을 클리어한다. 결과 화면 별이 예전(별 2개 11,300·3개 14,600점)보다 쉽게 찬다: 지금은 별 2개 10,000·3개 12,100점 (값은 `public/stages/story.json` 11번 `stars`)
 2. `?stage=21`~`30`도 같은 방식. 클리어 자체(이동 수·미션·장애물)는 예전과 같다
@@ -1294,6 +1308,15 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **CORS는 인증이 아니다**: 허용 출처만 브라우저 응답을 읽게 할 뿐, 토큰 검사는 따로 한다
 - **캔버스 위 HTML 입력**: Phaser에는 글자 입력이 없어 `<input>`을 덮는다. 한글 조합 중 Enter(`isComposing`)는 제출하지 않는다. 씬이 끝나면 DOM·리스너·타이머를 지운다 (`src/view/NicknamePrompt.ts`, `nicknamePromptState.ts` `shouldSubmitOnEnter`)
 - **배포 게이트**: 아직 점수 제출이 없어 창이 랭킹 등록으로 오해될 수 있으므로 `import.meta.env.DEV && ?ranking`일 때만 연결. 빌드에서 이 분기는 통째로 빠진다 (`ResultScene.askNickname`)
+
+### V2-W4-04 테마별 배경음악
+- **표로 고르기 + 기본값 대체**: 테마 × 모드 곡을 `config.MUSIC.gameTracks` 표에 두고, 칸이 비면 기본 테마 곡을 쓴다. 테마를 더해도 코드는 그대로 (`src/scenes/musicRules.ts` `gameTrack`)
+- **데이터와 파일의 일치를 테스트로**: 설정이 가리키는 곡마다 `.ogg`·`.m4a`가 실제로 있고, 안 쓰는 파일이 남지 않았는지 fs로 확인한다 (`tests/view/music.test.ts`)
+- **필요한 것만 미리 읽기**: 첫 화면은 메뉴 곡만 기다리고, 지금 테마의 게임 곡 두 개만 뒤에서 읽는다. 8곡을 다 읽으면 모바일 데이터와 시작 시간이 늘어난다 (`MenuScene`, `StageMapScene`)
+- **함께 올려야 하는 커밋**: 파일 이름이 바뀌는 변경은 파일과 코드를 같은 push로 올린다. 하나만 먼저 배포되면 그 사이 곡을 못 찾는다
+- **오디오 루프 이음새**: 인코더가 넣는 앞 무음(AAC priming)은 메타데이터로 잘리지만, 원본 자체의 무음·첫 박 어택은 반복할 때 "톡" 소리가 될 수 있다. 길이를 원본과 샘플 단위로 비교해 확인 (`afinfo`, `decodeAudioData`)
+- **라이선스 종류**: CC0는 표시 의무가 없고, CC-BY는 곡명·작가·출처·라이선스·변경 사실을 남겨야 한다. 다중 라이선스 곡은 쓸 라이선스를 골라 적는다 (`public/audio/CREDITS.md`)
+- **큰 파일 push**: HTTP push가 400(RPC failed)이면 `git -c http.postBuffer=524288000 push`로 그 명령에만 버퍼를 늘린다
 
 ### V2-W4-01c 스토리 11~30 별 기준 완화
 - **측정 봇과 사람의 차이 보정**: 11~30번 기준 봇(탐욕 봇)은 아이보다 강하다. 같은 분위수(95%)를 써도 사람에게는 더 어렵기 때문에, 봇이 강한 구간은 분위수를 더 낮게(50%·80%) 잡는다 (`public/stages/story.json`, `scripts/sim/stageSim.ts` `clearP50`·`clearP80`)
