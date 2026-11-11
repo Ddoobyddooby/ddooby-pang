@@ -53,6 +53,7 @@ import { StoryMode } from '../modes/StoryMode';
 import { TimeAttackMode } from '../modes/TimeAttackMode';
 import { addSceneBackground } from '../view/theme/sceneBackground';
 import { drawBoardFrame } from '../view/theme/BoardFrame';
+import { getActiveThemeId } from '../view/theme/themes';
 
 /** 개발 모드 키 → 발동 연출 미리보기 */
 const SPECIAL_PREVIEW_KEYS: Record<string, SpecialKind> = {
@@ -246,7 +247,7 @@ export class GameScene extends Phaser.Scene {
     });
     // 모드 곡. [다시하기]로 같은 모드를 다시 시작하면 곡은 이어진다. 아직 안 읽혔으면 다 읽힌 순간부터
     const music = Music.of(this.game);
-    const track = musicFor('Game', this.startData);
+    const track = musicFor('Game', this.startData, getActiveThemeId());
     music.play(track);
     if (track) music.load(this, [track]);
     // 일시정지에서 돌아오면 힌트를 처음부터 재고, 멈추기 전 누르고 있던 상태를 버린다. 음악은 원래 볼륨으로

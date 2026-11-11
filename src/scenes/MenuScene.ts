@@ -12,7 +12,7 @@ import { openThemePicker } from '../view/ThemePicker';
 import { setTheme } from '../storage/progress';
 import { storyLabel, storyProgress, timeAttackLabel } from './menuText';
 import { Music } from '../view/Music';
-import { musicFor } from './musicRules';
+import { gameTracksOf, musicFor } from './musicRules';
 import { addSceneMusicButton, addSceneMuteButton } from './muteToggle';
 import { commitSave, getSave } from './saveRegistry';
 import { startTimeAttack } from './startTimeAttack';
@@ -52,7 +52,7 @@ export class MenuScene extends Phaser.Scene {
     addSceneMusicButton(this);
     const music = Music.of(this.game);
     music.play(musicFor('Menu'));
-    music.load(this, ['timeattack', 'story']); // 게임 곡은 메뉴가 뜬 뒤 뒤에서
+    music.load(this, gameTracksOf(getActiveThemeId())); // 지금 테마의 게임 곡은 메뉴가 뜬 뒤 뒤에서 (테마를 바꾸면 메뉴가 다시 떠서 새 곡을 읽는다)
 
     const save = getSave(this.registry);
     const stageCount = getStages(this.registry).story.length;

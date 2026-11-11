@@ -21,10 +21,11 @@ import {
 } from '../view/mapLayout';
 import { addSceneBackground } from '../view/theme/sceneBackground';
 import { addHills } from '../view/theme/Hills';
+import { getActiveThemeId } from '../view/theme/themes';
 import { Sfx } from '../view/Sfx';
 import type { PressLock } from '../view/ui/Button';
 import { Music } from '../view/Music';
-import { musicFor } from './musicRules';
+import { gameTrack, musicFor } from './musicRules';
 import { addSceneMusicButton, addSceneMuteButton } from './muteToggle';
 import { commitSave, getSave } from './saveRegistry';
 import type { GameData } from './sceneData';
@@ -94,7 +95,7 @@ export class StageMapScene extends Phaser.Scene {
     addSceneMusicButton(this);
     const music = Music.of(this.game);
     music.play(musicFor('StageMap')); // 메뉴에서 왔으면 같은 곡이 이어진다
-    music.load(this, ['story']);
+    music.load(this, [gameTrack(getActiveThemeId(), 'story')]);
 
     if (import.meta.env.DEV) {
       // 확인용: 스크롤 양과 노드의 화면 위치

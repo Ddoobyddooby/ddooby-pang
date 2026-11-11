@@ -663,7 +663,24 @@ export const SOUND = {
  * volume 0~1, 시간 ms
  */
 export const MUSIC = {
-  tracks: ['menu', 'timeattack', 'story'],
+  tracks: [
+    'menu',
+    'story-storybook',
+    'timeattack-storybook',
+    'story-space',
+    'timeattack-space',
+    'story-ocean',
+    'story-candy',
+    'timeattack-candy',
+    'timeattack-ocean',
+  ],
+  /** 게임 곡: 테마 × 모드 (PLAN 6.8). 곡이 빠진 칸은 기본 테마(storybook)의 같은 모드 곡을 쓴다 */
+  gameTracks: {
+    storybook: { story: 'story-storybook', timeattack: 'timeattack-storybook' },
+    candy: { story: 'story-candy', timeattack: 'timeattack-candy' },
+    space: { story: 'story-space', timeattack: 'timeattack-space' },
+    ocean: { story: 'story-ocean', timeattack: 'timeattack-ocean' },
+  } as Record<'storybook' | 'candy' | 'space' | 'ocean', { story?: string; timeattack?: string }>,
   volume: 0.35,
   /** 곡을 바꿀 때 페이드 (나가는 곡은 줄이며 끝내고 들어오는 곡은 0에서 올린다) */
   fadeMs: 600,
