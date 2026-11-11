@@ -32,3 +32,10 @@ android/local.properties
 
 # V2-W2-08 core 공유 PoC 결과 (scripts/server-poc/out/)
 scripts/server-poc/out/
+
+# 개인 도구 스킬(이 PC 전용 링크)·설치 잠금 파일
+.claude/skills/
+skills-lock.json
+
+# 고르지 않은·이미 반영된 테마 시안 원본 (WORKFLOW 8.8)
+assets/theme-src/drafts/
