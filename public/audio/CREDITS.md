@@ -30,17 +30,22 @@ for f in *.ogg; do afconvert -f m4af -d aac "$f" "${f%.ogg}.m4a"; done
 
 ## 배경 음악 (W4-13, V2-W4-04, `music/`)
 
-모두 OpenGameArt의 **CC0** 곡이다 (2026-11-12 각 게시물과 압축 안 readme에서 다시 확인). 원본은 저장소에 넣지 않고 변환한 것만 둔다.
-게임 곡은 테마 × 모드마다 다르다 (SPEC 15절, PLAN2 6.8). 곡이 없는 자리(사탕 스토리·경쟁, 바다 경쟁)는 그림책 테마의 같은 모드 곡을 쓴다.
+모두 OpenGameArt 곡이다. `timeattack-ocean` 하나만 **CC-BY 4.0**(크레딧 필수)이고 나머지는 **CC0**다 (2026-11-12 각 게시물과 압축 안 readme에서 다시 확인). 원본은 저장소에 넣지 않고 변환한 것만 둔다.
+게임 곡은 테마 × 모드마다 다르다 (SPEC 15절, PLAN2 6.8).
 
 | 파일 | 곡 · 작가 | 원본 | 라이선스 | 쓰는 곳 |
 |---|---|---|---|---|
 | `music/menu.{ogg,m4a}` | Happy Clappy Loop · OwlishMedia | `HappyClappyLoop.wav` · https://opengameart.org/content/happy-clappy-loop | CC0 | 메뉴·스테이지 지도·랭킹 (모든 테마) |
-| `music/story-storybook.{ogg,m4a}` | Cozy Puzzle In-Game 3 · MintoDog | `cozy_puzzle_in-game_3_bpm108.ogg` · https://opengameart.org/content/cozy-puzzle-in-game-3 | CC0 | 그림책 × 스토리 (사탕 × 스토리 대신) |
-| `music/timeattack-storybook.{ogg,m4a}` | Children's March Theme · CleytonKauffman | `childrens_march_theme.zip` 안 `Children's March Theme.wav` · https://opengameart.org/content/childrens-march-theme | CC0 (압축 안 `readme.txt`도 CC0) | 그림책 × 경쟁 60초 (사탕·바다 × 경쟁 대신) |
+| `music/story-storybook.{ogg,m4a}` | Cozy Puzzle In-Game 3 · MintoDog | `cozy_puzzle_in-game_3_bpm108.ogg` · https://opengameart.org/content/cozy-puzzle-in-game-3 | CC0 | 그림책 × 스토리 |
+| `music/timeattack-storybook.{ogg,m4a}` | Children's March Theme · CleytonKauffman | `childrens_march_theme.zip` 안 `Children's March Theme.wav` · https://opengameart.org/content/childrens-march-theme | CC0 (압축 안 `readme.txt`도 CC0) | 그림책 × 경쟁 60초 |
 | `music/story-space.{ogg,m4a}` | Iridescent Deep 차분한 버전 루프 · Tsorthan Grove | `iridescent_deep_ogg.7z` 안 `Iridescent Deep - Loop (Alternate).ogg` · https://opengameart.org/content/iridescent-deep | CC0 | 우주 × 스토리 |
 | `music/timeattack-space.{ogg,m4a}` | Interstellar Fleet 1 루프 버전 · Zane Little Music | `interstellar_fleet_1.zip` 안 `WAV/Interstellar Fleet 1 [LOOP].wav` · https://opengameart.org/content/interstellar-fleet-1 | CC0 | 우주 × 경쟁 60초 |
 | `music/story-ocean.{ogg,m4a}` | Aurora · Trex0n | `aurora.wav` · https://opengameart.org/content/aurora-0 | CC0 | 바다 × 스토리 |
+| `music/story-candy.{ogg,m4a}` | Good Morning · Cakeflaps @ You're Perfect Studio | `Cakeflaps - Good Morning.wav` · https://opengameart.org/content/good-morning | CC0 (게시물은 CC-BY 4.0·OGA-BY 3.0·CC0 다중 라이선스, CC0를 골랐다) | 사탕 × 스토리 |
+| `music/timeattack-candy.{ogg,m4a}` | Fun Bass Loop · Fupi | `Fun Bass Loop.flac` · https://opengameart.org/content/fun-bass-loop | CC0 | 사탕 × 경쟁 60초 |
+| `music/timeattack-ocean.{ogg,m4a}` | "Jungle Jumpin' Loop" — 원곡 "Jungle Jumpin'" by **Scott Elliott** (https://opengameart.org/content/jungle-jumpin), 루프 편집 **AntumDeluge** (https://opengameart.org/content/jungle-jumpin-loop) | `jungle_jumpin.flac` (루프 편집본) | **CC-BY 4.0** · https://creativecommons.org/licenses/by/4.0/ · 변경: 모노로 합치고 96kbps 이하 Ogg Vorbis·AAC(m4a)로 형식 변환 (길이·루프 구간은 그대로) | 바다 × 경쟁 60초 |
+
+이 파일은 배포본에 `audio/CREDITS.md`로도 올라간다 (`public/` → `dist/`). CC-BY 곡의 크레딧 표시는 이 파일로 한다.
 
 변환 (모노, 44.1kHz. 루프 구간은 자르지 않는다):
 
@@ -51,17 +56,21 @@ afconvert -f WAVE -d LEI16@44100 -c 1 "Children's March Theme.wav" timeattack-st
 afconvert -f WAVE -d LEI16@44100 -c 1 "Iridescent Deep - Loop (Alternate).ogg" story-space.wav
 afconvert -f WAVE -d LEI16@44100 -c 1 "Interstellar Fleet 1 [LOOP].wav" timeattack-space.wav
 afconvert -f WAVE -d LEI16@44100 -c 1 aurora.wav story-ocean.wav
+afconvert -f WAVE -d LEI16@44100 -c 1 "Cakeflaps - Good Morning.wav" story-candy.wav
+afconvert -f WAVE -d LEI16@44100 -c 1 "Fun Bass Loop.flac" timeattack-candy.wav
+afconvert -f WAVE -d LEI16@44100 -c 1 jungle_jumpin.flac timeattack-ocean.wav
 # 2) 인코딩: ogg는 oggenc(brew install vorbis-tools) 96kbps, m4a는 afconvert 96kbps
 oggenc -b 96 -o story-ocean.ogg story-ocean.wav
 afconvert -f m4af -d aac -b 96000 story-ocean.wav story-ocean.m4a
-#    m4a만 1.5MB를 넘는 두 곡은 비트레이트를 낮췄다: story-storybook 88000, story-space 80000
+#    m4a만 1.5MB를 넘는 세 곡은 비트레이트를 낮췄다: story-storybook 88000, story-space 80000, timeattack-ocean 88000
 ```
 
-- 앞뒤 무음: 다섯 원본 모두 처음·끝에 무음이 없어(|샘플| > 64가 첫·끝 샘플부터) 자르지 않았다
+- 앞뒤 무음: 원본을 자르지 않았다. 끝은 여덟 곡 모두 무음이 없다. 처음은 두 곡의 원본 파일 첫머리에 완전 무음(샘플 값 0)이 있어 그대로 두었다: story-candy 899샘플(20ms), timeattack-candy 256샘플(6ms). 나머지는 처음부터 소리가 난다
 - 반복 이음새: 디코드한 길이가 두 형식 모두 원본과 샘플 단위로 같다 (Chrome `decodeAudioData`, 2026-11-12).
-  menu 769,132 / story-storybook 5,488,000 / timeattack-storybook 2,822,400 / story-space 6,773,760 / timeattack-space 3,907,939 / story-ocean 3,528,000.
+  menu 769,132 / story-storybook 5,488,000 / timeattack-storybook 2,822,400 / story-space 6,773,760 / timeattack-space 3,907,939 / story-ocean 3,528,000 /
+  story-candy 5,339,676 / timeattack-candy 1,360,896 / timeattack-ocean 5,503,645.
   AAC 인코더가 앞에 넣는 무음(priming 2,112)은 `afconvert`가 파일에 길이를 적어 두어 디코더가 잘라 낸다
-- 크기: 곡마다 1.5MB 이하 (ogg 0.67~1.26MB, m4a 0.80~1.41MB. 기기는 한 형식만 받는다)
+- 크기: 곡마다 1.5MB 이하 (ogg 0.22~1.29MB, m4a 0.35~1.42MB. 기기는 한 형식만 받는다)
 
 ## 경쟁 결과 소리 (W4-22)
 
