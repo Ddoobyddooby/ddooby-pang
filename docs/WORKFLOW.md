@@ -23,7 +23,7 @@
 
 ## 3. 탭 찾기
 
-- 각 탭의 `orcaTabId`는 `CLAUDE.md` 표에 기록한다. 다른 PC나 Orca 세션에서는 달라질 수 있으므로 지시 전에 `orca terminal list --json`으로 실제 탭·handle을 확인한다
+- 역할별 Orca 탭 제목은 `CLAUDE.md` 표에 있다. 탭 ID·handle은 PC나 Orca 세션마다 달라지므로 적어 두지 않고, 지시 전에 `orca terminal list --worktree current --include-visual-layouts --json`으로 탭 제목이 일치하는 handle을 확인한다
 - Claude 메인에서 Claude 세션 간 `ListAgents`를 쓸 때는 같은 PC의 세션 이름을 확인한다. 메시지 주소는 세션 이름(예: `ddooby-pang-22`)이다
 - 사용자가 Orca `orcaTabId`로 알려주면 macOS에서는 다음으로 대조한다:
   `~/.claude/sessions/<pid>.json`의 `name` ↔ `ps -Eww -p <pid>`의 `ORCA_TAB_ID`
@@ -145,10 +145,10 @@ Codex는 상주 역할이 아니다. 메인이 필요한 시점에 **한 요청�
 
 ### 8.7 보내기와 받기 (Orca)
 
-- Codex 탭과 디자이너 탭의 `orcaTabId`는 `CLAUDE.md` 표에 있다. 터미널 handle은 Orca를 다시 켜면 바뀌므로 맡길 때마다 대상 `tabId`로 다시 찾는다. 연결할 수 없으면 요청서를 사용자에게 전달해 수동 입력할 수 있게 한다:
+- Codex 탭과 디자이너 탭의 탭 제목은 `CLAUDE.md` 표에 있다. 터미널 handle은 Orca를 다시 켜면 바뀌므로 맡길 때마다 탭 제목으로 다시 찾는다. 연결할 수 없으면 요청서를 사용자에게 전달해 수동 입력할 수 있게 한다:
 
   ```bash
-  orca terminal list --json   # 현재 PC의 대상 tabId에 해당하는 handle
+  orca terminal list --worktree current --include-visual-layouts --json   # visualLayouts에서 탭 제목이 일치하는 handle
   orca terminal read --terminal <handle> --screen --json        # 쉬는 중인지 먼저 본다
   orca terminal send --terminal <handle> --text "<요청서>" --enter --wait-submit 10 --json
   orca terminal wait --terminal <handle> --for tui-idle --timeout-ms 900000 --json

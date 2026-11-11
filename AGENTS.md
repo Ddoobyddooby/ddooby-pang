@@ -7,7 +7,7 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 완료, v0.2 개
 
 ## 기본 팀과 역할
 
-기본 팀은 사용자(고객·제품 최종 결정자), Claude 메인(상시 PM·PL)·claude-1·claude-2, Codex 탭이다. Codex는 상주 PM이 아니다. Claude 메인이 필요한 시점에 **요청마다 한 가지 역할**로 부른다 (2026-11-08부터). 탭 ID와 위임 순서는 `CLAUDE.md` "작업 위임 흐름", 요청서·산출물 형식은 `docs/WORKFLOW.md` 8절을 따른다.
+기본 팀은 사용자(고객·제품 최종 결정자), Claude 메인(상시 PM·PL)·claude-1·claude-2, Codex 탭이다. Codex는 상주 PM이 아니다. Claude 메인이 필요한 시점에 **요청마다 한 가지 역할**로 부른다 (2026-11-08부터). 탭 제목과 위임 순서는 `CLAUDE.md` "작업 위임 흐름", 요청서·산출물 형식은 `docs/WORKFLOW.md` 8절을 따른다.
 
 - **Claude 메인 (PM·PL)**: 사용자 요청 상시 접수, 제품 요구사항·SPEC·PLAN·TASKS, 기술 설계, 작업 배분, 구현 조정, 통합·검증, 완료 보고
 - **claude-1·claude-2**: Claude 메인이 나눈 범위에서 코드·테스트를 구현하고 커밋한다
