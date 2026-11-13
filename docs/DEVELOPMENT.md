@@ -14,11 +14,15 @@
    cd ddooby-pang
    ```
 3. VSCode로 열기: `code .`
-   - `code` 명령이 없으면 VSCode에서 `Cmd+Shift+P` → "Shell Command: Install 'code' command in PATH"
+   - `code` 명령이 없으면 VSCode에서 `Cmd+Shift+P`(Windows는 `Ctrl+Shift+P`) → "Shell Command: Install 'code' command in PATH"
 4. 의존성 설치: VSCode 터미널(`` Ctrl+` ``)에서 `npm install`
 5. 추천 확장 설치: 처음 열면 오른쪽 아래에 "추천 확장을 설치할까요?" 알림이 뜬다 → 설치
    - ESLint, Prettier, Vitest (목록은 `.vscode/extensions.json`)
    - 설치하면 저장할 때 자동 포맷되고, 규칙 위반은 빨간 밑줄로 보인다
+6. (v0.2, 온라인 기능을 쓸 때) `.env.example`을 `.env.local`로 복사하고 `VITE_SUPABASE_URL`·`VITE_SUPABASE_PUBLISHABLE_KEY`를 넣는다. 값은 Supabase 대시보드 → Project Settings → API Keys의 **publishable key**만 쓴다 (secret·service_role 키 금지). `.env.local`은 커밋하지 않는다. 없으면 게임은 그대로 돌아가고 닉네임·주간 랭킹만 꺼진다
+7. (v0.2, 서버 함수를 검사할 때만) Deno 설치: macOS `brew install deno`, Windows `winget install DenoLand.Deno`. `npm run functions:check`·`npm run poc:deno`에 필요하다. 게임 개발·테스트에는 없어도 된다
+
+> 이 문서의 단축키와 경로는 macOS 기준이다. Windows에서는 `Cmd` → `Ctrl`, `Cmd+Option+I` → `F12`(또는 `Ctrl+Shift+I`)로 읽는다. `JAVA_HOME="/Applications/Android Studio.app/..."` 경로는 Windows에서 Android Studio 설치 폴더의 `jbr`로 바꾼다 (정확한 경로는 PC마다 다르므로 확인 필요).
 
 ## 2. 매일 쓰는 명령
 

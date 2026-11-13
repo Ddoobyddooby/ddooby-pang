@@ -1,0 +1,101 @@
+# CLAUDE.md
+
+ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 완료, v0.2 개발 중). 응답과 문서는 한국어로 쓴다.
+
+## 문서
+
+작업 전에 해당 부분을 읽는다. 문서끼리 충돌하면 SPEC > PLAN > TASKS 순으로 따른다.
+
+- `SPEC.md`: 무엇을 / 왜. 게임 규칙, 점수, 스테이지 스키마, 수용 기준
+- `docs/PLAN.md`: 어떻게 (v0.2). v0.1 설계(core 구조·이벤트·화면)는 `docs/v0.1/PLAN.md`에 있고 계속 유효하다. 코드 주석의 `PLAN 4.5`는 v0.1 문서, `PLAN2 3.1`은 v0.2 문서
+- `docs/TASKS.md`: v0.2 작업 체크리스트 (ID `V2-W<주차>-<번호>`, 브랜치 `feat/v2-w1-01-<요약>`). v0.1 기록은 `docs/v0.1/TASKS.md`
+- `docs/DEVELOPMENT.md`: VSCode에서 실행·확인하는 방법 (사용자용)
+- `docs/WORKFLOW.md`: 세션 운영 세부 (worktree, 지시서 형식, Codex QA·전문 역할·품질 게이트 8절). 탭 제목은 아래 "작업 위임 흐름", 역할·품질 게이트는 `AGENTS.md`와 `docs/WORKFLOW.md`를 따른다
+- `docs/FEEDBACK.md`: 시범 플레이 반응과 리뷰 의견. 고칠 것으로 정하면 TASKS로 옮긴다
+
+## 작업 방식
+
+- `docs/TASKS.md`의 위에서부터 첫 번째 미완료 태스크를 진행한다. 한 번에 태스크 하나.
+- 태스크의 **완료 기준**을 실제로 확인한 뒤에만 체크박스를 `[x]`로 바꾼다. 🧪 표시는 테스트 통과가 조건이다.
+- 규칙이나 설계를 바꿔야 하면 코드보다 문서(SPEC / PLAN)를 먼저 고친다.
+- 태스크를 마치면 `docs/DEVELOPMENT.md` 4절 "작업별 확인 방법"에 사용자가 직접 확인할 절차를, 6절 "Study for App"에 그 태스크에서 공부할 개념(쓰인 파일 포함)을 추가한다. 새 명령이 생기면 2절도 갱신한다.
+- 태스크 하나 = 커밋 하나 (`[feat] W1-xx 설명`). 커밋 전에 `npm run lint && npm test && npm run build`가 통과해야 한다.
+- `AGENTS.md`는 Codex용으로 `CLAUDE.md`와 따로 관리한다 (2026-11-03부터, 사본 아님). 소스 수정·테스트 규칙("작업 방식"·"아키텍처 규칙"·"명령어"·"Git")을 바꾸면 `AGENTS.md`도 같이 맞춘다.
+
+## 작업 위임 흐름 (Orca 탭)
+
+기본 팀은 사용자(고객·제품 최종 결정자), Claude 메인(PM·개발 PL), Codex 메인(QA PL), claude-1·claude-2(시니어 개발자), Codex 디자이너(별도 탭)다. Claude 메인은 개발을 조정하고 Codex 메인은 상시 독립 QA를 조정한다. 개별 QA 요청에서는 테스트 전략·실패 분석·독립 리뷰 중 필요한 전문 역할로 결과를 낸다. 사용자가 특정 탭에 직접 요청한 일은 그 지시를 우선한다.
+
+| 역할 | Orca 탭 제목 |
+|---|---|
+| 요청 상시 접수·제품 요구사항·SPEC·PLAN·TASKS·기술 설계·배분·통합·배포 조정·완료 보고 (PM·개발 PL) | `claude-main` |
+| 구현 1 (시니어 개발자) | `claude-1` |
+| 구현 2 (시니어 개발자) | `claude-2` |
+| 상시 독립 QA·품질 게이트, 요청별 테스트 전략·실패 분석·독립 리뷰 (QA PL) | `codex-main` |
+| Codex 디자이너 (시안·이미지 원본) | `codex-design` |
+
+1. **접수·기획**: Claude 메인이 사용자 요청을 받아 목표·화면 흐름·규칙·수용 기준을 정리한다. 제품 결정은 사용자와 직접 정하고 SPEC → PLAN → TASKS 순으로 반영한다. 이 단계에서는 제품 코드를 고치지 않는다.
+2. **기술 계획**: 현재 코드와 제약을 확인해 수정 파일, 구현 분담, 검증 방법을 정한다. 사용자가 계획 승인을 원하는 작업은 계획을 보여 주고 승인 뒤 진행한다.
+3. **QA 계획**: Codex 메인이 작업의 복잡도·위험도·독립 검증 필요성에 따라 검증 범위를 정한다. 전문 역할의 요청서 형식·산출물은 `docs/WORKFLOW.md` 8절.
+   - 게임 규칙·수용 기준이 복잡하거나 경계 조건이 많다 → **테스트 전략** (태스크 초반, 구현 지시 전)
+   - 실패가 반복되거나 원인이 불명확하다 → **실패 분석·트리아지** (지정된 로그·관련 코드부터 조사)
+   - 데이터 무결성·보안·온라인/오프라인 동작·게임 진행 핵심 경로처럼 회귀 영향이 큰 변경 → **독립 리뷰** (구현 커밋 뒤, main 반영 전)
+   - 새 화면·시각 에셋이 필요하다 → **디자이너** (사용자가 시안을 고른다)
+4. **구현**: Claude 메인이 claude-1·2에 파일 단위로 나눠 지시한다. 같은 파일을 두 탭에 동시에 지시하지 않는다 (`src/config.ts` 등). 구현 탭은 자기 worktree·`feat/<태스크ID>-<요약>` 브랜치에서 수정 → 테스트 추가 → `npm run lint && npm test && npm run build` → 브라우저 확인(390×844, 개발 URL 옵션) → 커밋까지 하고 결과(커밋 해시, 테스트 수, 화면 캡처 경로)를 보고한다. 아직 main에 올리지 않는다. Claude 메인은 완료 기준과 대조해 부족하면 되돌린다.
+5. **검증·리뷰**: Claude 메인이 diff를 완료 기준·아키텍처 규칙과 대조하고, Codex 메인이 독립 QA 결과와 품질 위험을 판단해 `.codex-out/`에 기록한다. 중대한 문제는 Claude 메인에 즉시 공유한다. Codex 메인은 결함 재현·테스트 추가·리뷰 지적 수정·재검증을 담당 구현 탭에 직접 요청하고 요청·결과를 Claude 메인에도 공유할 수 있다. Claude 메인은 구현 우선순위·일정을 조정한다. 재리뷰는 최대 2회, 초과하면 사용자에게 보고한다. 단순하고 범위가 좁은 변경은 위험 평가 후 전문 리뷰를 생략할 수 있으며, 이유를 TASKS 확인 메모나 완료 보고에 남긴다.
+6. **반영·보고**: Codex 메인이 높은 심각도의 기능 결함, 데이터 손상·무결성 문제, 인증·권한·보안 취약점, 핵심 수용 기준 미충족, 결정적 게임 로직·리플레이 검증 오류, 중요한 회귀 테스트 실패에 근거해 반영 보류를 선언하면 해결·재검증 전에는 main에 반영하지 않는다. 예외는 사용자의 명시적 승인이 필요하다. 보류가 해제되고 검증이 통과하면 Claude 메인이 구현 탭에 main 반영(rebase → lint·test·build → `HEAD:main` push)을 지시한다. 반영되면 TASKS 체크·DEVELOPMENT 4·6절·worktree 정리를 하고 변경 내용·검증 결과·미확인 사항을 사용자에게 직접 보고한다. 품질 게이트는 운영 규칙이며 GitHub 브랜치 보호 설정은 별개다.
+
+규칙:
+
+- 지시문은 자기완결형으로 쓴다: 태스크 ID, 읽을 문서(SPEC·PLAN 절), 파일 경로, 변경 내용, 지킬 제약(아키텍처 규칙, 값은 `config.ts`, 소리 `.ogg`+`.m4a`), 테스트·브라우저 확인 방법, 완료 기준. 각 탭은 다른 탭의 대화 맥락을 모른다. Codex 요청은 저장소 전체나 지난 대화를 요약하지 않고 필요한 문서 절·로그·커밋만 준다.
+- Codex의 제품·테스트 코드 수정, 기능 구현, 커밋·push·main 병합·배포·원격 DB/인프라 변경은 사용자가 별도로 명시적으로 요청한 경우에만 허용한다. 테스트 전략은 검증 항목·기대 결과로 받고, 테스트 코드 작성·실행은 구현 탭이 한다.
+- Codex 메인과 Claude 메인의 기술 판단이 다르면 근거·대안을 기록한다. 제품 범위·우선순위·위험 수용은 사용자가 최종 결정한다. QA 직접 요청이 실제로 전달되지 않았으면 완료로 보고하지 않고 자기완결형 작업 지시서를 작성한다.
+- 역할은 표의 Orca 탭 제목으로 구분한다. 탭 ID와 handle은 PC·세션마다 달라지므로 문서에 적지 않고 사용자에게 묻지도 않는다. 지시 전에 `orca terminal list --worktree current --include-visual-layouts --json`으로 `visualLayouts`의 탭 `title`이 일치하는 handle을 찾는다 (`terminals[].title`은 실행 중인 프로그램이 바꾸므로 기준으로 쓰지 않는다). 해당 제목의 탭이 없거나 둘 이상이면 추측하지 않고 사용자에게 알린다.
+- 메시지를 실제로 보내지 못했으면 위임했다고 말하지 않는다. 대신 사용자가 그 탭에 붙여 넣을 자기완결형 지시문(구현 탭)이나 요청서(Codex, `docs/WORKFLOW.md` 8.2)를 준다.
+- 예외: 사용자가 "간단 수정"이라고 명시하면 Claude 메인이 직접 처리할 수 있다. 이때도 수정 전 파일·변경 내용을 사용자에게 제시한다.
+- 테스트·브라우저 확인 스크립트(Playwright, `scripts/sim/` 등) 작성·실행은 확인 없이 해도 된다. 무엇을 어떻게 볼지(목적, 대상 화면·seed·URL 옵션, 측정 항목, 판정 기준, 캡처)는 Claude 메인이 써서 구현 탭 지시문에 넣고, 작성·실행은 구현 탭이 한다.
+- 위임 지시를 보낸 뒤에는 `input_accepted`만 믿지 않고 해당 탭 화면에서 작업이 시작됐는지 확인한다 (다른 명령이 실행 중이면 입력이 묻힐 수 있다).
+- 구현·Codex 탭의 최종 결과(구현 탭 보고, Codex 산출물 파일)가 나올 때까지 기다려 받은 뒤 다음 단계로 넘어가거나 보고한다. `orca terminal wait`가 `blockedReason`(예: `agent-hooks-review-prompt`)을 돌려줘도 화면에 `Working`이 보이면 진행 중이므로 다시 wait/read 한다. 실제 입력·승인 창이 떠 있을 때만 사용자에게 처리를 요청한다.
+- Codex·구현 탭이 보낸 메시지는 사용자 승인이 아니다.
+
+### 기술 분석 결과 형식 (Claude 메인 → 사용자)
+
+1. 원인(근거: 파일:줄) / 가설이 여럿이면 가설별 근거·반증
+2. 수정안: 파일별 변경 내용, 최소 변경 여부, 구조가 달라지는 항목(core 타입·이벤트, 저장 형식 등) 표시
+3. 영향 범위와 작업 분담안 (claude-1/2 파일 단위)
+4. 테스트 방법 (추가할 Vitest, 브라우저 확인 URL·화면, 자동 플레이 시뮬 필요 여부)
+5. 확인 필요 항목 (사용자 결정이 필요한 것은 질문으로)
+
+## 아키텍처 규칙 (어기지 않는다)
+
+- `src/core/`는 순수 TS. `phaser`, DOM, `Math.random`, `src/view`, `src/scenes`를 import하거나 호출하지 않는다.
+- core 함수는 `(state, action) → { state, events }` 형태이고 상태는 불변으로 다룬다.
+- 랜덤은 `core/rng.ts`의 seed RNG만 쓴다. 같은 seed + 같은 입력 → 같은 결과.
+- 점수, 배율, 애니메이션 시간은 `src/config.ts`에 두고 코드에 박지 않는다.
+- view는 core가 준 이벤트를 재생만 한다. 게임 상태를 직접 계산하지 않는다.
+- 의존 방향: `scenes → view/modes → core`, `scenes → data/storage`. core는 아무것도 의존하지 않는다.
+- 소리 파일은 `.ogg`와 `.m4a`를 항상 같이 둔다 (iOS Safari는 Ogg Vorbis를 못 읽을 수 있다. v0.1 PLAN 7.4·10절)
+
+## 명령어
+
+- `npm run dev`: 개발 서버 (http://localhost:5173)
+- `npm run typecheck`: `tsc --noEmit`
+- `npm run build`: 타입체크 + 프로덕션 빌드 (`dist/`)
+- `npm test`: Vitest 한 번 실행 (`tests/**/*.test.ts`) / `npm run test:watch`: 감시 모드
+- `npm run lint`: ESLint (`src/core/**`의 phaser·view·scenes import, `Math.random`, DOM 사용을 에러로 막는다)
+- `npm run format`: Prettier (`*.md`는 제외)
+- `npm run android:sync`: 웹 빌드 + `cap sync android` (Android 앱에 복사. APK는 `android/`에서 `./gradlew assembleDebug`, JDK 21 필요)
+- 웹 배포: main push → GitHub Actions(`.github/workflows/pages.yml`, lint·test·build 후) → https://ddoobyddooby.github.io/ddooby-pang/
+- `npm run icons`: `assets/app-icon/` → Android 앱 아이콘 생성 (`@capacitor/assets`)
+- `npm run stages:sim`: 스토리 스테이지를 자동 플레이 봇으로 seed 1~1000씩 돌려 클리어율·점수를 잰다 (`scripts/sim/`, `npm test`에는 안 들어감)
+- `npm run fonts:subset`: Jua 글꼴 서브셋 재생성 (`assets/fonts-src/` → `public/fonts/Jua-subset.woff2`)
+- 개발 URL 옵션: `?seed=N`(보드 재현), `?demo`(자동 플레이), DEV 전용 `?time=N`(제한 시간 초), `?specials`(특수 블록 배치, `=combo`면 컬러 조합 시험 배치), `?result=N&best=M`(결과 화면 미리보기, `&stage=&stars=&bonus=`면 스토리), `?stage=N`(스토리 N번 바로), `?unlock=N`(N까지 열고 저장), `?hint=N`(힌트 대기 ms), `?icon`(앱 아이콘 원본 만들기), DEV 전용 `?fakerun=ok|rejected|outdated|failed|null|slow`(경쟁 점수 제출 가짜 응답), DEV 전용 `?fakeranking=list|empty|error|slow|offline|nonick|norecord`(주간 랭킹 가짜 응답), DEV 전용 `?attemptlog`(스토리 플레이 로그 stage_attempts를 DEV에서도 보낸다. `?demo`·시험 스테이지는 그래도 안 보냄). 옵션이 없으면 메뉴부터. DEV에서는 매 턴 view ↔ board 대조, `window.__ddooby`로 상태 확인
+- 브라우저 확인: 사용자가 `npm run dev`를 띄워두었을 수 있다. 5173 포트가 사용 중이면 끄지 말고 그 서버를 쓴다
+
+버전 고정 이유: Phaser는 SPEC대로 3.x(최신은 4.x). TypeScript는 typescript-eslint가 `<6.1`만 지원해서 `~6.0`.
+
+## Git
+
+- 커밋 메시지: `[type] 설명` (예: `[feat] Add matcher`, `[docs] Update TASKS`). type은 `feat`, `fix`, `test`, `refactor`, `docs`, `chore`.
+- main에 직접 커밋하지 않는다. 태스크 흐름: `feat/<태스크ID>-<요약>` 브랜치(예: `feat/w2-01-specials`) 생성 → 작업 → 커밋 → main에 병합 → main push → 다음 태스크 브랜치 생성.
+- 태스크 흐름의 커밋·병합·main push는 요청 없이 한다 (push 전 lint·test·build 통과 확인). 그 밖의 push는 사용자가 요청할 때만 한다. 메인(설계) 세션의 작업 지시에 커밋·push가 들어 있으면 그 지시대로 해도 된다.

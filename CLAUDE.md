@@ -19,7 +19,7 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 완료, v0.2 개
 - 태스크의 **완료 기준**을 실제로 확인한 뒤에만 체크박스를 `[x]`로 바꾼다. 🧪 표시는 테스트 통과가 조건이다.
 - 규칙이나 설계를 바꿔야 하면 코드보다 문서(SPEC / PLAN)를 먼저 고친다.
 - 태스크를 마치면 `docs/DEVELOPMENT.md` 4절 "작업별 확인 방법"에 사용자가 직접 확인할 절차를, 6절 "Study for App"에 그 태스크에서 공부할 개념(쓰인 파일 포함)을 추가한다. 새 명령이 생기면 2절도 갱신한다.
-- 태스크 하나 = 커밋 하나 (`[feat] W1-xx 설명`). 커밋 전에 `npm run lint && npm test && npm run build`가 통과해야 한다.
+- 태스크 하나 = 커밋 하나 (`[feat] V2-W1-01 설명`). 커밋 전에 `npm run lint && npm test && npm run build`가 통과해야 한다.
 - `AGENTS.md`는 Codex용으로 `CLAUDE.md`와 따로 관리한다 (2026-11-03부터, 사본 아님). 소스 수정·테스트 규칙("작업 방식"·"아키텍처 규칙"·"명령어"·"Git")을 바꾸면 `AGENTS.md`도 같이 맞춘다.
 
 ## 작업 위임 흐름 (Orca 탭)
@@ -73,7 +73,12 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 완료, v0.2 개
 - 랜덤은 `core/rng.ts`의 seed RNG만 쓴다. 같은 seed + 같은 입력 → 같은 결과.
 - 점수, 배율, 애니메이션 시간은 `src/config.ts`에 두고 코드에 박지 않는다.
 - view는 core가 준 이벤트를 재생만 한다. 게임 상태를 직접 계산하지 않는다.
-- 의존 방향: `scenes → view/modes → core`, `scenes → data/storage`. core는 아무것도 의존하지 않는다.
+- 의존 방향: `scenes → view/modes → core`, `scenes → data/storage`, `scenes → online/replay`. core는 아무것도 의존하지 않는다 (ESLint가 검사한다).
+- `src/replay/`는 서버 번들(`supabase/functions/_shared/replay.js`)에 들어가는 순수 TS다. `core`·`modes`에만 의존하고 Phaser, DOM, 네트워크, 외부 패키지를 쓰지 않는다.
+- `src/online/`은 Supabase 연결만 맡는다. Phaser와 다른 게임 계층(core·view·scenes·modes·data·storage·config)을 import하지 않는다. 예외는 `replay/coreVersion`뿐이다.
+- `src/dev/`는 개발 전용 도구다. `main.ts`만 불러 쓴다.
+- `supabase/functions/_shared/`는 `npm run server:shared`가 만든다. 직접 고치지 않는다. 닉네임 규칙·금칙어(`src/online/nicknameRules.ts`·`bannedWords.ts`)나 `src/replay/`를 고치면 다시 묶어 같이 커밋한다 (CI가 `server:shared:check`로 대조).
+- 키: `.env.local`(커밋 안 함)에는 Supabase publishable key만 둔다. secret·service_role 키를 파일·채팅·코드에 남기지 않는다. 원격 DB 적용·Edge Function 배포는 사용자 확인을 받은 뒤에만 한다 (`supabase/README.md`).
 - 소리 파일은 `.ogg`와 `.m4a`를 항상 같이 둔다 (iOS Safari는 Ogg Vorbis를 못 읽을 수 있다. v0.1 PLAN 7.4·10절)
 
 ## 명령어
@@ -89,6 +94,10 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 완료, v0.2 개
 - `npm run icons`: `assets/app-icon/` → Android 앱 아이콘 생성 (`@capacitor/assets`)
 - `npm run stages:sim`: 스토리 스테이지를 자동 플레이 봇으로 seed 1~1000씩 돌려 클리어율·점수를 잰다 (`scripts/sim/`, `npm test`에는 안 들어감)
 - `npm run fonts:subset`: Jua 글꼴 서브셋 재생성 (`assets/fonts-src/` → `public/fonts/Jua-subset.woff2`)
+- `npm run server:shared`: src의 닉네임 규칙·리플레이 코드를 서버 함수용 파일(`supabase/functions/_shared/`)로 다시 묶는다 / `npm run server:shared:check`: 커밋본과 같은지만 본다 (CI도 실행)
+- `npm run functions:check`: Edge Function 타입 검사 (`deno check`, Deno 필요)
+- `npm run supabase:check`: Supabase 권한(RLS)·닉네임·점수 제출·랭킹 시험 (`.env.local` 필요, 옵션은 `docs/DEVELOPMENT.md` 2절)
+- `npm run poc:deno`: 같은 기록을 Node와 Deno(서버 번들)로 다시 계산해 점수·판정이 같은지 비교 (Deno 필요)
 - 개발 URL 옵션: `?seed=N`(보드 재현), `?demo`(자동 플레이), DEV 전용 `?time=N`(제한 시간 초), `?specials`(특수 블록 배치, `=combo`면 컬러 조합 시험 배치), `?result=N&best=M`(결과 화면 미리보기, `&stage=&stars=&bonus=`면 스토리), `?stage=N`(스토리 N번 바로), `?unlock=N`(N까지 열고 저장), `?hint=N`(힌트 대기 ms), `?icon`(앱 아이콘 원본 만들기), DEV 전용 `?fakerun=ok|rejected|outdated|failed|null|slow`(경쟁 점수 제출 가짜 응답), DEV 전용 `?fakeranking=list|empty|error|slow|offline|nonick|norecord`(주간 랭킹 가짜 응답), DEV 전용 `?attemptlog`(스토리 플레이 로그 stage_attempts를 DEV에서도 보낸다. `?demo`·시험 스테이지는 그래도 안 보냄). 옵션이 없으면 메뉴부터. DEV에서는 매 턴 view ↔ board 대조, `window.__ddooby`로 상태 확인
 - 브라우저 확인: 사용자가 `npm run dev`를 띄워두었을 수 있다. 5173 포트가 사용 중이면 끄지 말고 그 서버를 쓴다
 
@@ -97,5 +106,5 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 완료, v0.2 개
 ## Git
 
 - 커밋 메시지: `[type] 설명` (예: `[feat] Add matcher`, `[docs] Update TASKS`). type은 `feat`, `fix`, `test`, `refactor`, `docs`, `chore`.
-- main에 직접 커밋하지 않는다. 태스크 흐름: `feat/<태스크ID>-<요약>` 브랜치(예: `feat/w2-01-specials`) 생성 → 작업 → 커밋 → main에 병합 → main push → 다음 태스크 브랜치 생성.
+- main에 직접 커밋하지 않는다. 태스크 흐름: `feat/<태스크ID>-<요약>` 브랜치(예: `feat/v2-w1-01-combo`) 생성 → 작업 → 커밋 → main에 병합 → main push → 다음 태스크 브랜치 생성.
 - 태스크 흐름의 커밋·병합·main push는 요청 없이 한다 (push 전 lint·test·build 통과 확인). 그 밖의 push는 사용자가 요청할 때만 한다. 메인(설계) 세션의 작업 지시에 커밋·push가 들어 있으면 그 지시대로 해도 된다.
