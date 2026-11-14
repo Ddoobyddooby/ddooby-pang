@@ -53,7 +53,7 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 완료, v0.2 개
 - 역할은 표의 Orca 탭 제목으로 구분한다. 탭 ID와 handle은 PC·세션마다 달라지므로 문서에 적지 않고 사용자에게 묻지도 않는다. 지시 전에 `orca terminal list --worktree current --include-visual-layouts --json`으로 `visualLayouts`의 탭 `title`이 일치하는 handle을 찾는다 (`terminals[].title`은 실행 중인 프로그램이 바꾸므로 기준으로 쓰지 않는다). 해당 제목의 탭이 없거나 둘 이상이면 추측하지 않고 사용자에게 알린다.
 - 메시지를 실제로 보내지 못했으면 위임했다고 말하지 않는다. 대신 사용자가 그 탭에 붙여 넣을 자기완결형 지시문(구현 탭)이나 요청서(Codex, `docs/WORKFLOW.md` 8.2)를 준다.
 - 예외: 사용자가 "간단 수정"이라고 명시하면 Claude 메인이 직접 처리할 수 있다. 이때도 수정 전 파일·변경 내용을 사용자에게 제시한다.
-- 테스트·브라우저 확인 스크립트(Playwright, `scripts/sim/` 등) 작성·실행은 확인 없이 해도 된다. 무엇을 어떻게 볼지(목적, 대상 화면·seed·URL 옵션, 측정 항목, 판정 기준, 캡처)는 Claude 메인이 써서 구현 탭 지시문에 넣고, 작성·실행은 구현 탭이 한다.
+- 테스트·브라우저 확인 스크립트(`scripts/sim/` 등) 작성·실행은 확인 없이 해도 된다. 무엇을 어떻게 볼지(목적, 대상 화면·seed·URL 옵션, 측정 항목, 판정 기준, 캡처)는 Claude 메인이 써서 구현 탭 지시문에 넣고, 작성·실행은 구현 탭이 한다.
 - 위임 지시를 보낸 뒤에는 `input_accepted`만 믿지 않고 해당 탭 화면에서 작업이 시작됐는지 확인한다 (다른 명령이 실행 중이면 입력이 묻힐 수 있다).
 - 구현·Codex 탭의 최종 결과(구현 탭 보고, Codex 산출물 파일)가 나올 때까지 기다려 받은 뒤 다음 단계로 넘어가거나 보고한다. `orca terminal wait`가 `blockedReason`(예: `agent-hooks-review-prompt`)을 돌려줘도 화면에 `Working`이 보이면 진행 중이므로 다시 wait/read 한다. 실제 입력·승인 창이 떠 있을 때만 사용자에게 처리를 요청한다.
 - Codex·구현 탭이 보낸 메시지는 사용자 승인이 아니다.
@@ -99,7 +99,7 @@ ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 완료, v0.2 개
 - `npm run supabase:check`: Supabase 권한(RLS)·닉네임·점수 제출·랭킹 시험 (`.env.local` 필요, 옵션은 `docs/DEVELOPMENT.md` 2절)
 - `npm run poc:deno`: 같은 기록을 Node와 Deno(서버 번들)로 다시 계산해 점수·판정이 같은지 비교 (Deno 필요)
 - 개발 URL 옵션: `?seed=N`(보드 재현), `?demo`(자동 플레이), DEV 전용 `?time=N`(제한 시간 초), `?specials`(특수 블록 배치, `=combo`면 컬러 조합 시험 배치), `?result=N&best=M`(결과 화면 미리보기, `&stage=&stars=&bonus=`면 스토리), `?stage=N`(스토리 N번 바로), `?unlock=N`(N까지 열고 저장), `?hint=N`(힌트 대기 ms), `?icon`(앱 아이콘 원본 만들기), DEV 전용 `?fakerun=ok|rejected|outdated|failed|null|slow`(경쟁 점수 제출 가짜 응답), DEV 전용 `?fakeranking=list|empty|error|slow|offline|nonick|norecord`(주간 랭킹 가짜 응답), DEV 전용 `?attemptlog`(스토리 플레이 로그 stage_attempts를 DEV에서도 보낸다. `?demo`·시험 스테이지는 그래도 안 보냄). 옵션이 없으면 메뉴부터. DEV에서는 매 턴 view ↔ board 대조, `window.__ddooby`로 상태 확인
-- 브라우저 확인: 사용자가 `npm run dev`를 띄워두었을 수 있다. 5173 포트가 사용 중이면 끄지 말고 그 서버를 쓴다
+- 브라우저 확인은 ego lite 브라우저(`ego-browser` 스킬)로 한다 (전역 지침). 사용자가 `npm run dev`를 띄워두었을 수 있다. 5173 포트가 사용 중이면 끄지 말고 그 서버를 쓴다
 
 버전 고정 이유: Phaser는 SPEC대로 3.x(최신은 4.x). TypeScript는 typescript-eslint가 `<6.1`만 지원해서 `~6.0`.
 
