@@ -25,6 +25,15 @@ export type RankingResult =
   | { kind: 'offline' }
   | { kind: 'error' };
 
+/** 스토리 별 랭킹 응답 (V2-W5-02): 주 정보가 없고 score = 별 합계 */
+export type StoryRankingResult =
+  | { kind: 'ok'; top: RankingRow[]; around: RankingRow[]; me: RankingMe | null }
+  | { kind: 'offline' }
+  | { kind: 'error' };
+
+/** 랭킹 화면의 탭 종류: 주간 점수 / 스토리 별 */
+export type RankingKind = 'weekly' | 'story';
+
 /** 화면에 그릴 줄 하나. 글자는 모두 만들어 둔다 */
 export interface RankingLine {
   kind: 'row';
@@ -50,7 +59,8 @@ export type RankingItem = RankingLine | RankingGap;
 /** 하단 고정 줄 */
 export type RankingFooter =
   | { kind: 'me'; rank: number; score: string }
-  | { kind: 'noRecord' }
+  /** score = 스토리 탭의 "★ N"(기기 저장 합계, 0 포함). 주간 탭은 없다 */
+  | { kind: 'noRecord'; score?: string }
   /** 기록은 있는데 닉네임이 없다: [이름 정하기]를 같이 보인다 */
   | { kind: 'noNickname'; score: string };
 
@@ -71,20 +81,29 @@ export function formatTagText(tag: number): string {
   return `#${String(Math.max(0, Math.floor(tag))).padStart(4, '0')}`;
 }
 
-function toLine(row: RankingRow): RankingLine {
+/** 탭에 맞는 점수 글자: 주간 "15,320", 스토리 "★ 57" */
+export function formatScore(kind: RankingKind, n: number): string {
+  return kind === 'story' ? RANKING_TEXT.stars(Math.max(0, Math.floor(n))) : formatPoints(n);
+}
+
+function toLine(row: RankingRow, kind: RankingKind): RankingLine {
   return {
     kind: 'row',
     rank: String(row.rank),
     nickname: row.nickname,
     tag: formatTagText(row.tag),
-    score: formatPoints(row.score),
+    score: formatScore(kind, row.score),
     isMe: row.isMe,
     medal: row.rank >= 1 && row.rank <= 3 ? (row.rank as 1 | 2 | 3) : null,
   };
 }
 
 /** top과 around를 seq로 합쳐 중복을 없애고, 순번이 끊기는 곳(앞 줄 seq + 1이 아닌 곳)에 gap을 끼운다 */
-export function mergeRows(top: RankingRow[], around: RankingRow[]): RankingItem[] {
+export function mergeRows(
+  top: RankingRow[],
+  around: RankingRow[],
+  kind: RankingKind = 'weekly',
+): RankingItem[] {
   const bySeq = new Map<number, RankingRow>();
   for (const row of [...top, ...around]) bySeq.set(row.seq, row);
   const rows = [...bySeq.values()].sort((a, b) => a.seq - b.seq);
@@ -92,39 +111,62 @@ export function mergeRows(top: RankingRow[], around: RankingRow[]): RankingItem[
   let prev: number | null = null;
   for (const row of rows) {
     if (prev !== null && row.seq !== prev + 1) items.push({ kind: 'gap' });
-    items.push(toLine(row));
+    items.push(toLine(row, kind));
     prev = row.seq;
   }
   return items;
 }
 
-function footerFor(me: RankingMe | null): RankingFooter {
-  if (!me) return { kind: 'noRecord' };
-  if (me.rank === null) return { kind: 'noNickname', score: formatPoints(me.score) };
-  return { kind: 'me', rank: me.rank, score: formatPoints(me.score) };
+/**
+ * localStars = 이 기기에 저장된 별 합계 (스토리 탭에서 서버 기록이 없을 때만 쓴다).
+ * 내 별은 조회 결과(me)를 먼저 쓴다
+ */
+function footerFor(me: RankingMe | null, kind: RankingKind, localStars: number): RankingFooter {
+  if (!me) {
+    return kind === 'story'
+      ? { kind: 'noRecord', score: formatScore(kind, localStars) }
+      : { kind: 'noRecord' };
+  }
+  if (me.rank === null) return { kind: 'noNickname', score: formatScore(kind, me.score) };
+  return { kind: 'me', rank: me.rank, score: formatScore(kind, me.score) };
 }
 
-/** 응답 → 화면 상태 */
-export function selectView(result: RankingResult): RankingView {
+/** 응답 → 화면 상태. kind = 어느 탭의 응답인지, localStars = 스토리 탭의 기기 별 합계 */
+export function selectView(
+  result: RankingResult | StoryRankingResult,
+  kind: RankingKind = 'weekly',
+  localStars = 0,
+): RankingView {
   if (result.kind !== 'ok') return { state: result.kind };
-  const footer = footerFor(result.me);
+  const footer = footerFor(result.me, kind, localStars);
   if (result.top.length === 0) {
-    // 빈 주: 안내 문구가 이미 "기록이 없다"를 말하므로 기록 없음 줄은 겹쳐 그리지 않는다
-    return { state: 'empty', footer: footer.kind === 'noRecord' ? null : footer };
+    // 빈 주: 안내 문구가 이미 "기록이 없다"를 말하므로 주간 탭은 기록 없음 줄을 겹쳐 그리지 않는다.
+    // 스토리 탭은 빈 목록에서도 내 별(0 포함)을 보인다
+    const hide = kind === 'weekly' && footer.kind === 'noRecord';
+    return { state: 'empty', footer: hide ? null : footer };
   }
-  return { state: 'list', items: mergeRows(result.top, result.around), footer };
+  return { state: 'list', items: mergeRows(result.top, result.around, kind), footer };
 }
 
 /** 하단 고정 줄 글자 */
-export function footerText(footer: RankingFooter): { left: string; right: string } {
+export function footerText(
+  footer: RankingFooter,
+  kind: RankingKind = 'weekly',
+): { left: string; right: string } {
   const t = RANKING_TEXT;
   switch (footer.kind) {
     case 'me':
       return { left: t.myRank(footer.rank), right: footer.score };
     case 'noRecord':
-      return { left: t.noRecord, right: '' };
+      return {
+        left: footer.score === undefined ? t.noRecord : t.storyNoRecord(footer.score),
+        right: '',
+      };
     case 'noNickname':
-      return { left: t.noNickname(footer.score), right: '' };
+      return {
+        left: kind === 'story' ? t.storyNoNickname(footer.score) : t.noNickname(footer.score),
+        right: '',
+      };
   }
 }
 
@@ -136,14 +178,15 @@ export function refreshLabel(view: RankingView | null): string {
 }
 
 /** 안내 문구가 가운데에 보이는 상태의 글자 (목록 상태는 null) */
-export function messageFor(view: RankingView): string | null {
+export function messageFor(view: RankingView, kind: RankingKind = 'weekly'): string | null {
+  const story = kind === 'story';
   switch (view.state) {
     case 'offline':
-      return RANKING_TEXT.offline;
+      return story ? RANKING_TEXT.storyOffline : RANKING_TEXT.offline;
     case 'error':
-      return RANKING_TEXT.error;
+      return story ? RANKING_TEXT.storyError : RANKING_TEXT.error;
     case 'empty':
-      return RANKING_TEXT.empty;
+      return story ? RANKING_TEXT.storyEmpty : RANKING_TEXT.empty;
     case 'list':
       return null;
   }
@@ -175,4 +218,19 @@ export function weekRangeText(key: string): string {
   const [m1, d1] = days.start;
   const [m2, d2] = days.end;
   return `${m1}월 ${d1}일(월) ~ ${m2}월 ${d2}일(일)`;
+}
+
+/** 이 기기에 저장된 별 합계: 대상 스테이지(범위)·별(범위) 안의 최고 별만 더한다 */
+export function localStarTotal(
+  bestStars: Record<number, number>,
+  range: { stageMin: number; stageMax: number; starMin: number; starMax: number },
+): number {
+  let total = 0;
+  for (const [key, stars] of Object.entries(bestStars)) {
+    const id = Number(key);
+    if (!Number.isInteger(id) || id < range.stageMin || id > range.stageMax) continue;
+    if (!Number.isInteger(stars) || stars < range.starMin || stars > range.starMax) continue;
+    total += stars;
+  }
+  return total;
 }

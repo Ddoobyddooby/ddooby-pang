@@ -19,6 +19,7 @@ import { registerBackButton } from './backButton';
 import { bootRoute, devUnlock } from './bootRoute';
 import { commitSave, getSave, putSave } from './saveRegistry';
 import { putDevStage, putStages } from './stageRegistry';
+import { syncContextNow, syncStars } from './storyStarsSync';
 
 /** 글꼴이 늦거나 실패해도 게임은 이 시간 안에 시작한다 (오프라인, 느린 휴대폰) */
 const FONT_TIMEOUT_MS = 2000;
@@ -84,6 +85,8 @@ export class BootScene extends Phaser.Scene {
           const save = getSave(this.registry);
           commitSave(this.registry, { ...save, story: { ...save.story, unlocked: unlock } });
         }
+        // 기기에 있던 별을 내 계정에 한 번 올린다 (기다리지 않는다. 실패는 다음 클리어·랭킹 탭에서 메운다)
+        void syncStars(getSave(this.registry).story.bestStars, syncContextNow(dev !== undefined));
         // 기본은 메뉴. 개발 주소(?demo, ?stage=N, ?result=N 등)는 해당 화면으로 바로 (bootRoute.ts)
         const route = bootRoute(window.location.search, import.meta.env.DEV);
         if (route.scene === 'Menu' || route.scene === 'Ranking') this.scene.start(route.scene);

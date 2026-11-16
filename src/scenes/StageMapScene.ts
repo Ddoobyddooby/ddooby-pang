@@ -23,12 +23,12 @@ import { addSceneBackground } from '../view/theme/sceneBackground';
 import { addHills } from '../view/theme/Hills';
 import { getActiveThemeId } from '../view/theme/themes';
 import { Sfx } from '../view/Sfx';
-import type { PressLock } from '../view/ui/Button';
+import { addButton, type PressLock } from '../view/ui/Button';
 import { Music } from '../view/Music';
 import { gameTrack, musicFor } from './musicRules';
 import { addSceneMusicButton, addSceneMuteButton } from './muteToggle';
 import { commitSave, getSave } from './saveRegistry';
-import type { GameData } from './sceneData';
+import type { GameData, RankingData } from './sceneData';
 import { getStages } from './stageRegistry';
 
 /** 지도를 마지막으로 열었을 때의 unlocked (방금 열린 스테이지 연출용) */
@@ -91,6 +91,7 @@ export class StageMapScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     this.addBackButton();
+    this.addRankButton();
     addSceneMuteButton(this);
     addSceneMusicButton(this);
     const music = Music.of(this.game);
@@ -297,6 +298,19 @@ export class StageMapScene extends Phaser.Scene {
       ease: 'Quad.easeOut',
       onComplete: () => this.scene.start('Game', { mode: 'story', stageId } satisfies GameData),
     });
+  }
+
+  /** 제목 아래 오른쪽 [별 랭킹] 버튼 → 랭킹 화면의 스토리 별 탭 (돌아가기는 지도로) */
+  private addRankButton(): void {
+    const b = MAP.rankButton;
+    addButton(
+      this,
+      b.x,
+      b.y,
+      { label: b.text, width: b.width, height: b.height, fontSize: b.fontSize },
+      () => this.scene.start('Ranking', { tab: 'story', from: 'StageMap' } satisfies RankingData),
+      this.lock,
+    );
   }
 
   /** 왼쪽 위 [←] 동그란 버튼 → 메뉴 */

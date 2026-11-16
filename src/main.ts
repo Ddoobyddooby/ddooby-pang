@@ -37,6 +37,8 @@ if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('icon
   // 주간 랭킹: 키 없음·오프라인이면 요청 없이 offline (src/online/ranking.ts)
   setRankingClient({
     fetchRanking: () => fetchRanking(),
+    // TODO(연결 대기): claude-1의 src/online fetchStoryRanking·syncStoryStars가 main에 올라오면 여기와 setStoryStarsClient에 연결
+    fetchStoryRanking: () => Promise.resolve({ kind: 'offline' }),
     setNickname: (name) => setNickname(name).then(toPromptResult),
   });
   // DEV ?fakeranking=<list|empty|error|slow|offline|nonick|norecord>: 서버 없는 랭킹 화면 확인

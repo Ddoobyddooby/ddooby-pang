@@ -16,6 +16,7 @@ import { gameTracksOf, musicFor } from './musicRules';
 import { addSceneMusicButton, addSceneMuteButton } from './muteToggle';
 import { commitSave, getSave } from './saveRegistry';
 import { startTimeAttack } from './startTimeAttack';
+import type { RankingData } from './sceneData';
 import { getStages } from './stageRegistry';
 
 /** 테마 버튼 (MENU와 같은 방식, 2주차 config.ts는 장애물 태스크만 고쳐서 여기 둔다) */
@@ -81,7 +82,7 @@ export class MenuScene extends Phaser.Scene {
       cx,
       cy + r.dy,
       { width: r.width, height: r.height, fontSize: r.fontSize, label: r.text },
-      () => this.scene.start('Ranking'),
+      () => this.scene.start('Ranking', { tab: 'weekly', from: 'Menu' } satisfies RankingData),
       lock,
     );
   }

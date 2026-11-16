@@ -1,4 +1,4 @@
-// 주간 랭킹 화면 (V2-W3-04, PLAN2 6.5): 제목 · 주 기간 · 드래그 스크롤 목록(StageMapScene 방식) · 하단 내 순위 고정 줄 · [새로고침/다시 시도] [돌아가기].
+// 랭킹 화면 (V2-W3-04 주간 점수, V2-W5-02 스토리 별 탭; PLAN2 6.5·6.9.1): 제목 · 탭 [주간 점수][스토리 별] · 주 기간 · 드래그 스크롤 목록(StageMapScene 방식) · 하단 내 순위 고정 줄 · [새로고침/다시 시도] [돌아가기(들어온 화면으로)].
 // 무엇을 보일지(줄, 상태, 문구)는 view/rankingRows가 정하고, 이 씬은 그리기만 한다.
 // 닉네임이 없으면 [이름 정하기]로 결과 화면과 같은 NicknamePrompt를 띄우고, 정해지면 목록을 다시 불러온다.
 
@@ -6,6 +6,7 @@ import Phaser from 'phaser';
 import { GAME, RANKING, THEME } from '../config';
 import { weekKey } from '../replay/weekKey';
 import { Music } from '../view/Music';
+import { Sfx } from '../view/Sfx';
 import { NicknamePrompt } from '../view/NicknamePrompt';
 import { clampScroll, isDrag, maxScroll } from '../view/mapLayout';
 import {
@@ -17,8 +18,11 @@ import {
   type RankingFooter,
   type RankingItem,
   type RankingLine,
+  type RankingKind,
   type RankingResult,
   type RankingView,
+  type StoryRankingResult,
+  localStarTotal,
 } from '../view/rankingRows';
 import { RANKING_TEXT } from '../view/rankingText';
 import { addSceneBackground } from '../view/theme/sceneBackground';
@@ -26,10 +30,23 @@ import { addButton, type PressLock } from '../view/ui/Button';
 import { musicFor } from './musicRules';
 import { addSceneMusicButton, addSceneMuteButton } from './muteToggle';
 import { getRankingClient } from './rankingClient';
+import { getSave } from './saveRegistry';
+import type { RankingData } from './sceneData';
+import { syncContextNow, syncStars } from './storyStarsSync';
 
 export class RankingScene extends Phaser.Scene {
-  /** 요청마다 올린다: 늦게 온 옛 응답은 버린다 */
-  private token = 0;
+  /** 탭마다 요청 번호: 요청마다 올린다. 늦게 온 옛 응답(다른 탭이 된 뒤 포함)은 버린다 */
+  private tokens: Record<RankingKind, number> = { weekly: 0, story: 0 };
+  private tab: RankingKind = 'weekly';
+  /** [돌아가기]가 가는 화면 */
+  private from: 'Menu' | 'StageMap' = 'Menu';
+  /** 서버가 말한 주 (주간 탭의 기간 줄) */
+  private shownWeek = '';
+  private loadingTimer: Phaser.Time.TimerEvent | null = null;
+  private tabParts: Record<
+    RankingKind,
+    { bg: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text }
+  > | null = null;
   private view: RankingView | null = null;
   private week!: Phaser.GameObjects.Text;
   private refreshButton!: Phaser.GameObjects.Container;
@@ -49,10 +66,14 @@ export class RankingScene extends Phaser.Scene {
     super('Ranking');
   }
 
-  create(): void {
+  create(data?: RankingData): void {
     const { width, height } = this.scale;
     this.cameras.main.setScroll(-(width - GAME.width) / 2, 0); // 넓은 화면에서 가운데 맞춤
-    this.token = 0;
+    this.tokens = { weekly: 0, story: 0 };
+    this.tab = data?.tab === 'story' ? 'story' : 'weekly';
+    this.from = data?.from === 'StageMap' ? 'StageMap' : 'Menu';
+    this.shownWeek = weekKey(Date.now());
+    this.loadingTimer = null;
     this.view = null;
     this.scroll = 0;
     this.dragged = false;
@@ -73,9 +94,10 @@ export class RankingScene extends Phaser.Scene {
         strokeThickness: RANKING.title.strokeThickness,
       })
       .setOrigin(0.5);
-    // 주 기간: 응답이 오기 전에는 기기 시각의 이번 주, 응답이 오면 서버가 말한 주
+    this.addTabs(cx);
+    // 주 기간: 응답이 오기 전에는 기기 시각의 이번 주, 응답이 오면 서버가 말한 주 (스토리 탭은 고정 문구)
     this.week = this.add
-      .text(cx, RANKING.week.y, weekRangeText(weekKey(Date.now())), {
+      .text(cx, RANKING.week.y, this.periodText(), {
         fontFamily: THEME.font,
         fontSize: `${RANKING.week.fontSize}px`,
         color: THEME.info.text,
@@ -109,7 +131,7 @@ export class RankingScene extends Phaser.Scene {
       cx + b.dx,
       by,
       { ...spec, label: RANKING_TEXT.back },
-      () => this.scene.start('Menu'),
+      () => this.scene.start(this.from),
       this.backLock,
     );
     addSceneMuteButton(this);
@@ -117,13 +139,17 @@ export class RankingScene extends Phaser.Scene {
     Music.of(this.game).play(musicFor('Ranking')); // 메뉴에서 왔으면 같은 곡이 이어진다
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.token++; // 기다리던 응답을 버린다
+      this.tokens.weekly++; // 기다리던 응답을 버린다
+      this.tokens.story++;
+      this.loadingTimer?.remove();
       this.closePrompt();
     });
     if (import.meta.env.DEV) {
       // 확인용: 스크롤과 지금 상태
       (window as unknown as { __ranking?: unknown }).__ranking = {
         state: () => this.view?.state ?? 'loading',
+        tab: () => this.tab,
+        setTab: (kind: RankingKind) => this.switchTab(kind),
         scroll: () => this.scroll,
         maxScroll: () => this.maxScrollValue(),
         scrollTo: (v: number) => this.setScroll(v),
@@ -134,35 +160,109 @@ export class RankingScene extends Phaser.Scene {
 
   // ── 불러오기 ──
 
+  private periodText(): string {
+    return this.tab === 'story' ? RANKING_TEXT.storyPeriod : weekRangeText(this.shownWeek);
+  }
+
+  /** 지금 탭의 목록을 다시 불러온다 (스토리 탭은 별을 먼저 올린 뒤 조회: 올리기가 실패해도 조회는 한다) */
   private reload(): void {
-    const token = ++this.token;
+    const kind = this.tab;
+    const token = ++this.tokens[kind];
     this.clearBodies();
+    this.loadingTimer?.remove();
     // 0.3초 넘게 걸릴 때만 "불러오는 중…" (빠르면 깜빡이지 않는다)
     const timer = this.time.delayedCall(RANKING.loadingMs, () => {
-      if (token === this.token) this.showMessage(RANKING_TEXT.loading);
+      if (token === this.tokens[kind] && kind === this.tab) this.showMessage(RANKING_TEXT.loading);
     });
-    getRankingClient()
-      .fetchRanking()
+    this.loadingTimer = timer;
+    const request: Promise<RankingResult | StoryRankingResult> =
+      kind === 'story' ? this.fetchStory() : getRankingClient().fetchRanking();
+    request
       .catch((): RankingResult => ({ kind: 'error' }))
       .then((result) => {
         timer.remove();
-        if (token !== this.token || !this.scene.isActive()) return;
-        this.render(result);
+        if (token !== this.tokens[kind] || kind !== this.tab || !this.scene.isActive()) return;
+        this.render(result, kind);
       });
   }
 
-  private render(result: RankingResult): void {
-    const view = selectView(result);
+  private async fetchStory(): Promise<StoryRankingResult> {
+    await syncStars(this.bestStars(), syncContextNow()); // 결과(성공·실패·건너뜀)와 무관하게 이어서 조회
+    return getRankingClient().fetchStoryRanking();
+  }
+
+  private bestStars(): Record<number, number> {
+    return getSave(this.registry).story.bestStars;
+  }
+
+  private switchTab(kind: RankingKind): void {
+    if (kind === this.tab || this.prompt) return;
+    this.tab = kind;
+    this.view = null;
+    this.week.setText(this.periodText());
+    this.paintTabs();
+    (this.refreshButton.list[1] as Phaser.GameObjects.Text).setText(refreshLabel(null));
+    this.reload();
+  }
+
+  private render(result: RankingResult | StoryRankingResult, kind: RankingKind): void {
+    const view = selectView(result, kind, localStarTotal(this.bestStars(), RANKING.story));
     this.view = view;
     this.clearBodies();
-    if (result.kind === 'ok') this.week.setText(weekRangeText(result.weekKey));
+    if (result.kind === 'ok' && 'weekKey' in result) {
+      this.shownWeek = result.weekKey;
+      this.week.setText(this.periodText());
+    }
     (this.refreshButton.list[1] as Phaser.GameObjects.Text).setText(refreshLabel(view));
 
-    const message = messageFor(view);
+    const message = messageFor(view, kind);
     if (message) this.showMessage(message);
     if (view.state === 'list') this.drawList(view.items);
     if (view.state === 'list' || view.state === 'empty') {
       if (view.footer) this.drawFooter(view.footer);
+    }
+  }
+
+  // ── 탭 ──
+
+  private addTabs(cx: number): void {
+    const T = RANKING.tabs;
+    const sfx = new Sfx(this);
+    const make = (kind: RankingKind, x: number, label: string) => {
+      const bg = this.add.graphics();
+      const text = this.add
+        .text(0, 0, label, { fontFamily: THEME.font, fontSize: `${T.fontSize}px` })
+        .setOrigin(0.5);
+      this.add
+        .container(x, T.y, [bg, text])
+        .setSize(T.width, T.height)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerup', () => {
+          if (kind === this.tab) return;
+          sfx.play('button');
+          this.switchTab(kind);
+        });
+      return { bg, label: text };
+    };
+    this.tabParts = {
+      weekly: make('weekly', cx - T.dx, RANKING_TEXT.tabWeekly),
+      story: make('story', cx + T.dx, RANKING_TEXT.tabStory),
+    };
+    this.paintTabs();
+  }
+
+  private paintTabs(): void {
+    const T = RANKING.tabs;
+    if (!this.tabParts) return;
+    for (const kind of ['weekly', 'story'] as const) {
+      const { bg, label } = this.tabParts[kind];
+      const active = kind === this.tab;
+      bg.clear()
+        .fillStyle(active ? T.activeFill : T.inactiveFill, active ? 1 : T.inactiveAlpha)
+        .lineStyle(4, active ? T.activeStroke : T.inactiveStroke, 1)
+        .fillRoundedRect(-T.width / 2, -T.height / 2, T.width, T.height, T.radius)
+        .strokeRoundedRect(-T.width / 2, -T.height / 2, T.width, T.height, T.radius);
+      label.setColor(active ? T.activeText : T.inactiveText);
     }
   }
 
@@ -258,7 +358,7 @@ export class RankingScene extends Phaser.Scene {
       bg.strokeRoundedRect(L.x, cy - F.height / 2, L.width, F.height, R.radius);
     this.fixedBox.add(bg);
 
-    const t = footerText(footer);
+    const t = footerText(footer, this.tab);
     const left = this.add
       .text(L.x + 24, cy, t.left, {
         fontFamily: THEME.font,

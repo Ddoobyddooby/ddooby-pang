@@ -1,6 +1,7 @@
 // 씬 사이에 넘기는 데이터 (스토리 화면 설계 1절 표). 씬 키: Menu, StageMap, Game, Result, Pause.
 
 import type { ModeResult } from '../modes/GameMode';
+import type { RankingKind } from '../view/rankingRows';
 import type { RankInfo } from './rankStatus';
 import type { RunInfo } from './runClient';
 
@@ -21,4 +22,10 @@ export interface ResultData {
 /** Pause 씬 데이터: 다시하기에 쓰고, 스토리면 [지도] 경쟁이면 [메뉴]를 보인다 */
 export interface PauseData {
   from: GameData;
+}
+
+/** 랭킹 화면이 어느 탭으로 열리고(없으면 weekly), [돌아가기]가 어디로 가는지(없으면 메뉴) */
+export interface RankingData {
+  tab?: RankingKind;
+  from?: 'Menu' | 'StageMap';
 }

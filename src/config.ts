@@ -521,7 +521,7 @@ export const MENU = {
   story: { text: '스토리', dy: 0 },
   timeattack: { text: '경쟁 60초', dy: 190 },
   /** 주간 랭킹 (V2-W3-04): 테마 버튼 아래. 기존 addButton 스타일 */
-  ranking: { text: '주간 랭킹', dy: 480, width: 340, height: 110, fontSize: 44 },
+  ranking: { text: '랭킹', dy: 480, width: 340, height: 110, fontSize: 44 },
   button: { width: 440, height: 150, fontSize: 56, subFontSize: 28 },
 } as const;
 
@@ -530,12 +530,31 @@ export const MENU = {
  * 390×844에서 줄 약 44px = 게임 좌표 약 82. 10자 닉네임 + #0000 + 6자리 점수가 한 줄에 들어간다
  */
 export const RANKING = {
-  title: { y: 100, fontSize: 64, strokeThickness: 10 },
-  week: { y: 172, fontSize: 32 },
+  title: { y: 84, fontSize: 64, strokeThickness: 10 },
+  /** 탭 [주간 점수] [스토리 별] (V2-W5-02): 두 개가 가운데에서 dx씩 떨어져 놓인다 */
+  tabs: {
+    y: 178,
+    dx: 176,
+    width: 340,
+    height: 82,
+    fontSize: 38,
+    radius: 41,
+    activeFill: 0xfff3a8,
+    activeStroke: 0xe8b622,
+    inactiveFill: 0xffffff,
+    inactiveAlpha: 0.7,
+    inactiveStroke: 0xb9a9d6,
+    activeText: '#8a5a24',
+    inactiveText: '#8a7aa8',
+  },
+  /** 주 기간 / 스토리 탭의 "스테이지 1~30 별 합계" 줄 */
+  week: { y: 252, fontSize: 30 },
+  /** 스토리 별 랭킹 대상 (서버 story_stars와 같은 범위): 스테이지 번호와 별 개수 */
+  story: { stageMin: 1, stageMax: 30, starMin: 1, starMax: 3 },
   /** 요청이 이 시간을 넘길 때만 "불러오는 중…"을 보인다 */
   loadingMs: 300,
   /** 목록: top = 목록 칸 맨 위 y, bottom = 칸 맨 아래에서 화면 아래까지 남기는 거리(하단 고정 줄과 버튼 자리) */
-  list: { top: 220, bottomReserve: 270, x: 36, width: 648, rowH: 84, rowGap: 8, gapH: 52, pad: 8 },
+  list: { top: 290, bottomReserve: 270, x: 36, width: 648, rowH: 84, rowGap: 8, gapH: 52, pad: 8 },
   row: {
     radius: 22,
     /** 순위는 오른쪽 정렬(이 x), 닉네임은 왼쪽 정렬(이 x), 점수는 오른쪽 정렬(이 x) */
@@ -583,6 +602,8 @@ export const SAVE = {
 /** 스테이지 지도 (스토리 화면 설계 3절, A안). 좌표는 폭 720 기준, 시간은 ms */
 export const MAP = {
   title: { text: '스토리', y: 110, fontSize: 64, strokeThickness: 10 },
+  /** 제목 아래 오른쪽 [별 랭킹] 버튼 (V2-W5-02): 누르면 랭킹 화면의 스토리 별 탭 */
+  rankButton: { text: '별 랭킹', x: 596, y: 214, width: 200, height: 76, fontSize: 32 },
   /** 왼쪽 위 [←] 동그란 버튼 */
   back: { x: 70, y: 110, r: 38, arrow: 0x8a5a24 },
   /** 지도 세계 좌표(PLAN 6.12): 맨 위 노드 y = top, 1번 노드 y = 세계 높이 - bottomPad (바닥 언덕 위) */

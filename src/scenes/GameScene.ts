@@ -38,6 +38,7 @@ import { MoveLog } from '../view/moveLog';
 import { applyModeResult } from '../storage/progress';
 import { commitSave, getSave } from './saveRegistry';
 import { shouldLogAttempt, stageAttemptOf } from './attemptLog';
+import { syncStars } from './storyStarsSync';
 import { logStageAttempt } from '../online';
 import { musicFor } from './musicRules';
 import { canPause } from './pauseRules';
@@ -379,6 +380,15 @@ export class GameScene extends Phaser.Scene {
           this.storyMode.movesLeft(),
           save.story.attempts[result.stageId] ?? 1,
         );
+        // 클리어로 별이 늘 수 있다: 저장한 직후 최고 별 전체를 올린다 (기다리지 않고, 실패는 다음 기회에)
+        if (result.cleared) {
+          void syncStars(save.story.bestStars, {
+            devStage: this.devStage,
+            demo: this.demo,
+            dev: import.meta.env.DEV,
+            search: window.location.search,
+          });
+        }
       }
     }
     this.scene.start('Result', { result, rank });

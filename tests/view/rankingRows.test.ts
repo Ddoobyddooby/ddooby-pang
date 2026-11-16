@@ -244,3 +244,86 @@ describe('rankingRows: weekRangeText', () => {
     expect(weekRangeText('2026-W54')).toBe('');
   });
 });
+
+// ── 스토리 별 탭 (V2-W5-02) ──
+import {
+  localStarTotal,
+  type RankingFooter,
+  type RankingView,
+  type StoryRankingResult,
+} from '../../src/view/rankingRows';
+
+const STARS = { stageMin: 1, stageMax: 30, starMin: 1, starMax: 3 };
+const starRow = (seq: number, stars: number, extra: Partial<RankingRow> = {}): RankingRow =>
+  row(seq, { score: stars, ...extra });
+const footerOf = (v: RankingView): RankingFooter => (v as { footer: RankingFooter }).footer;
+const storyOk = (
+  top: RankingRow[],
+  around: RankingRow[],
+  me: { rank: number | null; score: number } | null,
+): StoryRankingResult => ({ kind: 'ok', top, around, me });
+
+describe('rankingRows: 스토리 탭', () => {
+  it('UI-02 줄의 점수 글자는 ★ N, 주간은 쉼표 점수 그대로 (REG-02)', () => {
+    const story = selectView(storyOk([starRow(1, 90)], [], null), 'story', 0);
+    expect(story).toMatchObject({ state: 'list' });
+    expect(lines((story as { items: RankingItem[] }).items)[0]!.score).toBe('★ 90');
+    const weekly = selectView(ok([row(1, { score: 15_320 })], [], null));
+    expect(lines((weekly as { items: RankingItem[] }).items)[0]!.score).toBe('15,320');
+  });
+
+  it('UI-02 하단: 내 순위 / 닉네임 없음 / 기록 없음(기기 합계)', () => {
+    const me = selectView(storyOk([starRow(1, 90)], [], { rank: 3, score: 57 }), 'story', 12);
+    expect(me).toMatchObject({ footer: { kind: 'me', rank: 3, score: '★ 57' } });
+    expect(footerText(footerOf(me), 'story')).toEqual({
+      left: '내 순위 3위',
+      right: '★ 57',
+    });
+    const nonick = selectView(storyOk([starRow(1, 90)], [], { rank: null, score: 57 }), 'story');
+    expect(footerText(footerOf(nonick), 'story').left).toBe('★ 57 이름을 정하면 랭킹에 보여요');
+    const none = selectView(storyOk([starRow(1, 90)], [], null), 'story', 12);
+    expect(footerText(footerOf(none), 'story').left).toBe('내 별 ★ 12');
+  });
+
+  it('UI-02 빈 목록에서도 내 별(0 포함)이 보인다. 주간 빈 목록의 기록 없음 줄은 계속 숨긴다', () => {
+    const zero = selectView(storyOk([], [], null), 'story', 0);
+    expect(zero).toEqual({ state: 'empty', footer: { kind: 'noRecord', score: '★ 0' } });
+    const weekly = selectView(ok([], [], null));
+    expect(weekly).toEqual({ state: 'empty', footer: null });
+  });
+
+  it('SYNC-11/D-05 서버 me가 있으면 기기 합계보다 me가 먼저다 (빈 목록 포함)', () => {
+    const v = selectView(storyOk([], [], { rank: null, score: 90 }), 'story', 0);
+    expect(v).toMatchObject({ state: 'empty', footer: { kind: 'noNickname', score: '★ 90' } });
+  });
+
+  it('UI-03 공동 순위 1·1·3과 간격 ⋯, 본인 강조는 스토리에서도 같다', () => {
+    const top = [
+      starRow(1, 6, { rank: 1 }),
+      starRow(2, 6, { rank: 1 }),
+      starRow(3, 5, { rank: 3 }),
+    ];
+    const v = selectView(storyOk(top, [starRow(9, 4, { rank: 4, isMe: true })], null), 'story');
+    const items = (v as { items: RankingItem[] }).items;
+    expect(shape(items)).toBe('1,1,3,⋯,4');
+    expect(lines(items).find((l) => l.isMe)!.score).toBe('★ 4');
+    expect(lines(items)[0]!.medal).toBe(1);
+  });
+
+  it('UI-04 탭에 맞는 안내 문구와 offline·error 상태', () => {
+    expect(messageFor({ state: 'empty', footer: null }, 'story')).toBe('첫 별을 모아 보세요!');
+    expect(messageFor({ state: 'empty', footer: null })).toBe('이번 주 첫 기록을 남겨 보세요!');
+    expect(messageFor({ state: 'error' }, 'story')).toContain('별 랭킹');
+    expect(selectView({ kind: 'offline' }, 'story')).toEqual({ state: 'offline' });
+    expect(selectView({ kind: 'error' }, 'story')).toEqual({ state: 'error' });
+    expect(refreshLabel({ state: 'error' })).toBe('다시 시도');
+  });
+
+  it('UI-02 기기 별 합계: 1~30번·별 1~3만 더한다', () => {
+    expect(localStarTotal({}, STARS)).toBe(0);
+    expect(localStarTotal({ 1: 3, 2: 1 }, STARS)).toBe(4);
+    expect(localStarTotal({ 0: 3, 31: 3, 999: 3, 5: 0, 6: 4, 7: 1.5, 8: 2 }, STARS)).toBe(2);
+    const all = Object.fromEntries(Array.from({ length: 30 }, (_, i) => [i + 1, 3]));
+    expect(localStarTotal(all, STARS)).toBe(90);
+  });
+});

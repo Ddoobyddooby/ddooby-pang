@@ -3,9 +3,9 @@
 
 import type { RankingResult as OnlineRankingResult } from '../online';
 import type { NicknameResult } from '../view/nicknamePromptState';
-import type { RankingResult } from '../view/rankingRows';
+import type { RankingResult, StoryRankingResult } from '../view/rankingRows';
 
-export type { RankingResult } from '../view/rankingRows';
+export type { RankingResult, StoryRankingResult } from '../view/rankingRows';
 
 // view는 online을 import하지 않는다(의존 방향). 그래서 rankingRows가 입력 타입을 갖고, 여기서 src/online의 타입과
 // 서로 대입 가능한지 컴파일 때 확인한다. 한쪽 모양이 바뀌면 타입 검사(npm run build)가 여기서 실패한다
@@ -15,12 +15,15 @@ export const RANKING_TYPES_MATCH: Same<RankingResult, OnlineRankingResult> = tru
 export interface RankingClient {
   /** 이번 주 랭킹. 절대 throw하지 않는다 (키 없음·오프라인이면 요청 없이 offline) */
   fetchRanking(): Promise<RankingResult>;
+  /** 스토리 별 랭킹 (V2-W5-02). 절대 throw하지 않는다. score = 별 합계 */
+  fetchStoryRanking(): Promise<StoryRankingResult>;
   /** 닉네임 입력 창이 쓰는 저장 함수 (결과 화면과 같은 규칙) */
   setNickname(name: string): Promise<NicknameResult>;
 }
 
 const NO_RANKING: RankingClient = {
   fetchRanking: () => Promise.resolve({ kind: 'offline' }),
+  fetchStoryRanking: () => Promise.resolve({ kind: 'offline' }),
   setNickname: () => Promise.resolve({ ok: false, code: 'network' }),
 };
 

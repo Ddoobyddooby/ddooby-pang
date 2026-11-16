@@ -13,7 +13,7 @@ export const RANKING_TEXT = {
   unranked: '이번 판은 랭킹에 안 올라가요',
 
   // ── 주간 랭킹 화면 (V2-W3-04) ──
-  title: '주간 랭킹',
+  title: '랭킹',
   loading: '불러오는 중…',
   offline: '인터넷에 연결되면 랭킹을 볼 수 있어요',
   error: '랭킹을 불러오지 못했어요',
@@ -27,4 +27,18 @@ export const RANKING_TEXT = {
   myRank: (n: number) => `내 순위 ${n}위`,
   /** score = 천 단위 쉼표를 넣은 점수 */
   noNickname: (score: string) => `${score}점 이름을 정하면 랭킹에 보여요`,
+
+  // ── 스토리 별 랭킹 (V2-W5-02) ──
+  tabWeekly: '주간 점수',
+  tabStory: '스토리 별',
+  /** 스토리 탭의 주 기간 줄 자리 */
+  storyPeriod: '스테이지 1~30 별 합계',
+  storyEmpty: '첫 별을 모아 보세요!',
+  storyOffline: '인터넷에 연결되면 별 랭킹을 볼 수 있어요',
+  storyError: '별 랭킹을 불러오지 못했어요',
+  /** score = "★ 57" */
+  storyNoRecord: (score: string) => `내 별 ${score}`,
+  storyNoNickname: (score: string) => `${score} 이름을 정하면 랭킹에 보여요`,
+  /** 별 합계 글자 */
+  stars: (n: number) => `★ ${n}`,
 } as const;
