@@ -535,7 +535,7 @@ V2-W4-03에서 사람의 첫 시도 클리어율을 계산할 자료는 확보�
 
 - 표 `public.story_stars(user_id uuid not null references auth.users on delete cascade, stage_id int check (1~30), stars int check (1~3), updated_at timestamptz default now(), primary key (user_id, stage_id))`. RLS 켬. `anon`·`authenticated`는 **SELECT만**(정책 `using (true)`, weekly_scores와 같음). INSERT·UPDATE·DELETE 권한은 주지 않는다
 - 쓰기 함수 `public.sync_story_stars(p_stars jsonb) returns int` — `security definer`, `set search_path = ''`, `authenticated`만 실행. 입력은 `{"1":3,"2":1,...}`(키 = 스테이지 번호 문자열, 값 = 별)
-  - `auth.uid()`가 null이면 예외. `p_stars`가 object가 아니거나, 키가 1~30 정수 문자열이 아니거나, 값이 1~3 정수가 아니거나, 키가 30개를 넘으면 **전체 거부**(예외, 아무 행도 안 바뀜). 빈 object는 허용(쓰기 없음)
+  - `auth.uid()`가 null이면 예외. `p_stars`가 object가 아니거나, 키가 1~30 정수 문자열이 아니거나, 값이 1~3 정수가 아니거나, 키가 30개를 넘으면 **전체 거부**(예외, 아무 행도 안 바뀜). 빈 object는 허용(쓰기 없음). 키는 `^([1-9]|[12][0-9]|30)$`에 맞는 표기만(`"01"`·`"1.0"`·공백 거부), 값은 `jsonb_typeof = 'number'`이고 1·2·3 중 하나(문자열 `"3"`·불리언·null 거부) (D-04)
   - 행마다 `insert ... on conflict (user_id, stage_id) do update set stars = excluded.stars, updated_at = now() where story_stars.stars < excluded.stars` → 낮거나 같은 별은 행을 바꾸지 않는다(`updated_at`도 그대로). 같은 요청을 여러 번 보내도 결과가 같다
   - 반환: 호출자의 서버 합계(0~90). `user_id`는 인자로 받지 않고 `auth.uid()`만 쓴다 → 다른 사용자 기록은 쓸 수 없다
 - 조회 함수 `public.story_ranking()` — `weekly_ranking`과 같은 틀(`stable`, `security invoker`, `anon`·`authenticated` 실행). 반환 열 `section, seq, rank, nickname, tag, total_stars, is_me`
@@ -561,7 +561,10 @@ fetchStoryRanking(): Promise<StoryRankingResult>
 
 - ① 부팅 뒤 한 번(기존 기기 별 반영) ② 스토리 판이 클리어로 끝나 저장한 직후 ③ 스토리 랭킹 탭을 열거나 새로고침할 때(동기화를 기다린 뒤 조회. 동기화가 실패해도 조회는 한다)
 - 게임은 기다리지 않는다(②는 `void`). 실패는 버리고 다음 ①②③에서 전체를 다시 보낸다 — 매번 전체 별을 보내고 서버가 최고값만 남기므로 중복·순서 문제가 없다
-- 마지막으로 성공한 내용(직렬화한 별)을 **메모리에만** 기억해 같은 내용이면 다시 보내지 않는다
+- 마지막으로 성공한 내용을 **메모리에만** 기억해 같은 내용이면 다시 보내지 않는다. 이 기억은 `src/online/storyStars.ts`가 갖고 **계정(user id)별**로 둔다: 계정이 바뀌면 같은 별도 다시 보낸다. 실패·시간 초과는 기억하지 않는다. 비교는 스테이지 번호순으로 정규화한 내용으로 한다 (Codex D-01)
+- `syncStoryStars` 호출은 **한 줄로 세운다**: 앞선 호출이 끝난 뒤 자기 내용을 보낸다(기억과 같으면 생략). 그래서 랭킹 탭의 "동기화 → 조회"는 부팅·클리어 동기화가 진행 중이어도 그 뒤에 최신 내용까지 보낸 다음 조회한다 (D-02)
+- 네트워크가 돌아온 순간 자동으로 보내지는 않는다. "온라인 복귀 후 반영"은 다음 ①②③에서 한다 (D-03)
+- 빈 내용의 `{ok, total: 0}`은 서버 합계가 아니다. 화면의 내 별은 조회 결과 `me`를 먼저 쓰고, `me`가 없을 때만 기기 합계를 쓴다 (D-05)
 - 보내지 않는 경우: `?demo`, DEV 시험 스테이지, **DEV 빌드**(개발 중 `?unlock` 등으로 실제 랭킹을 흐리지 않게. `stage_attempts`와 같은 규칙). DEV에서는 `?starsync`가 있을 때만 보낸다
 
 **화면** (경쟁 주간 랭킹 화면을 탭 2개로 확장. 새 씬을 만들지 않는다)
@@ -581,6 +584,7 @@ fetchStoryRanking(): Promise<StoryRankingResult>
 
 - 순서: 둘이 동시에 시작한다. claude-2는 `scenes/rankingClient`·`storyStarsSync`의 주입 인터페이스에만 기대어 만들고, claude-1의 `src/online` 커밋이 main에 올라온 뒤 rebase해서 `main.ts` 연결을 마친다
 - 원격 DB 적용(`supabase db push`)은 사용자 확인 뒤. 적용 전에는 `story_ranking` 호출이 error로 돌아와 화면이 "불러오지 못했어요"를 보이고 게임은 그대로다 (코드를 먼저 main에 올려도 안전)
+- 테스트 전략: `.codex-out/V2-W5-02-test-plan.md`(2026-11-16, 56항목). 설계 지적 D-01~05는 위에 반영했다
 - QA: Codex 테스트 전략(경계 조건이 많음) → 구현 → Codex 독립 리뷰(`security definer` 쓰기 함수·권한, 오프라인 복귀)
 
 - 5주차 종료 게이트(V2-W5-03): 랭킹 코드와 실제 DB 적용을 모두 마치고 위 검증 및 lint·test·build가 통과해야 v0.2 완료로 기록한다
