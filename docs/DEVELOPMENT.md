@@ -675,6 +675,14 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 6. `?ranking` 없이(배포본과 같음) 경쟁 결과: 창이 뜨지 않는다
 7. 서버: `npm run supabase:check -- .env.local --nickname` → 44개 모두 PASS (금칙어·짧음 400, 같은 이름 다른 태그, 두 번째 설정 409, 토큰 없음 401, 허용 안 된 출처 차단)
 
+### V2-W5-02 스토리 별 랭킹
+1. `npm run dev` → 메뉴 [랭킹]: 위쪽 탭 [주간 점수] [스토리 별]. 메뉴에서 들어오면 주간 점수 탭, 스토리 지도의 [별 랭킹]으로 들어오면 스토리 별 탭이 먼저 열린다. [돌아가기](안드로이드 뒤로 가기 포함)는 들어온 화면으로 간다
+2. 서버 없이 화면만: `?fakeranking=list`에서 [스토리 별] → 줄마다 `★ N`, 같은 별은 같은 순위, 아래에 "내 순위 57위 ★ 34". `nonick`은 [이름 정하기], `norecord`·`empty`는 "내 별 ★ N"(기기에 저장된 별 합계), `error`·`offline`·`slow`도 탭마다 확인
+3. 실제 서버: 개발 서버는 별을 올리지 않는다. `?starsync`를 붙이고 스토리를 클리어하면 저장 직후 `sync_story_stars` 요청이 한 번 나가고, [별 랭킹]에 내 별 합계가 보인다. **`?unlock`과 같이 쓰지 않는다** (가짜 별이 실제 랭킹에 올라간다). 배포된 게임은 `?starsync` 없이 부팅·클리어·스토리 별 탭에서 올린다
+4. 이름(닉네임)을 정해야 공개 목록에 보인다. 이름이 없으면 "★ N 이름을 정하면 랭킹에 보여요"
+5. 와이파이를 끄고 스토리를 깨도 저장·결과 화면은 그대로다. 다시 연결한 뒤 앱을 다시 열거나, 한 판을 더 깨거나, 스토리 별 탭을 열면 그동안 얻은 별이 올라간다
+6. 서버 권한 시험: `npm run supabase:check -- .env.local --stars` → 92개 모두 PASS. `--stars-ranking`은 `시험S…` 계정 4명이 공개 목록에 남으므로 운영 DB에서는 돌리지 않는다 (`supabase/README.md`)
+
 ### V2-W4-04 테마별 배경음악
 1. `npm run dev` → 메뉴: 테마와 상관없이 메뉴 곡(Happy Clappy Loop). 스토리 지도로 가도 끊기지 않고 이어진다
 2. 메뉴에서 테마를 고르고 스토리·경쟁에 각각 들어가면 아래 곡이 나온다. 개발자 도구 콘솔 `__music.state().current`로 이름 확인
@@ -1312,6 +1320,17 @@ VSCode 터미널에서 실행한다. 터미널은 `+` 버튼으로 여러 개 �
 - **CORS는 인증이 아니다**: 허용 출처만 브라우저 응답을 읽게 할 뿐, 토큰 검사는 따로 한다
 - **캔버스 위 HTML 입력**: Phaser에는 글자 입력이 없어 `<input>`을 덮는다. 한글 조합 중 Enter(`isComposing`)는 제출하지 않는다. 씬이 끝나면 DOM·리스너·타이머를 지운다 (`src/view/NicknamePrompt.ts`, `nicknamePromptState.ts` `shouldSubmitOnEnter`)
 - **배포 게이트**: 아직 점수 제출이 없어 창이 랭킹 등록으로 오해될 수 있으므로 `import.meta.env.DEV && ?ranking`일 때만 연결. 빌드에서 이 분기는 통째로 빠진다 (`ResultScene.askNickname`)
+
+### V2-W5-02 스토리 별 랭킹
+- **쓰기는 함수로만 (security definer)**: 표에는 SELECT 권한만 주고, 쓰기는 `auth.uid()`만 쓰는 DB 함수가 한다. 사용자 ID를 인자로 받지 않으니 남의 행을 쓸 길이 없다. `search_path = ''`와 PUBLIC 실행 권한 회수가 짝이다 (`supabase/migrations/20261116120000_v2_w5_02_story_stars.sql`)
+- **멱등한 동기화**: 매번 전체 별을 보내고 서버가 `on conflict ... where 기존 < 새 값`으로 높은 값만 남긴다. 실패·중복·순서 뒤바뀜을 따로 처리하지 않아도 결과가 같다
+- **먼저 전부 검사, 그다음 쓰기**: 입력이 하나라도 어긋나면 예외로 전체를 되돌린다 (부분 성공 없음)
+- **공동 순위와 나열 순번**: `rank()`는 별만으로(공동 순위), `row_number()`는 별·도달 시각·ID로(TOP 50·내 주변 자르기). 둘을 섞으면 동점이 깨진다 (`story_ranking`)
+- **시간 제한은 호출 시점부터**: 줄 세운 작업은 대기 시간도 제한에 넣어야 "최대 5초"가 지켜진다. `Promise.race`식 제한은 작업을 멈추지 못하므로, 만료된 작업이 뒤늦게 요청을 보내지 않게 단계마다 만료를 확인한다 (`src/online/storyStars.ts`)
+- **응답의 주인 확인**: 요청한 계정과 응답을 받을 때의 계정이 다르면 버린다. 캐시도 계정별로 둔다
+- **주입형 클라이언트**: scenes는 인터페이스만 알고 `main.ts`가 online 구현을 꽂는다. 의존 방향을 지키고 테스트·가짜 응답(`?fakeranking`)을 쉽게 한다 (`src/scenes/rankingClient.ts`, `storyStarsSync.ts`)
+- **탭별 요청 token**: 탭을 바꾸거나 새로고침할 때마다 번호를 올려, 늦게 온 옛 응답을 그리지 않는다 (`src/scenes/RankingScene.ts`)
+- **독립 리뷰가 잡은 것**: 경합(대기 시간, 늦은 요청, 계정 교체)은 "정상 경로 테스트"로는 안 보인다. 가짜 시간으로 순서를 뒤집어 재현한다 (`tests/online/storyStars.test.ts` "Codex 리뷰 R1~R4 재검증")
 
 ### V2-W4-04 테마별 배경음악
 - **표로 고르기 + 기본값 대체**: 테마 × 모드 곡을 `config.MUSIC.gameTracks` 표에 두고, 칸이 비면 기본 테마 곡을 쓴다. 테마를 더해도 코드는 그대로 (`src/scenes/musicRules.ts` `gameTrack`)
