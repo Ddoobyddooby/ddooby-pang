@@ -6,6 +6,12 @@ import { createDefaultBackend, hasOnlineKeys } from './client';
 import { createProfile, type MyProfile, type Profile, type SetNicknameResult } from './profile';
 import { createRanking, type Ranking, type RankingResult } from './ranking';
 import {
+  createStoryStars,
+  type StarsSyncResult,
+  type StoryRankingResult,
+  type StoryStars,
+} from './storyStars';
+import {
   createRuns,
   type Runs,
   type StartedRun,
@@ -20,6 +26,7 @@ export type { StageAttempt } from './attempts';
 export type { MyProfile, SetNicknameErrorCode, SetNicknameResult } from './profile';
 export type { RunMove, StartedRun, SubmitOutcome, SubmitPayload } from './runs';
 export type { RankingMe, RankingResult, RankingRow } from './ranking';
+export type { StarsSyncResult, StoryRankingResult } from './storyStars';
 export {
   checkNickname,
   formatTag,
@@ -33,6 +40,7 @@ let instance: {
   runs: Runs;
   ranking: Ranking;
   attempts: Attempts;
+  storyStars: StoryStars;
 } | null = null;
 
 function online() {
@@ -52,6 +60,7 @@ function online() {
       runs: createRuns(account, { version: CORE_VERSION, isOnline }),
       ranking: createRanking(account, { isOnline }),
       attempts: createAttempts(account, { isOnline }),
+      storyStars: createStoryStars(account, { isOnline }),
     };
   }
   return instance;
@@ -93,4 +102,17 @@ export function fetchRanking(week?: string): Promise<RankingResult> {
 /** 스토리 한 판 기록 (최대 5초). 키 없음·오프라인·계정 없음이면 보내지 않는다. 절대 throw하지 않는다 */
 export function logStageAttempt(attempt: StageAttempt): Promise<void> {
   return online().attempts.logStageAttempt(attempt);
+}
+
+/**
+ * 기기의 스테이지별 최고 별 전체를 보낸다 (최대 5초). 1~30번·별 1~3만 고르고, 서버는 더 높은 별만 남긴다.
+ * 호출은 한 줄로 세운다. 같은 계정에 같은 내용을 이미 보냈으면 요청하지 않는다. 절대 throw하지 않는다
+ */
+export function syncStoryStars(bestStars: Record<number, number>): Promise<StarsSyncResult> {
+  return online().storyStars.syncStoryStars(bestStars);
+}
+
+/** 스토리 별 랭킹 (최대 5초). score는 별 합계. 절대 throw하지 않는다 */
+export function fetchStoryRanking(): Promise<StoryRankingResult> {
+  return online().storyStars.fetchStoryRanking();
 }

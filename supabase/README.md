@@ -45,6 +45,8 @@ npm run supabase:check -- <env 파일 경로> --nickname   # set-nickname 배포
 
 `--nickname` 항목 (익명 사용자 C를 하나 더 만든다): A 정상 설정(응답·profiles 일치), B 금칙어(사칭 접두·욕설 접미 변형)·짧음 400(시험 이름이 현재 규칙에서 그 코드로 거부되는지 먼저 로컬 확인), 닉네임 없는 C가 A와 같은 이름 → 다른 태그, A 두 번째 설정 409, 토큰 없음·무효 401, 허용 출처 preflight에 Allow-Origin 있음, 허용 안 된 출처 preflight에 없음, profiles 직접 UPDATE 여전히 실패.
 
+**스토리 별 랭킹 적용 순서 (V2-W5-02, `20261116120000_v2_w5_02_story_stars.sql`)**: 사용자 확인 뒤 ① `supabase db push --dry-run`으로 이 파일 하나만 올라가는지 본다 → ② `supabase db push` (표 `story_stars`, 함수 `sync_story_stars`·`story_ranking`. Edge Function 배포는 필요 없다) → ③ `npm run supabase:check -- <env> --stars`로 직접 쓰기 거부·입력 검증·최고값 유지·멱등·동시 요청·닉네임 없음·anon 조회와 주간 쓰기 차단 유지를 본다 (닉네임 없는 시험 계정만 써서 공개 목록에 안 보인다) → ④ 필요하면 `--stars-ranking`으로 공동 순위·이름 생긴 뒤 반영을 본다. 이 항목은 `시험S` 접두어 닉네임 4명을 만들고, 스토리 랭킹은 주간 초기화가 없어 **공개 목록에 계속 남으므로** 운영 DB에서는 실행 여부를 먼저 정한다. 적용 전에 앱 코드가 먼저 배포돼도 `story_ranking` 호출은 error로 돌아와 화면이 "불러오지 못했어요"를 보이고 게임은 그대로다. 되돌리려면 `drop function public.story_ranking(); drop function public.sync_story_stars(jsonb); drop table public.story_stars;`(기록이 지워진다).
+
 `runs`는 클라이언트가 만들 수 없어 지금은 "오류 없이 0행"만 본다. 실제 교차 시험(B가 A의 run을 못 읽음)은 `start-run`이 생기는 V2-W3-03에서 추가한다.
 
 ## PLAN2 6.2 대조 (`20261106150000_v2_w3_01_schema_rls.sql`)

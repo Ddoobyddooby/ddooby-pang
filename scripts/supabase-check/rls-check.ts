@@ -1,12 +1,17 @@
 // V2-W3-01 권한(RLS·GRANT) 시험: 원격 개발 프로젝트에 익명 사용자 A·B와 비로그인 anon으로 접속해
 // PLAN2 6.2 시험 ①~④와 anon 쓰기 차단을 확인한다. publishable key만 쓴다 (npm test에 넣지 않음).
 //
-//   npm run supabase:check [-- <env 파일 경로>] [--nickname] [--scores] [--ranking]   (기본값 .env.local)
+//   npm run supabase:check [-- <env 파일 경로>] [--nickname] [--scores] [--ranking] [--stars] [--stars-ranking]
+//   (기본값 .env.local)
 //
 // --nickname: Edge Function set-nickname 시험을 더한다 (V2-W3-02, 함수 배포 뒤에만).
 // --scores: start-run·submit-score 시험 ①~⑪을 더한다 (V2-W3-03, 마이그레이션·함수 배포 뒤에만. 약 70초).
 // --ranking: DB 함수 weekly_ranking 시험을 더한다 (V2-W3-04, 마이그레이션 뒤에만. 기록을 --scores 경로로
 //   만들려고 약 60초 기다린다). 닉네임 있는 시험 사용자(`시험R` 접두어)의 기록은 이번 주 랭킹에 보인다.
+// --stars: story_stars·sync_story_stars·story_ranking 시험 (V2-W5-02, 마이그레이션 뒤에만). 닉네임 없는 시험
+//   계정만 써서 공개 스토리 랭킹에는 보이지 않는다. 시험 계정의 story_stars 행은 남는다 (지울 권한이 없다).
+// --stars-ranking: 닉네임 있는 시험 사용자(`시험S` 접두어) 4명으로 공동 순위·이름 생긴 뒤 반영을 본다 (set-nickname
+//   배포 뒤에만). 스토리 랭킹은 주간 초기화가 없어 **이 사용자들은 공개 목록에 계속 남는다**. 운영 DB에서는 주의
 // 시험이 만든 익명 계정, stage_attempts 행(stage_id 999), `시험` 접두어 닉네임, 이번 주 runs·weekly_scores 행
 // (닉네임 없는 시험 계정이라 랭킹에는 보이지 않는다)은 개발 프로젝트에 남는다.
 import { readFileSync } from 'node:fs';
@@ -171,6 +176,8 @@ async function main(): Promise<number> {
   const withNickname = args.includes('--nickname');
   const withScores = args.includes('--scores');
   const withRanking = args.includes('--ranking');
+  const withStars = args.includes('--stars');
+  const withStarsRanking = args.includes('--stars-ranking');
   const { url, key } = loadEnv(envPath);
 
   const anon = newClient(url, key);
@@ -397,6 +404,8 @@ async function main(): Promise<number> {
   if (withNickname) await nicknameChecks({ url, key, a, b, idA, check });
   if (withScores) await scoreChecks({ url, key, a, b, idA, check, anon });
   if (withRanking) await rankingChecks({ url, key, anon, check });
+  if (withStars) await storyStarsChecks({ url, key, anon, check });
+  if (withStarsRanking) await storyRankingChecks({ url, key, anon, check });
 
   console.log('| # | 항목 | 기대 | 결과 | 상세 |');
   console.log('|---|---|---|---|---|');
@@ -871,6 +880,464 @@ async function rankingChecks({ url, key, anon, check }: RankingContext): Promise
   );
   await check('랭', 'R weekly_scores 직접 DELETE', '실패', async () =>
     denied(await r.from('weekly_scores').delete().eq('user_id', idR).select()),
+  );
+}
+
+interface StoryRankingRpcRow {
+  section: string;
+  seq: number | null;
+  rank: number | null;
+  nickname: string | null;
+  tag: number | null;
+  total_stars: number;
+  is_me: boolean;
+}
+
+interface StarsRow {
+  stage_id: number;
+  stars: number;
+  updated_at: string;
+}
+
+/** 스테이지 1~n 모두 같은 별 */
+const allStars = (n: number, stars: number): Record<string, number> =>
+  Object.fromEntries(Array.from({ length: n }, (_, i) => [String(i + 1), stars]));
+
+async function syncStars(client: SupabaseClient, p: unknown): Promise<Res> {
+  return client.rpc('sync_story_stars', { p_stars: p });
+}
+
+/** 합계 반환을 기대하는 sync. 오류면 throw */
+async function syncTotal(client: SupabaseClient, p: unknown): Promise<number> {
+  const res = await syncStars(client, p);
+  if (res.error) throw new Error(errText(res));
+  if (typeof res.data !== 'number')
+    throw new Error(`합계가 숫자가 아님: ${JSON.stringify(res.data)}`);
+  return res.data;
+}
+
+/** 그 사용자의 story_stars 행 (전체 SELECT라 누구로 읽어도 같다) */
+async function starsOf(client: SupabaseClient, userId: string): Promise<StarsRow[]> {
+  const res = await client
+    .from('story_stars')
+    .select('stage_id, stars, updated_at')
+    .eq('user_id', userId)
+    .order('stage_id');
+  if (res.error) throw new Error(errText(res));
+  return res.data as StarsRow[];
+}
+
+const showStars = (rows: StarsRow[]) => rows.map((r) => `${r.stage_id}:${r.stars}`).join(',');
+const sameRows = (x: StarsRow[], y: StarsRow[]) => JSON.stringify(x) === JSON.stringify(y);
+
+async function storyRanking(client: SupabaseClient): Promise<StoryRankingRpcRow[]> {
+  const res = await client.rpc('story_ranking');
+  if (res.error) throw new Error(errText(res));
+  return res.data as StoryRankingRpcRow[];
+}
+
+const storyMe = (rows: StoryRankingRpcRow[]) => rows.filter((x) => x.section === 'me');
+
+const storySummary = (rows: StoryRankingRpcRow[]) =>
+  `${rows.length}행 (top ${rows.filter((x) => x.section === 'top').length}, ` +
+  `around ${rows.filter((x) => x.section === 'around').length}, me ${JSON.stringify(storyMe(rows))})`;
+
+/** 공동 순위 일관성: seq 순으로 합계가 줄고, 같은 합계는 같은 rank, 합계가 바뀌는 행은 rank = seq */
+function ranksConsistent(rows: StoryRankingRpcRow[]): boolean {
+  const bySeq = new Map<number, StoryRankingRpcRow>();
+  for (const x of rows) {
+    if ((x.section === 'top' || x.section === 'around') && x.seq !== null) bySeq.set(x.seq, x);
+  }
+  for (const [seq, cur] of bySeq) {
+    if (cur.rank === null || cur.rank > seq) return false;
+    const prev = bySeq.get(seq - 1);
+    if (!prev) continue;
+    if (cur.total_stars > prev.total_stars) return false;
+    if (cur.total_stars === prev.total_stars ? cur.rank !== prev.rank : cur.rank !== seq)
+      return false;
+  }
+  return true;
+}
+
+/**
+ * 스토리 별 쓰기·권한·입력 검증·최고값·조회 (PLAN2 6.9.1, 테스트 전략 DB-01~10·MAX-01~06·RANK-05/07/08·REG-03).
+ * 닉네임 없는 새 익명 사용자만 쓴다 → 공개 목록에 보이지 않는다
+ */
+async function storyStarsChecks({ url, key, anon, check }: RankingContext): Promise<void> {
+  const a = newClient(url, key);
+  const b = newClient(url, key);
+  const n = newClient(url, key);
+  const z = newClient(url, key);
+  const idA = await signIn(a, 'SA');
+  const idB = await signIn(b, 'SB');
+  const idN = await signIn(n, 'SN');
+  await signIn(z, 'SZ');
+
+  // DB-10 빈 object
+  await check('별DB-10', 'A 빈 object (신규)', '0, 행 없음', async () => {
+    const t = await syncTotal(a, {});
+    const rows = await starsOf(a, idA);
+    return { pass: t === 0 && rows.length === 0, detail: `합계 ${t}, ${rows.length}행` };
+  });
+
+  // MAX-01·02·03 최고값·멱등
+  let snapshot: StarsRow[] = [];
+  await check('별MAX-01', 'A {1:1} → {1:3,2:1} → {1:2}', '1 → 4 → 4, 1:3,2:1 유지', async () => {
+    const t1 = await syncTotal(a, { '1': 1 });
+    const t2 = await syncTotal(a, { '1': 3, '2': 1 });
+    snapshot = await starsOf(a, idA);
+    const t3 = await syncTotal(a, { '1': 2 });
+    const rows = await starsOf(a, idA);
+    const pass =
+      t1 === 1 && t2 === 4 && t3 === 4 && showStars(rows) === '1:3,2:1' && sameRows(rows, snapshot);
+    return { pass, detail: `${t1} → ${t2} → ${t3}, ${showStars(rows)}` };
+  });
+  await check('별MAX-02', 'A 같은 요청 반복·키 순서 바꿈', '4, 행·updated_at 불변', async () => {
+    const t1 = await syncTotal(a, { '1': 3, '2': 1 });
+    const t2 = await syncTotal(a, { '2': 1, '1': 3 });
+    const rows = await starsOf(a, idA);
+    return { pass: t1 === 4 && t2 === 4 && sameRows(rows, snapshot), detail: `${t1}, ${t2}` };
+  });
+  await check('별DB-10', 'A 빈 object (기록 있음)', '4, 행·updated_at 불변', async () => {
+    const t = await syncTotal(a, {});
+    const rows = await starsOf(a, idA);
+    return { pass: t === 4 && sameRows(rows, snapshot), detail: `합계 ${t}, ${showStars(rows)}` };
+  });
+  await check('별MAX-03', 'A {1:3,2:2} (2만 상승)', '5, 2의 updated_at만 바뀜', async () => {
+    const t = await syncTotal(a, { '1': 3, '2': 2 });
+    const rows = await starsOf(a, idA);
+    const pass =
+      t === 5 &&
+      rows[0]?.updated_at === snapshot[0]?.updated_at &&
+      rows[1]?.stars === 2 &&
+      rows[1]?.updated_at !== snapshot[1]?.updated_at;
+    snapshot = rows;
+    return { pass, detail: `합계 ${t}, ${showStars(rows)}` };
+  });
+
+  // DB-05~09 입력 검증: 전체 거부, 아무 행도 안 바뀐다.
+  // supabase-js는 JSON으로 보내므로 null은 SQL NULL로 들어간다 (JSON null과 SQL NULL을 구분해 보낼 수 없다)
+  const rejects: [string, string, unknown][] = [
+    ['별DB-05', 'null', null],
+    ['별DB-05', '배열', [3]],
+    ['별DB-05', '문자열', 'x'],
+    ['별DB-05', '숫자', 3],
+    ['별DB-05', '불리언', true],
+    ...['0', '31', '999', '-1', '1.5', '1e0', '01', ' 1', '', 'abc', '99999999999999999999'].map(
+      (k): [string, string, unknown] => ['별DB-06', `키 ${JSON.stringify(k)}`, { [k]: 3 }],
+    ),
+    ...[0, 4, -1, 1.5, null, true, '3', [3], { a: 3 }, 1e300].map(
+      (v): [string, string, unknown] => ['별DB-07', `값 ${JSON.stringify(v)}`, { '3': v }],
+    ),
+    ['별DB-08', '정상 + 잘못(뒤)', { '4': 3, '1': 3, '5': 9 }],
+    ['별DB-08', '잘못(앞) + 정상', { '0': 3, '4': 3 }],
+    ['별DB-09', '31개', { ...allStars(30, 3), '31': 3 }],
+  ];
+  for (const [id, label, p] of rejects) {
+    await check(id, `A sync ${label}`, '오류, A 행 불변', async () => {
+      const res = await syncStars(a, p);
+      const rows = await starsOf(a, idA);
+      return {
+        pass: res.error !== null && sameRows(rows, snapshot),
+        detail: `${res.error ? errText(res) : `호출됨 ${String(res.data)}`}, ${showStars(rows)}`,
+      };
+    });
+  }
+
+  // DB-02·03 호출자 인증·소유권
+  await check('별DB-02', 'anon sync_story_stars', '실패', async () => {
+    const res = await syncStars(anon, { '1': 3 });
+    return { pass: res.error !== null, detail: res.error ? errText(res) : '호출됨' };
+  });
+  await check('별DB-03', 'B가 p_user로 A 지정', '실패, A 불변', async () => {
+    const res = await b.rpc('sync_story_stars', { p_stars: { '9': 3 }, p_user: idA });
+    const rows = await starsOf(b, idA);
+    return {
+      pass: res.error !== null && sameRows(rows, snapshot),
+      detail: `${res.error ? errText(res) : '호출됨'}, A ${showStars(rows)}`,
+    };
+  });
+  await check('별DB-03', 'B 정상 {7:2}', 'B에만 기록, A 불변', async () => {
+    const t = await syncTotal(b, { '7': 2 });
+    const rowsA = await starsOf(b, idA);
+    const rowsB = await starsOf(b, idB);
+    return {
+      pass: t === 2 && showStars(rowsB) === '7:2' && sameRows(rowsA, snapshot),
+      detail: `B 합계 ${t}, B ${showStars(rowsB)}, A ${showStars(rowsA)}`,
+    };
+  });
+
+  // DB-01 직접 쓰기: 실제 있는 A의 행을 표적으로. 오류가 나야 한다 (0행 반영을 통과로 보지 않는다)
+  const writers: [string, SupabaseClient][] = [
+    ['A', a],
+    ['B', b],
+    ['anon', anon],
+  ];
+  for (const [who, client] of writers) {
+    const writes: [string, () => PromiseLike<Res>][] = [
+      [
+        'INSERT',
+        () => client.from('story_stars').insert({ user_id: idA, stage_id: 20, stars: 3 }).select(),
+      ],
+      ['UPDATE', () => client.from('story_stars').update({ stars: 3 }).eq('user_id', idA).select()],
+      ['DELETE', () => client.from('story_stars').delete().eq('user_id', idA).select()],
+      [
+        'upsert',
+        () =>
+          client
+            .from('story_stars')
+            .upsert({ user_id: idA, stage_id: 2, stars: 3 }, { onConflict: 'user_id,stage_id' })
+            .select(),
+      ],
+    ];
+    for (const [label, run] of writes) {
+      await check(
+        '별DB-01',
+        `${who} story_stars 직접 ${label} (A 행)`,
+        '오류, A 불변',
+        async () => {
+          const res = await run();
+          const rows = await starsOf(a, idA);
+          return {
+            pass: res.error !== null && sameRows(rows, snapshot),
+            detail: `${res.error ? errText(res) : `오류 없음 ${rowsOf(res).length}행`}, A ${showStars(rows)}`,
+          };
+        },
+      );
+    }
+  }
+  await check('별DB-04', 'anon·B story_stars SELECT', '성공 (공개 읽기)', async () => {
+    const x = await anon.from('story_stars').select('*').limit(5);
+    const y = await b.from('story_stars').select('*').eq('user_id', idA);
+    if (x.error || y.error) return { pass: false, detail: errText(x.error ? x : y) };
+    return {
+      pass: y.data.length === snapshot.length,
+      detail: `anon ${x.data.length}행, B→A ${y.data.length}행`,
+    };
+  });
+
+  // MAX-04·05 동시 요청: 모두 끝난 뒤 다시 읽어 판정한다
+  const showRes = (rs: Res[]) => rs.map((r) => (r.error ? errText(r) : String(r.data))).join(' / ');
+  await check('별MAX-04', 'A 스테이지 10에 1·3·2 동시', '모두 끝난 뒤 10:3 한 행', async () => {
+    const results = await Promise.all([
+      syncStars(a, { '10': 1 }),
+      syncStars(a, { '10': 3 }),
+      syncStars(a, { '10': 2 }),
+    ]);
+    const row10 = (await starsOf(a, idA)).filter((r) => r.stage_id === 10);
+    return {
+      pass: row10.length === 1 && row10[0]!.stars === 3,
+      detail: `${showRes(results)}, ${showStars(row10)}`,
+    };
+  });
+  await check(
+    '별MAX-05',
+    'A 서로 다른 묶음 동시 (키 순서 뒤집음)',
+    '최고값 수렴 11:2,12:3,13:3',
+    async () => {
+      const batches = [
+        { '11': 1, '12': 3, '13': 2 },
+        { '13': 3, '12': 1, '11': 2 },
+      ];
+      const results = await Promise.all(batches.map((p) => syncStars(a, p)));
+      // 충돌로 실패한 호출은 같은 내용을 다시 보낸다 (앱도 다음 시점에 전체를 다시 보낸다)
+      for (const [i, r] of results.entries()) if (r.error) await syncTotal(a, batches[i]);
+      const rows = (await starsOf(a, idA)).filter((r) => r.stage_id >= 11 && r.stage_id <= 13);
+      return {
+        pass: showStars(rows) === '11:2,12:3,13:3',
+        detail: `${showRes(results)}, ${showStars(rows)}`,
+      };
+    },
+  );
+
+  // MAX-06 30개 3별 = 90 (닉네임 없는 N)
+  await check('별MAX-06', 'N 30개 3별 → 30개 1별 → 빈 요청', '90, 90, 90, 30행', async () => {
+    const t1 = await syncTotal(n, allStars(30, 3));
+    const t2 = await syncTotal(n, allStars(30, 1));
+    const t3 = await syncTotal(n, {});
+    const rows = await starsOf(n, idN);
+    return {
+      pass: t1 === 90 && t2 === 90 && t3 === 90 && rows.length === 30,
+      detail: `${t1}, ${t2}, ${t3}, ${rows.length}행`,
+    };
+  });
+
+  // story_ranking: 닉네임 없음·기록 없음·anon
+  await check(
+    '별RANK-05',
+    'N(90, 닉네임 없음) 조회',
+    'me 1행 rank·seq null·90, around 없음',
+    async () => {
+      const rows = await storyRanking(n);
+      const me = storyMe(rows);
+      const pass =
+        me.length === 1 &&
+        me[0]!.rank === null &&
+        me[0]!.seq === null &&
+        me[0]!.total_stars === 90 &&
+        me[0]!.is_me === true &&
+        !rows.some((x) => x.section === 'around') &&
+        !rows.some((x) => x.section !== 'me' && x.is_me);
+      return { pass, detail: storySummary(rows) };
+    },
+  );
+  await check('별RANK-07', 'Z(기록 없음) 조회', 'me·around 없음', async () => {
+    const rows = await storyRanking(z);
+    return {
+      pass: rows.every((x) => x.section === 'top' && x.is_me === false),
+      detail: storySummary(rows),
+    };
+  });
+  await check(
+    '별RANK-08',
+    'anon 조회',
+    'top만(≤50), is_me false, user_id·week_key 없음, 순위 일관',
+    async () => {
+      const rows = await storyRanking(anon);
+      const pass =
+        rows.length <= 50 &&
+        rows.every(
+          (x) =>
+            x.section === 'top' && x.is_me === false && !('user_id' in x) && !('week_key' in x),
+        ) &&
+        ranksConsistent(rows);
+      return { pass, detail: storySummary(rows) };
+    },
+  );
+
+  // REG-03 story 동기화 뒤에도 주간 쓰기 경로는 그대로 막혀 있다
+  await check('별REG-03', 'A weekly_scores 직접 INSERT', '실패', async () =>
+    denied(
+      await a
+        .from('weekly_scores')
+        .insert({ user_id: idA, week_key: TEST_WEEK_KEY, best_score: 999999, run_id: NIL_UUID })
+        .select(),
+    ),
+  );
+  await check('별REG-03', 'A record_weekly_best RPC', '실패', async () => {
+    const res = await a.rpc('record_weekly_best', {
+      p_user: idA,
+      p_week: TEST_WEEK_KEY,
+      p_score: 999999,
+      p_run: NIL_UUID,
+    });
+    return { pass: res.error !== null, detail: res.error ? errText(res) : '호출됨' };
+  });
+}
+
+interface StarsUser {
+  name: string;
+  client: SupabaseClient;
+  token: string;
+}
+
+/**
+ * 공개 스토리 랭킹 시험 (RANK-01·02·04·06·08). 닉네임 있는 S1·S2·S3과 나중에 이름을 정하는 S4.
+ * 스토리 랭킹은 주간 초기화가 없어 이 사용자들은 공개 목록에 남는다
+ */
+async function storyRankingChecks({ url, key, anon, check }: RankingContext): Promise<void> {
+  const makeUser = async (name: string): Promise<StarsUser> => {
+    const client = newClient(url, key);
+    await signIn(client, name);
+    return { name, client, token: await tokenOf(client) };
+  };
+  const s1 = await makeUser('S1');
+  const s2 = await makeUser('S2');
+  const s3 = await makeUser('S3');
+  const s4 = await makeUser('S4');
+  const suffix = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+  const nameOf = (u: StarsUser) => `시험${u.name}${suffix}`;
+  const setName = async (u: StarsUser) => {
+    const res = await callFn(url, key, 'set-nickname', { nickname: nameOf(u) }, u.token);
+    if (res.status !== 200) {
+      throw new Error(`${u.name} 닉네임 ${res.status} ${JSON.stringify(res.body)}`);
+    }
+  };
+  const meOf = async (u: StarsUser) => storyMe(await storyRanking(u.client))[0];
+
+  await check('별RANK', `S1·S2·S3 닉네임 설정 (${nameOf(s1)} 등)`, '200', async () => {
+    for (const u of [s1, s2, s3]) await setName(u);
+    return { pass: true, detail: '3명' };
+  });
+  // S2가 먼저 6, S1이 나중에 6, S3은 5
+  await check('별RANK', 'S2 6 → S1 6 → S3 5 기록', '6, 6, 5', async () => {
+    const t2 = await syncTotal(s2.client, { '1': 3, '2': 3 });
+    await sleep(50);
+    const t1 = await syncTotal(s1.client, { '1': 3, '2': 3 });
+    const t3 = await syncTotal(s3.client, { '1': 3, '2': 2 });
+    return { pass: t1 === 6 && t2 === 6 && t3 === 5, detail: `${t1}, ${t2}, ${t3}` };
+  });
+  await check(
+    '별RANK-02',
+    '공동 순위',
+    'S1.rank = S2.rank, S2.seq < S1.seq, S3.rank > S1.rank',
+    async () => {
+      const [m1, m2, m3] = [await meOf(s1), await meOf(s2), await meOf(s3)];
+      const pass =
+        !!m1 &&
+        !!m2 &&
+        !!m3 &&
+        m1.rank !== null &&
+        m1.rank === m2.rank &&
+        m2.seq! < m1.seq! &&
+        m3.rank! > m1.rank &&
+        m3.total_stars === 5;
+      return { pass, detail: JSON.stringify([m1, m2, m3]) };
+    },
+  );
+  await check('별RANK-04', 'S1 조회', 'me 1행 rank·seq, around에 본인, ±5, 순위 일관', async () => {
+    const rows = await storyRanking(s1.client);
+    const me = storyMe(rows);
+    const around = rows.filter((x) => x.section === 'around');
+    const mine = around.filter((x) => x.is_me);
+    const pass =
+      me.length === 1 &&
+      Number.isInteger(me[0]!.rank) &&
+      me[0]!.total_stars === 6 &&
+      mine.length === 1 &&
+      mine[0]!.seq === me[0]!.seq &&
+      around.length <= 11 &&
+      around.every((x) => Math.abs(x.seq! - me[0]!.seq!) <= 5) &&
+      ranksConsistent(rows);
+    return { pass, detail: storySummary(rows) };
+  });
+  await check('별RANK-01', 'S1 같은 별 다시 제출', '합계 6, seq 그대로', async () => {
+    const before = await meOf(s1);
+    const t = await syncTotal(s1.client, { '2': 3, '1': 3 });
+    const after = await meOf(s1);
+    const pass = t === 6 && after?.total_stars === 6 && after.seq === before?.seq;
+    return { pass, detail: `${JSON.stringify(before)} → ${JSON.stringify(after)}` };
+  });
+  await check(
+    '별RANK-08',
+    'anon 조회 (공개 기록 있음)',
+    'top만, is_me false, 순위 일관',
+    async () => {
+      const rows = await storyRanking(anon);
+      const pass =
+        rows.length >= 1 &&
+        rows.every((x) => x.section === 'top' && x.is_me === false) &&
+        ranksConsistent(rows);
+      return { pass, detail: storySummary(rows) };
+    },
+  );
+  // RANK-06 기록 먼저, 이름은 나중 (새 제출 없이 반영)
+  await check(
+    '별RANK-06',
+    'S4 {1:1} 뒤 닉네임 설정',
+    '전 rank null → 뒤 rank 있음, 합계 1',
+    async () => {
+      await syncTotal(s4.client, { '1': 1 });
+      const before = await meOf(s4);
+      await setName(s4);
+      const after = await meOf(s4);
+      const pass =
+        before?.rank === null &&
+        after !== undefined &&
+        Number.isInteger(after.rank) &&
+        after.total_stars === 1;
+      return { pass, detail: `${JSON.stringify(before)} → ${JSON.stringify(after)}` };
+    },
   );
 }
 
