@@ -3,7 +3,7 @@
 이 파일은 Codex가 읽는 지침이다. Claude용 지침은 `CLAUDE.md`이며, 소스 수정·테스트 규칙(아래 "소스 수정 규칙"·"아키텍처 규칙"·"명령어"·"Git")은 둘이 같아야 한다.
 Claude 전용 스킬(oh-my-claudecode, superpowers)은 사용하지 않는다. 한국어로 간결하게 답하고, 불확실한 사실은 "확인 필요"로 표시한다.
 
-ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 완료, v0.2 개발 중). 조카가 시범 플레이한다. 저장소는 공개다.
+ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1·v0.2 완료). 조카가 시범 플레이한다. 저장소는 공개다.
 
 ## 기본 팀과 역할
 

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1 완료, v0.2 개발 중). 응답과 문서는 한국어로 쓴다.
+ddooby-pang: Phaser 3 + TypeScript 매치-3 퍼즐 게임 (v0.1·v0.2 완료). 응답과 문서는 한국어로 쓴다.
 
 ## 문서
 
