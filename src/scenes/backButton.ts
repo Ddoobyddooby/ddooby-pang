@@ -7,6 +7,7 @@ import type Phaser from 'phaser';
 import { backAction } from './backAction';
 import type { GameScene } from './GameScene';
 import type { PauseScene } from './PauseScene';
+import type { RankingScene } from './RankingScene';
 import type { ResultScene } from './ResultScene';
 
 let registered = false;
@@ -19,7 +20,10 @@ export function registerBackButton(game: Phaser.Game): void {
     const keys = scenes.map((s) => s.sys.settings.key);
     const find = <T extends Phaser.Scene>(key: string) =>
       scenes.find((s) => s.sys.settings.key === key) as T | undefined;
-    const action = backAction(keys, { resultKind: find<ResultScene>('Result')?.resultKind });
+    const action = backAction(keys, {
+      resultKind: find<ResultScene>('Result')?.resultKind,
+      rankingFrom: find<RankingScene>('Ranking')?.backTo,
+    });
 
     if (action === 'pause') find<GameScene>('Game')?.requestPause();
     else if (action === 'resume') find<PauseScene>('Pause')?.resumeGame();

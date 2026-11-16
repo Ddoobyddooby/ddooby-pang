@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   getStoryStarsClient,
   setStoryStarsClient,
+  syncThenFetch,
   shouldSyncStars,
   syncStars,
   type StarsSyncResult,
@@ -77,5 +78,43 @@ describe('syncStars', () => {
     await syncStars({ 1: 3 }, ctx());
     expect(c.syncStoryStars).toHaveBeenCalledTimes(1);
     setStoryStarsClient(before);
+  });
+});
+
+describe('syncThenFetch (SYNC-04)', () => {
+  const results: [string, () => Promise<unknown>][] = [
+    ['ok', () => Promise.resolve({ kind: 'ok', total: 3 })],
+    ['error', () => Promise.resolve({ kind: 'error' })],
+    ['offline', () => Promise.resolve({ kind: 'offline' })],
+    ['skipped', () => Promise.resolve({ kind: 'skipped' })],
+    ['reject', () => Promise.reject(new Error('x'))],
+  ];
+  for (const [name, sync] of results) {
+    it(`동기화 ${name}: 조회는 동기화가 끝난 뒤 정확히 한 번`, async () => {
+      const order: string[] = [];
+      const value = await syncThenFetch(
+        async () => {
+          order.push('sync-start');
+          await new Promise((r) => setTimeout(r, 5));
+          order.push('sync-end');
+          return sync();
+        },
+        () => {
+          order.push('fetch');
+          return Promise.resolve('조회결과');
+        },
+      );
+      expect(value).toBe('조회결과');
+      expect(order).toEqual(['sync-start', 'sync-end', 'fetch']);
+    });
+  }
+
+  it('조회 실패는 그대로 돌려준다 (reject는 호출한 쪽이 error로 처리)', async () => {
+    await expect(
+      syncThenFetch(
+        () => Promise.resolve(),
+        () => Promise.reject(new Error('f')),
+      ),
+    ).rejects.toThrow('f');
   });
 });

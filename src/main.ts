@@ -8,10 +8,19 @@ import { ResultScene } from './scenes/ResultScene';
 import { RankingScene } from './scenes/RankingScene';
 import { StageMapScene } from './scenes/StageMapScene';
 import { renderAppIconPage } from './dev/appIcon';
-import { fetchRanking, onlineStatus, setNickname, startRun, submitScore } from './online';
+import {
+  fetchRanking,
+  fetchStoryRanking,
+  onlineStatus,
+  setNickname,
+  startRun,
+  submitScore,
+  syncStoryStars,
+} from './online';
 import { toPromptResult } from './scenes/nicknameGate';
 import { setRankingClient } from './scenes/rankingClient';
 import { setRunClient } from './scenes/runClient';
+import { setStoryStarsClient } from './scenes/storyStarsSync';
 
 // DEV ?icon: 게임 대신 앱 아이콘 원본을 받는 페이지 (assets/app-icon/README.md)
 if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('icon')) {
@@ -37,10 +46,11 @@ if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('icon
   // 주간 랭킹: 키 없음·오프라인이면 요청 없이 offline (src/online/ranking.ts)
   setRankingClient({
     fetchRanking: () => fetchRanking(),
-    // TODO(연결 대기): claude-1의 src/online fetchStoryRanking·syncStoryStars가 main에 올라오면 여기와 setStoryStarsClient에 연결
-    fetchStoryRanking: () => Promise.resolve({ kind: 'offline' }),
+    fetchStoryRanking: () => fetchStoryRanking(),
     setNickname: (name) => setNickname(name).then(toPromptResult),
   });
+  // 스토리 별: 기기의 최고 별 전체를 내 계정에 올린다 (src/online/storyStars.ts가 직렬화·캐시)
+  setStoryStarsClient({ syncStoryStars: (bestStars) => syncStoryStars(bestStars) });
   // DEV ?fakeranking=<list|empty|error|slow|offline|nonick|norecord>: 서버 없는 랭킹 화면 확인
   const fakeRanking = import.meta.env.DEV
     ? new URLSearchParams(window.location.search).get('fakeranking')

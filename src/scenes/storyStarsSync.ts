@@ -74,3 +74,19 @@ export async function syncStars(
     return { kind: 'error' };
   }
 }
+
+/**
+ * 스토리 탭의 "동기화 → 조회" 순서 (SYNC-04): 조회는 동기화가 끝난 뒤 정확히 한 번 부른다.
+ * 동기화가 error·offline·skipped이거나 reject돼도 조회는 한다
+ */
+export async function syncThenFetch<T>(
+  sync: () => Promise<unknown>,
+  fetch: () => Promise<T>,
+): Promise<T> {
+  try {
+    await sync();
+  } catch {
+    // 동기화 실패는 조회를 막지 않는다
+  }
+  return fetch();
+}

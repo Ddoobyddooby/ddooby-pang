@@ -19,6 +19,11 @@ describe('backAction', () => {
     expect(backAction(['Ranking'])).toEqual({ go: 'Menu' });
   });
 
+  it('랭킹: 들어온 화면(지도·메뉴)으로, 모르면 메뉴', () => {
+    expect(backAction(['Ranking'], { rankingFrom: 'StageMap' })).toEqual({ go: 'StageMap' });
+    expect(backAction(['Ranking'], { rankingFrom: 'Menu' })).toEqual({ go: 'Menu' });
+  });
+
   it('결과: 스토리는 지도, 경쟁은 메뉴', () => {
     expect(backAction(['Result'], { resultKind: 'story' })).toEqual({ go: 'StageMap' });
     expect(backAction(['Result'], { resultKind: 'timeattack' })).toEqual({ go: 'Menu' });

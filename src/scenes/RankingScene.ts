@@ -32,7 +32,7 @@ import { addSceneMusicButton, addSceneMuteButton } from './muteToggle';
 import { getRankingClient } from './rankingClient';
 import { getSave } from './saveRegistry';
 import type { RankingData } from './sceneData';
-import { syncContextNow, syncStars } from './storyStarsSync';
+import { syncContextNow, syncStars, syncThenFetch } from './storyStarsSync';
 
 export class RankingScene extends Phaser.Scene {
   /** 탭마다 요청 번호: 요청마다 올린다. 늦게 온 옛 응답(다른 탭이 된 뒤 포함)은 버린다 */
@@ -40,6 +40,12 @@ export class RankingScene extends Phaser.Scene {
   private tab: RankingKind = 'weekly';
   /** [돌아가기]가 가는 화면 */
   private from: 'Menu' | 'StageMap' = 'Menu';
+
+  /** Android 뒤로 가기(backButton.ts)도 이 화면으로 간다 */
+  get backTo(): 'Menu' | 'StageMap' {
+    return this.from;
+  }
+
   /** 서버가 말한 주 (주간 탭의 기간 줄) */
   private shownWeek = '';
   private loadingTimer: Phaser.Time.TimerEvent | null = null;
@@ -187,8 +193,10 @@ export class RankingScene extends Phaser.Scene {
   }
 
   private async fetchStory(): Promise<StoryRankingResult> {
-    await syncStars(this.bestStars(), syncContextNow()); // 결과(성공·실패·건너뜀)와 무관하게 이어서 조회
-    return getRankingClient().fetchStoryRanking();
+    return syncThenFetch(
+      () => syncStars(this.bestStars(), syncContextNow()),
+      () => getRankingClient().fetchStoryRanking(),
+    );
   }
 
   private bestStars(): Record<number, number> {

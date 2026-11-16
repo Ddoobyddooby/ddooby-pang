@@ -603,7 +603,7 @@ export const SAVE = {
 export const MAP = {
   title: { text: '스토리', y: 110, fontSize: 64, strokeThickness: 10 },
   /** 제목 아래 오른쪽 [별 랭킹] 버튼 (V2-W5-02): 누르면 랭킹 화면의 스토리 별 탭 */
-  rankButton: { text: '별 랭킹', x: 596, y: 214, width: 200, height: 76, fontSize: 32 },
+  rankButton: { text: '별 랭킹', x: 596, y: 202, width: 200, height: 64, fontSize: 30 },
   /** 왼쪽 위 [←] 동그란 버튼 */
   back: { x: 70, y: 110, r: 38, arrow: 0x8a5a24 },
   /** 지도 세계 좌표(PLAN 6.12): 맨 위 노드 y = top, 1번 노드 y = 세계 높이 - bottomPad (바닥 언덕 위) */

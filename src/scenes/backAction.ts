@@ -4,17 +4,18 @@ export type BackAction = 'pause' | 'resume' | 'exit' | 'none' | { go: 'Menu' | '
 
 /**
  * activeKeys = 지금 돌고 있는 씬 키 (멈춘 씬은 빠진다: 일시정지 중이면 Game 없이 Pause만).
- * resultKind = 결과 화면이면 스토리/경쟁
+ * resultKind = 결과 화면이면 스토리/경쟁, rankingFrom = 랭킹 화면이 들어온 화면(없으면 메뉴)
  */
 export function backAction(
   activeKeys: readonly string[],
-  ctx: { resultKind?: 'story' | 'timeattack' } = {},
+  ctx: { resultKind?: 'story' | 'timeattack'; rankingFrom?: 'Menu' | 'StageMap' } = {},
 ): BackAction {
   if (activeKeys.includes('Pause')) return 'resume';
   if (activeKeys.includes('Game')) return 'pause';
   if (activeKeys.includes('Result'))
     return { go: ctx.resultKind === 'story' ? 'StageMap' : 'Menu' };
-  if (activeKeys.includes('StageMap') || activeKeys.includes('Ranking')) return { go: 'Menu' };
+  if (activeKeys.includes('Ranking')) return { go: ctx.rankingFrom ?? 'Menu' }; // 들어온 화면으로
+  if (activeKeys.includes('StageMap')) return { go: 'Menu' };
   if (activeKeys.includes('Menu')) return 'exit';
   return 'none'; // Boot(불러오는 중) 등
 }
