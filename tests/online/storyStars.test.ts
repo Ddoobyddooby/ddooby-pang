@@ -671,6 +671,51 @@ describe('Codex 리뷰 R1~R4 재검증', () => {
     expect(await pending).toMatchObject({ kind: 'ok', me: { rank: 8, score: 57 } });
   });
 
+  it('G1: 끝나지 않는 sync 뒤의 빈 내용은 온라인·오프라인 모두 5초 안에 ok 0, RPC·기억 무변경', async () => {
+    vi.useFakeTimers();
+    for (const isOnline of [true, false]) {
+      for (const empty of [{}, { 1: 0, 999: 3 }] as Record<number, number>[]) {
+        let online = true;
+        let calls = 0;
+        const backend = backendWith(() =>
+          ++calls === 1 ? new Promise<RpcResult>(() => {}) : Promise.resolve(total(3)),
+        );
+        const stars = createStoryStars(fakeAccount(backend), { isOnline: () => online });
+        void stars.syncStoryStars({ 1: 1 });
+        await flush();
+        expect(backend.callRpc).toHaveBeenCalledTimes(1); // 앞 sync는 RPC를 보내고 멈춰 있다
+        online = isOnline;
+        let settled = false;
+        const pending = stars.syncStoryStars(empty).then((r) => ((settled = true), r));
+        await vi.advanceTimersByTimeAsync(STORY_STARS_TIMEOUT_MS - 1);
+        expect(settled).toBe(false); // 앞 호출을 기다린다 (순서 보존)
+        await vi.advanceTimersByTimeAsync(1);
+        expect(await pending).toEqual({ kind: 'ok', total: 0 });
+        await vi.advanceTimersByTimeAsync(60_000);
+        expect(backend.callRpc).toHaveBeenCalledTimes(1);
+        // 기억 무변경: 온라인으로 돌아와 {1:1}을 보내면 다시 보낸다 (빈 내용이 성공으로 기억되지 않았다)
+        online = true;
+        expect(await stars.syncStoryStars({ 1: 1 })).toEqual({ kind: 'ok', total: 3 });
+        expect(backend.callRpc).toHaveBeenCalledTimes(2);
+      }
+    }
+  });
+
+  it('G1: 앞 호출이 빨리 끝나면 빈 내용도 그 뒤 바로 ok 0 (RPC 없음)', async () => {
+    const gate = deferred<RpcResult>();
+    const backend = backendWith(() => gate.promise);
+    const stars = starsFor(fakeAccount(backend));
+    const first = stars.syncStoryStars({ 1: 1 });
+    let settled = false;
+    const empty = stars.syncStoryStars({}).then((r) => ((settled = true), r));
+    await flush();
+    expect(settled).toBe(false);
+    gate.resolve(total(1));
+    expect(await first).toEqual({ kind: 'ok', total: 1 });
+    expect(await empty).toEqual({ kind: 'ok', total: 0 });
+    expect(backend.callRpc).toHaveBeenCalledTimes(1);
+  });
+
   it('R4: me는 rank > seq 거부, rank = seq·rank < seq(공동 순위)·둘 다 null 허용, 한쪽만 null 거부', async () => {
     const parse = async (data: unknown[]) =>
       starsFor(fakeAccount(backendWith({ data }))).fetchStoryRanking();

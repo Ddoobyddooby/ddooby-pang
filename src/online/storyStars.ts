@@ -172,13 +172,15 @@ export function createStoryStars(account: Account, deps: StoryStarsDeps): StoryS
       const picked = pickStoryStars(bestStars);
       const req = deadlineFrom();
       const prev = queue;
+      // 보낼 것이 없으면 요청 없이 ok 0. 큐 순서(앞 호출을 기다림)는 지키되 마감·실패 경로에서도 ok 0이다 (G1)
+      const failed: StarsSyncResult = picked.length === 0 ? { kind: 'ok', total: 0 } : error;
       const run = new Promise<StarsSyncResult>((resolve) => {
         const timer = setTimeout(() => {
           req.expire();
-          resolve(error);
+          resolve(failed);
         }, timeoutMs);
         prev
-          .then(() => (req.expired() ? error : send(picked, req)))
+          .then(() => (req.expired() ? failed : send(picked, req)))
           .then(
             (result) => {
               clearTimeout(timer);
@@ -186,7 +188,7 @@ export function createStoryStars(account: Account, deps: StoryStarsDeps): StoryS
             },
             () => {
               clearTimeout(timer);
-              resolve(error);
+              resolve(failed);
             },
           );
       });
