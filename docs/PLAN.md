@@ -529,6 +529,60 @@ V2-W4-03에서 사람의 첫 시도 클리어율을 계산할 자료는 확보�
 - 이 랭킹은 클라이언트 별 기록을 신뢰하는 친목용 순위다. 서버는 인증·소유권·스테이지 범위·별 범위·합계 상한을 검사하지만 실제 플레이 여부는 증명하지 못한다. 경쟁 점수의 리플레이 검증과는 별개다
 - 익명 계정이 바뀌면 이전 계정의 온라인 기록은 자동 이전되지 않는다. 기기에 남은 별은 새 계정으로 다시 반영될 수 있다. 기기 간 진행 동기화는 v0.2 범위 밖이다
 - 검증: 빈 기록 0, 30개 모두 3별이면 90, 같은 스테이지 재플레이·중복 제출·낮은 별 제출, 공동 순위, 닉네임 없음, 다른 사용자 쓰기 거부, 기존 기기 별 동기화, 오프라인 후 재시도, 경쟁 랭킹 회귀. 원격 마이그레이션·배포는 사용자 확인을 받은 뒤 수행한다
+#### 6.9.1 상세 설계 (2026-11-16 PL)
+
+**DB** (`supabase/migrations/20261116120000_v2_w5_02_story_stars.sql`, 기존 마이그레이션은 고치지 않는다)
+
+- 표 `public.story_stars(user_id uuid not null references auth.users on delete cascade, stage_id int check (1~30), stars int check (1~3), updated_at timestamptz default now(), primary key (user_id, stage_id))`. RLS 켬. `anon`·`authenticated`는 **SELECT만**(정책 `using (true)`, weekly_scores와 같음). INSERT·UPDATE·DELETE 권한은 주지 않는다
+- 쓰기 함수 `public.sync_story_stars(p_stars jsonb) returns int` — `security definer`, `set search_path = ''`, `authenticated`만 실행. 입력은 `{"1":3,"2":1,...}`(키 = 스테이지 번호 문자열, 값 = 별)
+  - `auth.uid()`가 null이면 예외. `p_stars`가 object가 아니거나, 키가 1~30 정수 문자열이 아니거나, 값이 1~3 정수가 아니거나, 키가 30개를 넘으면 **전체 거부**(예외, 아무 행도 안 바뀜). 빈 object는 허용(쓰기 없음)
+  - 행마다 `insert ... on conflict (user_id, stage_id) do update set stars = excluded.stars, updated_at = now() where story_stars.stars < excluded.stars` → 낮거나 같은 별은 행을 바꾸지 않는다(`updated_at`도 그대로). 같은 요청을 여러 번 보내도 결과가 같다
+  - 반환: 호출자의 서버 합계(0~90). `user_id`는 인자로 받지 않고 `auth.uid()`만 쓴다 → 다른 사용자 기록은 쓸 수 없다
+- 조회 함수 `public.story_ranking()` — `weekly_ranking`과 같은 틀(`stable`, `security invoker`, `anon`·`authenticated` 실행). 반환 열 `section, seq, rank, nickname, tag, total_stars, is_me`
+  - 사용자별 합계 `total_stars = sum(stars)`, `reached_at = max(updated_at)`. 닉네임 있는 사용자만 순위 대상
+  - 나열 `total_stars desc, reached_at asc, user_id`(seq), 표시 순위는 `rank() over (order by total_stars desc)` → **공동 순위**
+  - section: `top`(seq 1~50) / `around`(내 seq ±5) / `me`(닉네임·기록 있음 → rank, 기록은 있으나 닉네임 없음 → rank·seq null + 합계, 기록 없음 → 행 없음). `week` 메타 행은 없다. `user_id`는 돌려주지 않는다
+
+**`src/online/storyStars.ts`** (새 파일, `index.ts`에 내보내기 추가. `ranking.ts`·`attempts.ts`와 같은 방식: throw 없음, `within` 시간 제한 5초)
+
+```ts
+export type StarsSyncResult = { kind: 'ok'; total: number } | { kind: 'offline' } | { kind: 'error' };
+export type StoryRankingResult =
+  | { kind: 'ok'; top: RankingRow[]; around: RankingRow[]; me: RankingMe | null } // score = 별 합계
+  | { kind: 'offline' } | { kind: 'error' };
+syncStoryStars(bestStars: Record<number, number>): Promise<StarsSyncResult>
+fetchStoryRanking(): Promise<StoryRankingResult>
+```
+
+- `syncStoryStars`: 1~30번·별 1~3인 항목만 골라 보낸다(0·범위 밖·시험 스테이지 번호는 버림). 보낼 것이 없으면 요청 없이 `{ok, total: 0}`. `online`은 저장소(`storage`)를 import하지 않으므로 값은 인자로 받는다
+- 응답 형식 검사는 `ranking.ts`의 `parseRows`와 같은 엄격함(합계 0~90 정수, 어긋나면 error)
+
+**동기화 시점** (`src/scenes/storyStarsSync.ts` 새 파일: 보낼지 판단 + 주입형 클라이언트. 저장 형식은 그대로)
+
+- ① 부팅 뒤 한 번(기존 기기 별 반영) ② 스토리 판이 클리어로 끝나 저장한 직후 ③ 스토리 랭킹 탭을 열거나 새로고침할 때(동기화를 기다린 뒤 조회. 동기화가 실패해도 조회는 한다)
+- 게임은 기다리지 않는다(②는 `void`). 실패는 버리고 다음 ①②③에서 전체를 다시 보낸다 — 매번 전체 별을 보내고 서버가 최고값만 남기므로 중복·순서 문제가 없다
+- 마지막으로 성공한 내용(직렬화한 별)을 **메모리에만** 기억해 같은 내용이면 다시 보내지 않는다
+- 보내지 않는 경우: `?demo`, DEV 시험 스테이지, **DEV 빌드**(개발 중 `?unlock` 등으로 실제 랭킹을 흐리지 않게. `stage_attempts`와 같은 규칙). DEV에서는 `?starsync`가 있을 때만 보낸다
+
+**화면** (경쟁 주간 랭킹 화면을 탭 2개로 확장. 새 씬을 만들지 않는다)
+
+- `RankingScene` 위쪽에 탭 `[주간 점수] [스토리 별]`. 시작 데이터 `{ tab?: 'weekly' | 'story' }`(없으면 weekly). 탭을 누르면 같은 씬에서 목록만 다시 불러온다
+- 스토리 탭: 주 기간 줄 자리에 "스테이지 1~30 별 합계", 줄의 점수 칸은 `★ 57`. 하단 고정 줄은 `내 순위 N위 ★ 57` / 닉네임 없음 `★ 57 이름을 정하면 랭킹에 보여요` + [이름 정하기] / 서버 기록 없음 `내 별 ★ N`(N = 기기 저장 합계, 0 포함)
+- 진입: 메뉴 버튼 문구 '주간 랭킹' → '랭킹'(weekly 탭), **스테이지 지도에 [별 랭킹] 버튼 추가**(story 탭). [돌아가기]는 들어온 화면(메뉴·지도)으로
+- `view/rankingRows.ts`는 탭 종류(`'weekly' | 'story'`)를 받아 점수 글자·문구만 바꾼다. 줄 합치기·⋯·공동 순위 표시는 기존 로직 그대로
+- DEV `?fakeranking=`은 스토리 탭에도 같은 7가지 가짜 응답을 준다
+
+**분담** (같은 파일을 두 탭이 고치지 않는다)
+
+| 탭 | 파일 |
+|---|---|
+| claude-1 | `supabase/migrations/20261116120000_*.sql`, `scripts/supabase-check/rls-check.ts`, `supabase/README.md`, `src/online/storyStars.ts`·`index.ts`, `tests/online/storyStars.test.ts` |
+| claude-2 | `src/scenes/RankingScene.ts`·`rankingClient.ts`·`storyStarsSync.ts`·`MenuScene.ts`·`StageMapScene.ts`·`GameScene.ts`·`sceneData.ts`, `src/view/rankingRows.ts`·`rankingText.ts`, `src/config.ts`, `src/dev/fakeRanking.ts`, `src/main.ts`, 해당 테스트 |
+
+- 순서: 둘이 동시에 시작한다. claude-2는 `scenes/rankingClient`·`storyStarsSync`의 주입 인터페이스에만 기대어 만들고, claude-1의 `src/online` 커밋이 main에 올라온 뒤 rebase해서 `main.ts` 연결을 마친다
+- 원격 DB 적용(`supabase db push`)은 사용자 확인 뒤. 적용 전에는 `story_ranking` 호출이 error로 돌아와 화면이 "불러오지 못했어요"를 보이고 게임은 그대로다 (코드를 먼저 main에 올려도 안전)
+- QA: Codex 테스트 전략(경계 조건이 많음) → 구현 → Codex 독립 리뷰(`security definer` 쓰기 함수·권한, 오프라인 복귀)
+
 - 5주차 종료 게이트(V2-W5-03): 랭킹 코드와 실제 DB 적용을 모두 마치고 위 검증 및 lint·test·build가 통과해야 v0.2 완료로 기록한다
 
 ## 7. 리스크
