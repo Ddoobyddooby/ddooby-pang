@@ -38,7 +38,11 @@ function fakeAccount(backend: OnlineBackend | null, initial: OnlineStatus = 'rea
     switchTo(next: string) {
       uid = next;
     },
-  } satisfies Account & { switchTo(next: string): void };
+    /** 로그아웃 (account.ts의 onSignedOut과 같은 상태) */
+    signOut() {
+      status = 'offline';
+    },
+  } satisfies Account & { switchTo(next: string): void; signOut(): void };
 }
 
 const starsFor = (account: Account, isOnline = true) =>
@@ -354,7 +358,7 @@ describe('syncStoryStars 성공 기억·계정·직렬화 (SYNC-06~09)', () => {
     expect(order).toEqual(['sync {"1":1}', 'sync {"1":3}', 'story_ranking']);
   });
 
-  it('SYNC-09: 앞 호출이 시간 초과로 끝나도 줄이 막히지 않는다', async () => {
+  it('SYNC-09: 앞 호출이 시간 초과로 끝나도 줄이 막히지 않는다 (뒤 호출은 자기 마감 안에서 보낸다)', async () => {
     vi.useFakeTimers();
     let calls = 0;
     const backend = backendWith(() =>
@@ -362,8 +366,9 @@ describe('syncStoryStars 성공 기억·계정·직렬화 (SYNC-06~09)', () => {
     );
     const stars = starsFor(fakeAccount(backend));
     const first = stars.syncStoryStars({ 1: 1 });
+    await vi.advanceTimersByTimeAsync(1000);
     const second = stars.syncStoryStars({ 1: 3 });
-    await vi.advanceTimersByTimeAsync(STORY_STARS_TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(STORY_STARS_TIMEOUT_MS - 1000);
     expect(await first).toEqual({ kind: 'error' });
     expect(await second).toEqual({ kind: 'ok', total: 3 });
   });
@@ -457,6 +462,8 @@ describe('fetchStoryRanking (API-04~07)', () => {
       { data: [row('me', 1, null, 6)] },
       { data: [row('me', null, 1, 6)] },
       { data: [row('me', 1, 1, 6, { is_me: false })] },
+      // R4: me도 rank <= seq
+      { data: [row('me', 1, 2, 3)] },
     ];
     for (const result of cases) {
       expect(await starsFor(fakeAccount(backendWith(result))).fetchStoryRanking()).toEqual({
@@ -498,6 +505,181 @@ describe('fetchStoryRanking (API-04~07)', () => {
     expect(settled).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
     expect(await pending).toEqual({ kind: 'error' });
+  });
+});
+
+describe('Codex 리뷰 R1~R4 재검증', () => {
+  it('R1: 앞 요청과 자기 RPC가 모두 멈춰도 각 호출은 호출 시점부터 5초에 error, 대기 중 만료한 요청은 보내지 않는다', async () => {
+    vi.useFakeTimers();
+    const backend = backendWith(() => new Promise<RpcResult>(() => {}));
+    const stars = starsFor(fakeAccount(backend));
+    const settled: number[] = [];
+    const calls = [{ 1: 1 }, { 1: 2 }, { 1: 3 }].map((b, i) =>
+      stars.syncStoryStars(b).then((r) => {
+        settled.push(i);
+        return r;
+      }),
+    );
+    await vi.advanceTimersByTimeAsync(STORY_STARS_TIMEOUT_MS - 1);
+    expect(settled).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await Promise.all(calls)).toEqual([
+      { kind: 'error' },
+      { kind: 'error' },
+      { kind: 'error' },
+    ]);
+    // 첫 요청만 보냈다. 둘째·셋째는 큐에서 기다리다 만료되어 보내지 않는다
+    expect(backend.callRpc).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(backend.callRpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('R1: 늦게 들어온 호출도 자기 호출 시점부터 5초가 상한이다', async () => {
+    vi.useFakeTimers();
+    const backend = backendWith(() => new Promise<RpcResult>(() => {}));
+    const stars = starsFor(fakeAccount(backend));
+    void stars.syncStoryStars({ 1: 1 });
+    await vi.advanceTimersByTimeAsync(1000);
+    let done = false;
+    const second = stars.syncStoryStars({ 1: 3 }).then((r) => ((done = true), r));
+    await vi.advanceTimersByTimeAsync(STORY_STARS_TIMEOUT_MS - 1);
+    expect(done).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await second).toEqual({ kind: 'error' });
+    // 첫 요청 마감(5초)에 큐가 풀려 둘째는 남은 1초 안에 보냈다
+    expect(backend.callRpc).toHaveBeenCalledTimes(2);
+  });
+
+  it('R1: 대기 중 만료한 요청은 큐가 풀려도 보내지 않고 기억도 건드리지 않으며, 뒤이은 정상 재시도는 성공한다', async () => {
+    vi.useFakeTimers();
+    const gate = deferred<RpcResult>();
+    let calls = 0;
+    const backend = backendWith(() => (++calls === 1 ? gate.promise : Promise.resolve(total(4))));
+    const stars = starsFor(fakeAccount(backend));
+    const first = stars.syncStoryStars({ 1: 1 });
+    const waiting = stars.syncStoryStars({ 1: 3, 2: 1 });
+    await vi.advanceTimersByTimeAsync(STORY_STARS_TIMEOUT_MS);
+    expect(await first).toEqual({ kind: 'error' });
+    expect(await waiting).toEqual({ kind: 'error' });
+    gate.resolve(total(1)); // 첫 요청의 늦은 성공
+    await vi.advanceTimersByTimeAsync(10);
+    expect(backend.callRpc).toHaveBeenCalledTimes(1);
+    // 둘 다 기억되지 않았다: 같은 내용을 다시 보낸다
+    expect(await stars.syncStoryStars({ 1: 3, 2: 1 })).toEqual({ kind: 'ok', total: 4 });
+    expect(await stars.syncStoryStars({ 1: 1 })).toEqual({ kind: 'ok', total: 4 });
+    expect(backend.callRpc).toHaveBeenCalledTimes(3);
+    // 정상 성공은 기억한다 (순차 전송·성공 기억 유지)
+    expect(await stars.syncStoryStars({ 1: 1 })).toEqual({ kind: 'ok', total: 4 });
+    expect(backend.callRpc).toHaveBeenCalledTimes(3);
+  });
+
+  /** ensure가 gate에서 멈추는 계정 (실제 Account처럼 진행 중 ensure를 공유한다) */
+  function slowEnsureAccount(backend: OnlineBackend, gate: Promise<void>) {
+    const account = fakeAccount(backend, 'offline');
+    let status: OnlineStatus = 'offline';
+    let uid = 'user-a';
+    const shared = gate.then(() => {
+      status = 'ready';
+    });
+    return Object.assign(account, {
+      status: () => status,
+      ensure: vi.fn(() => shared),
+      userId: () => (status === 'ready' ? uid : null),
+      backend: () => (status === 'ready' ? backend : null),
+      switchTo: (next: string) => {
+        uid = next;
+      },
+    });
+  }
+
+  it('R2: 계정 준비 중 시간 초과된 작업은 ensure가 풀린 뒤에도 RPC를 시작하지 않는다 (동시 RPC 1개)', async () => {
+    vi.useFakeTimers();
+    const gate = deferred<void>();
+    let inflight = 0;
+    let maxInflight = 0;
+    const backend = backendWith(async (name) => {
+      inflight += 1;
+      maxInflight = Math.max(maxInflight, inflight);
+      await new Promise((r) => setTimeout(r, 100));
+      inflight -= 1;
+      return name === 'sync_story_stars' ? total(3) : { data: [] };
+    });
+    const account = slowEnsureAccount(backend, gate.promise);
+    const stars = starsFor(account);
+    const first = stars.syncStoryStars({ 1: 1 });
+    await vi.advanceTimersByTimeAsync(STORY_STARS_TIMEOUT_MS);
+    expect(await first).toEqual({ kind: 'error' });
+    const second = stars.syncStoryStars({ 1: 3 });
+    await vi.advanceTimersByTimeAsync(500);
+    gate.resolve();
+    await vi.advanceTimersByTimeAsync(200);
+    expect(await second).toEqual({ kind: 'ok', total: 3 });
+    expect(backend.callRpc.mock.calls).toEqual([['sync_story_stars', { p_stars: { '1': 3 } }]]);
+    expect(maxInflight).toBe(1);
+  });
+
+  it('R2: 그 사이 계정이 A→B로 바뀌고 후속 sync·조회가 시작돼도 만료 작업의 RPC는 0회', async () => {
+    vi.useFakeTimers();
+    const gate = deferred<void>();
+    const backend = backendWith(async (name) =>
+      name === 'sync_story_stars' ? total(3) : { data: [] },
+    );
+    const account = slowEnsureAccount(backend, gate.promise);
+    const stars = starsFor(account);
+    const first = stars.syncStoryStars({ 1: 1 });
+    await vi.advanceTimersByTimeAsync(STORY_STARS_TIMEOUT_MS);
+    expect(await first).toEqual({ kind: 'error' });
+    account.switchTo('user-b');
+    const tab = stars.syncStoryStars({ 1: 3 }).then(() => stars.fetchStoryRanking());
+    await vi.advanceTimersByTimeAsync(100);
+    gate.resolve();
+    expect(await tab).toMatchObject({ kind: 'ok' });
+    expect(backend.callRpc.mock.calls.map((c) => [c[0], c[1]])).toEqual([
+      ['sync_story_stars', { p_stars: { '1': 3 } }],
+      ['story_ranking', {}],
+    ]);
+  });
+
+  it('R3: 조회 중 계정이 A→B로 바뀌면 A의 me를 쓰지 않고 error', async () => {
+    const gate = deferred<RpcResult>();
+    const backend = backendWith(() => gate.promise);
+    const account = fakeAccount(backend);
+    const pending = starsFor(account).fetchStoryRanking();
+    await flush();
+    account.switchTo('user-b');
+    gate.resolve({ data: [row('me', 8, 8, 57)] });
+    expect(await pending).toEqual({ kind: 'error' });
+  });
+
+  it('R3: 조회 중 로그아웃되어 그대로면 error', async () => {
+    const gate = deferred<RpcResult>();
+    const backend = backendWith(() => gate.promise);
+    const account = fakeAccount(backend);
+    const pending = starsFor(account).fetchStoryRanking();
+    await flush();
+    account.signOut();
+    gate.resolve({ data: [row('me', 8, 8, 57)] });
+    expect(await pending).toEqual({ kind: 'error' });
+  });
+
+  it('R3: 계정이 그대로면 정상 조회', async () => {
+    const gate = deferred<RpcResult>();
+    const backend = backendWith(() => gate.promise);
+    const pending = starsFor(fakeAccount(backend)).fetchStoryRanking();
+    await flush();
+    gate.resolve({ data: [row('me', 8, 8, 57)] });
+    expect(await pending).toMatchObject({ kind: 'ok', me: { rank: 8, score: 57 } });
+  });
+
+  it('R4: me는 rank > seq 거부, rank = seq·rank < seq(공동 순위)·둘 다 null 허용, 한쪽만 null 거부', async () => {
+    const parse = async (data: unknown[]) =>
+      starsFor(fakeAccount(backendWith({ data }))).fetchStoryRanking();
+    expect(await parse([row('me', 1, 2, 3)])).toEqual({ kind: 'error' });
+    expect(await parse([row('me', 3, 3, 3)])).toMatchObject({ me: { rank: 3, score: 3 } });
+    expect(await parse([row('me', 3, 2, 3)])).toMatchObject({ me: { rank: 2, score: 3 } });
+    expect(await parse([row('me', null, null, 3)])).toMatchObject({ me: { rank: null } });
+    expect(await parse([row('me', 1, null, 3)])).toEqual({ kind: 'error' });
+    expect(await parse([row('me', null, 1, 3)])).toEqual({ kind: 'error' });
   });
 });
 

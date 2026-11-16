@@ -88,7 +88,7 @@ function parseStoryRows(data: unknown): StoryRankingResult | null {
         me = { rank: null, score: r.total_stars };
         continue;
       }
-      if (!isCount(r.rank, 1) || !isCount(r.seq, 1)) return null;
+      if (!isCount(r.rank, 1) || !isCount(r.seq, 1) || r.rank > r.seq) return null;
       me = { rank: r.rank, score: r.total_stars };
       continue;
     }
@@ -126,53 +126,91 @@ export function createStoryStars(account: Account, deps: StoryStarsDeps): StoryS
   /** 앞선 동기화가 끝나면 풀린다 (D-02). 결과와 무관하게 reject하지 않는다 */
   let queue: Promise<unknown> = Promise.resolve();
 
-  const send = async (picked: [number, number][]): Promise<StarsSyncResult> => {
+  /**
+   * 요청 하나의 마감. 호출 시점부터 timeoutMs (큐 대기 포함, R1). 마감이 지난 작업은 새 RPC를 시작하지 않고(R2)
+   * 늦게 온 응답도 기억하지 않는다
+   */
+  const deadlineFrom = () => {
+    const at = Date.now() + timeoutMs;
+    let expired = false;
+    return {
+      expire: () => (expired = true),
+      expired: () => expired || Date.now() >= at,
+    };
+  };
+
+  const send = async (
+    picked: [number, number][],
+    req: ReturnType<typeof deadlineFrom>,
+  ): Promise<StarsSyncResult> => {
     if (picked.length === 0) return { kind: 'ok', total: 0 };
     if (account.status() === 'disabled' || !deps.isOnline()) return offline;
     const content = JSON.stringify(picked);
-    // 성공했을 때만 기억한다. 시간 초과 뒤 늦게 온 성공은 within이 버리므로 commit도 불리지 않는다
-    type Done = { result: StarsSyncResult; commit?: () => void };
-    const done = await within<Done>(timeoutMs, { result: error }, async () => {
-      await account.ensure();
-      const backend = account.backend();
-      const uid = account.userId();
-      if (!backend || !uid) return { result: offline };
-      const cached = lastSent.get(uid);
-      if (cached?.content === content) return { result: { kind: 'ok', total: cached.total } };
-      const res = await backend.callRpc('sync_story_stars', {
-        p_stars: Object.fromEntries(picked.map(([stage, stars]) => [String(stage), stars])),
-      });
-      if (res === 'error' || !isTotal(res.data)) return { result: error };
-      const total = res.data;
-      return {
-        result: { kind: 'ok', total },
-        // 응답이 오는 사이 계정이 바뀌었으면 이 성공은 원래 계정 것이라 새 계정의 기억이 되지 않는다
-        commit: () => lastSent.set(uid, { content, total }),
-      };
+    await account.ensure();
+    // 계정 준비를 기다리는 사이 마감이 지났으면 보내지 않는다 (이미 error로 끝났다)
+    if (req.expired()) return error;
+    const backend = account.backend();
+    const uid = account.userId();
+    if (!backend || !uid) return offline;
+    const cached = lastSent.get(uid);
+    if (cached?.content === content) return { kind: 'ok', total: cached.total };
+    if (req.expired()) return error;
+    const res = await backend.callRpc('sync_story_stars', {
+      p_stars: Object.fromEntries(picked.map(([stage, stars]) => [String(stage), stars])),
     });
-    done.commit?.();
-    return done.result;
+    if (res === 'error' || !isTotal(res.data)) return error;
+    // 마감 뒤 늦게 온 성공은 기억하지 않는다. 응답 사이 계정이 바뀌어도 이 성공은 보낸 계정(uid) 것으로만 기억한다
+    if (req.expired()) return error;
+    lastSent.set(uid, { content, total: res.data });
+    return { kind: 'ok', total: res.data };
   };
 
   return {
     syncStoryStars(bestStars) {
-      // 부른 시점의 내용을 고정한다. 뒤 호출은 앞 호출이 끝난 뒤 자기 내용을 보낸다
+      // 부른 시점의 내용을 고정한다. 뒤 호출은 앞 호출이 끝난 뒤 자기 내용을 보낸다.
+      // 대기 중 마감이 지나면 큐가 풀려도 보내지 않는다. 큐는 각 호출이 끝나거나 마감되면 풀린다
       const picked = pickStoryStars(bestStars);
-      const run = queue.then(() => send(picked)).catch(() => error);
+      const req = deadlineFrom();
+      const prev = queue;
+      const run = new Promise<StarsSyncResult>((resolve) => {
+        const timer = setTimeout(() => {
+          req.expire();
+          resolve(error);
+        }, timeoutMs);
+        prev
+          .then(() => (req.expired() ? error : send(picked, req)))
+          .then(
+            (result) => {
+              clearTimeout(timer);
+              resolve(result);
+            },
+            () => {
+              clearTimeout(timer);
+              resolve(error);
+            },
+          );
+      });
       queue = run;
       return run;
     },
 
     async fetchStoryRanking() {
       if (account.status() === 'disabled' || !deps.isOnline()) return offline;
-      return within<StoryRankingResult>(timeoutMs, error, async () => {
+      let expired = false;
+      const result = within<StoryRankingResult>(timeoutMs, error, async () => {
         await account.ensure();
+        if (expired) return error;
         const backend = account.backend();
-        if (!backend) return offline;
+        // 요청 계정을 고정한다. 응답이 왔을 때 계정이 바뀌었으면(로그아웃 포함) 이전 계정의 me를 쓰지 않는다 (R3)
+        const uid = account.userId();
+        if (!backend || !uid) return offline;
         const res = await backend.callRpc('story_ranking', {});
+        if (account.userId() !== uid) return error;
         if (res === 'error') return error;
         return parseStoryRows(res.data) ?? error;
       });
+      void result.then(() => (expired = true));
+      return result;
     },
   };
 }
